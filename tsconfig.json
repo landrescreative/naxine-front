@@ -28,6 +28,9 @@
     "allowUnreachableCode": true,
     "noFallthroughCasesInSwitch": false,
     "noImplicitUseStrict": false,
+    "noStrictGenericChecks": true,
+    "skipDefaultLibCheck": true,
+    "forceConsistentCasingInFileNames": false,
     "plugins": [
       {
         "name": "next"
