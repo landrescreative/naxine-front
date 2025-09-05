@@ -104,7 +104,7 @@ export default function HowItWorksSection() {
 
   return (
     <section className="w-full py-8 md:py-14">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Grid en zig-zag para replicar la composición del mockup */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12">
           {/* 1 */}

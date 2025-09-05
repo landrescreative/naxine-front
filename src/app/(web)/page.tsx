@@ -3,6 +3,11 @@ import SeparatorSection from "@/components/ui/SeparatorSection";
 import ServicesSection from "@/components/ui/ServicesSection";
 import HowItWorksSection from "@/components/ui/HowItWorksSection";
 import nutricion from "@/assets/ca48d68e7670363c5191583082e186b99cc6ab67.jpg";
+import OurProcess from "@/components/ui/OurProcess";
+import NuestrasGarantias from "@/components/ui/NuestrasGarantias";
+import BenefitsSection from "@/components/ui/BenefitsSection";
+import AccesibilitySection from "@/components/ui/AccesibilitySection";
+import FAQSection from "@/components/ui/FAQSection";
 
 export default function Home() {
   return (
@@ -33,6 +38,16 @@ export default function Home() {
         className=""
       />
       <HowItWorksSection />
+      <OurProcess />
+      <NuestrasGarantias />
+      <BenefitsSection />
+      <AccesibilitySection />
+      <SeparatorSection
+        subtitle="Preguntas Frecuentes"
+        title="Preguntas Frecuentes (FAQs)"
+        className=""
+      />
+      <FAQSection />
     </div>
   );
 }
