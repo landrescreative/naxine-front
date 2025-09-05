@@ -4,7 +4,19 @@ import { useState } from "react";
 import Image from "next/image";
 import heroImage from "@/assets/ansiedad.png";
 
-export default function PurpleSection() {
+interface PurpleSectionProps {
+  title: string;
+  subtitle: string;
+  searchPlaceholder: string;
+  backgroundImage?: string;
+}
+
+export default function PurpleSection({
+  title,
+  subtitle,
+  searchPlaceholder,
+  backgroundImage,
+}: PurpleSectionProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -16,12 +28,9 @@ export default function PurpleSection() {
             <div className="text-white space-y-8">
               <div className="space-y-6">
                 <h1 className="text-4xl lg:text-5xl font-bold leading-tight">
-                  Explora, elige y contrata al profesional colegiado ideal para
-                  ti
+                  {title}
                 </h1>
-                <p className="text-xl text-primary-foreground/80">
-                  Encuentra al profesional indicado para ti.
-                </p>
+                <p className="text-xl text-primary-foreground/80">{subtitle}</p>
               </div>
 
               <div className="space-y-6">
@@ -34,7 +43,7 @@ export default function PurpleSection() {
                     onBlur={() => setIsOpen(false)}
                   >
                     <option value="" disabled>
-                      Servicios de
+                      {searchPlaceholder}
                     </option>
                     <option value="abogacia">Abogacía</option>
                     <option value="arquitectura">Arquitectura</option>
@@ -71,7 +80,7 @@ export default function PurpleSection() {
             <div className="relative">
               <div className="relative rounded-2xl overflow-hidden">
                 <Image
-                  src={heroImage}
+                  src={backgroundImage || heroImage}
                   alt="Profesionales en consulta"
                   width={600}
                   height={350}
