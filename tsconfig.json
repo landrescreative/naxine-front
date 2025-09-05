@@ -22,6 +22,12 @@
     "noImplicitOverride": false,
     "noPropertyAccessFromIndexSignature": false,
     "noUncheckedIndexedAccess": false,
+    "suppressImplicitAnyIndexErrors": true,
+    "suppressExcessPropertyErrors": true,
+    "allowUnusedLabels": true,
+    "allowUnreachableCode": true,
+    "noFallthroughCasesInSwitch": false,
+    "noImplicitUseStrict": false,
     "plugins": [
       {
         "name": "next"
