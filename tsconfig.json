@@ -23,7 +23,6 @@
     "noPropertyAccessFromIndexSignature": false,
     "noUncheckedIndexedAccess": false,
     "suppressImplicitAnyIndexErrors": true,
-    "suppressExcessPropertyErrors": true,
     "allowUnusedLabels": true,
     "allowUnreachableCode": true,
     "noFallthroughCasesInSwitch": false,
