@@ -84,9 +84,7 @@ export default function GlobalCTA() {
   };
 
   // Handle video error
-  const handleVideoError = (
-    e: React.SyntheticEvent<HTMLVideoElement, Event>
-  ) => {
+  const handleVideoError = (e: Event) => {
     console.error("Video failed to load:", e);
     setIsLoading(false);
   };
