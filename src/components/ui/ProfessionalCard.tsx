@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 
 interface Professional {
   id: string;
@@ -11,17 +12,30 @@ interface Professional {
   image: string;
   isPopular?: boolean;
   specialties: string[];
+  slug: string; // ← Agregar slug para la URL
 }
 
 interface ProfessionalCardProps {
   professional: Professional;
+  categorySlug: string; // ← Necesitamos la categoría para la URL
+  serviceSlug?: string; // ← Servicio opcional para la URL
 }
 
 export default function ProfessionalCard({
   professional,
+  categorySlug,
+  serviceSlug,
 }: ProfessionalCardProps) {
+  // Generar URL basada en si hay servicio o no
+  const href = serviceSlug
+    ? `/${categorySlug}/${serviceSlug}/${professional.slug}`
+    : `/${categorySlug}/${professional.slug}`;
+
   return (
-    <div className="bg-white border border-gray-200 overflow-hidden group relative">
+    <Link
+      href={href}
+      className="block bg-white border border-gray-200 overflow-hidden group relative hover:shadow-lg transition-shadow duration-300"
+    >
       {/* Popular Badge */}
       {professional.isPopular && (
         <div className="absolute top-0 left-0 z-10">
@@ -44,7 +58,9 @@ export default function ProfessionalCard({
       {/* Card Content */}
       <div className="p-6 space-y-3">
         {/* Name */}
-        <h3 className="text-xl font-bold text-primary">{professional.name}</h3>
+        <h3 className="text-xl font-bold text-primary group-hover:text-purple-700 transition-colors">
+          {professional.name}
+        </h3>
 
         {/* Title/Description */}
         <p className="text-gray-700 text-sm leading-relaxed">
@@ -66,7 +82,7 @@ export default function ProfessionalCard({
           </span>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 

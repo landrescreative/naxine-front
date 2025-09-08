@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import heroImage from "@/assets/ansiedad.png";
 
@@ -18,6 +19,168 @@ export default function PurpleSection({
   backgroundImage,
 }: PurpleSectionProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [selectedOption, setSelectedOption] = useState("");
+  const router = useRouter();
+
+  const categories = [
+    { value: "dietas", label: "Dietas y Nutrición" },
+    { value: "terapias", label: "Terapias Psicológicas" },
+    { value: "logopedas", label: "Logopedia y Terapia del Habla" },
+    { value: "desarrollo-personal", label: "Desarrollo Personal" },
+    { value: "consultas-legales", label: "Consultas Legales" },
+  ];
+
+  const services = [
+    // Dietas
+    { value: "dietas/perdida-de-peso", label: "Pérdida de peso" },
+    { value: "dietas/deportiva", label: "Nutrición deportiva" },
+    { value: "dietas/vegetarianos-y-veganos", label: "Vegetarianos y veganos" },
+    {
+      value: "dietas/tcas-trastornos-conducta-alimentaria",
+      label: "TCAs (trastornos de la conducta alimentaria)",
+    },
+    { value: "dietas/embarazo-y-lactancia", label: "Embarazo y lactancia" },
+    { value: "dietas/nutricion-infantil", label: "Nutrición infantil" },
+    { value: "dietas/aumento-de-peso", label: "Aumento de peso" },
+    { value: "dietas/menopausia", label: "Menopausia" },
+    { value: "dietas/salud-intestinal", label: "Salud intestinal" },
+    { value: "dietas/sibo-y-fodmap", label: "SIBO y dieta FODMAP" },
+    { value: "dietas/obesidad", label: "Obesidad" },
+    { value: "dietas/tiroides", label: "Tiroides" },
+    {
+      value: "dietas/alergias-e-intolerancias",
+      label: "Alergias e intolerancias",
+    },
+    { value: "dietas/nutricion-clinica", label: "Nutrición clínica" },
+    {
+      value: "dietas/nutricionista-oncologico",
+      label: "Nutricionista oncológico",
+    },
+
+    // Terapias
+    { value: "terapias/depresion", label: "Depresión" },
+    { value: "terapias/ansiedad", label: "Ansiedad" },
+    { value: "terapias/fobias", label: "Fobias" },
+    { value: "terapias/pareja", label: "Terapia de pareja" },
+    {
+      value: "terapias/trastornos-conducta-alimentaria",
+      label: "Trastornos de conducta alimentaria",
+    },
+    { value: "terapias/duelo", label: "Duelo: pérdida de un ser querido" },
+    { value: "terapias/baja-autoestima", label: "Baja autoestima" },
+    { value: "terapias/obsesiones", label: "Obsesiones" },
+    { value: "terapias/trauma-y-tept", label: "Trauma y TEPT" },
+    { value: "terapias/problemas-sexuales", label: "Problemas sexuales" },
+    { value: "terapias/psico-oncologia", label: "Psico-oncología" },
+
+    // Logopedas
+    { value: "logopedas/trastornos-del-habla", label: "Trastornos del habla" },
+    {
+      value: "logopedas/trastornos-del-lenguaje",
+      label: "Trastornos del lenguaje",
+    },
+    { value: "logopedas/trastornos-auditivos", label: "Trastornos auditivos" },
+    {
+      value: "logopedas/dificultades-neurologicas",
+      label: "Dificultades de origen neurológico",
+    },
+    {
+      value: "logopedas/dificultades-de-aprendizaje",
+      label: "Dificultades de aprendizaje",
+    },
+    {
+      value: "logopedas/problemas-de-deglucion",
+      label: "Problemas de deglución",
+    },
+
+    // Desarrollo Personal
+    { value: "desarrollo-personal/liderazgo", label: "Liderazgo" },
+    {
+      value: "desarrollo-personal/habilidades-sociales",
+      label: "Habilidades sociales",
+    },
+    {
+      value: "desarrollo-personal/hablar-en-publico",
+      label: "Hablar en público",
+    },
+    {
+      value: "desarrollo-personal/comunicacion-no-verbal",
+      label: "Comunicación no verbal",
+    },
+    {
+      value: "desarrollo-personal/relaciones-de-pareja",
+      label: "Relaciones de pareja",
+    },
+    {
+      value: "desarrollo-personal/relaciones-interpersonales",
+      label: "Relaciones interpersonales",
+    },
+
+    // Consultas Legales
+    { value: "consultas-legales/divorcio", label: "Divorcio" },
+    {
+      value: "consultas-legales/compraventa-inmuebles",
+      label: "Compraventa de inmuebles",
+    },
+    { value: "consultas-legales/herencias", label: "Herencias" },
+    {
+      value: "consultas-legales/nie-comunitarios",
+      label: "Tramitación de NIE para comunitarios",
+    },
+    { value: "consultas-legales/custodia", label: "Custodia" },
+    {
+      value: "consultas-legales/reclamacion-pensiones",
+      label: "Reclamación de pensiones",
+    },
+    {
+      value: "consultas-legales/matrimonio-y-filiaciones",
+      label: "Matrimonio y filiaciones",
+    },
+    {
+      value: "consultas-legales/contrato-de-alquiler",
+      label: "Contrato de alquiler",
+    },
+    { value: "consultas-legales/desahucios", label: "Desahucios" },
+    {
+      value: "consultas-legales/estafas-inmobiliarias",
+      label: "Estafas inmobiliarias",
+    },
+    {
+      value: "consultas-legales/comunidades-de-propietarios",
+      label: "Comunidades de propietarios",
+    },
+    {
+      value: "consultas-legales/testamento-notarial",
+      label: "Testamento notarial",
+    },
+    { value: "consultas-legales/donaciones", label: "Donaciones" },
+    {
+      value: "consultas-legales/fiscalidad-de-herencias",
+      label: "Fiscalidad de herencias",
+    },
+    {
+      value: "consultas-legales/reclamacion-de-herencias",
+      label: "Reclamación de herencias",
+    },
+    {
+      value: "consultas-legales/renuncia-de-herencias",
+      label: "Renuncia de herencias",
+    },
+    {
+      value: "consultas-legales/nacionalidad-espanola",
+      label: "Nacionalidad española",
+    },
+    {
+      value: "consultas-legales/residencia-extranjeros-no-comunitarios",
+      label: "Residencia para extranjeros no comunitarios",
+    },
+  ];
+
+  const handleSearch = () => {
+    if (selectedOption) {
+      router.push(`/${selectedOption}`);
+    }
+  };
 
   return (
     <div className="w-full px-20 py-16 bg-white">
@@ -37,7 +200,8 @@ export default function PurpleSection({
                 <div className="relative w-full max-w-full sm:max-w-md md:max-w-lg mx-auto md:mx-0">
                   <select
                     className="peer appearance-none w-full bg-white/95 backdrop-blur text-gray-800 px-4 py-3 pr-10 rounded-xl border border-white/60 shadow-sm transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-primary/30 focus:border-primary/70 focus:bg-white focus:shadow-lg hover:border-white text-lg font-medium"
-                    defaultValue=""
+                    value={selectedOption}
+                    onChange={(e) => setSelectedOption(e.target.value)}
                     aria-label="Buscar servicios"
                     onFocus={() => setIsOpen(true)}
                     onBlur={() => setIsOpen(false)}
@@ -45,11 +209,76 @@ export default function PurpleSection({
                     <option value="" disabled>
                       {searchPlaceholder}
                     </option>
-                    <option value="abogacia">Abogacía</option>
-                    <option value="arquitectura">Arquitectura</option>
-                    <option value="ingenieria">Ingeniería</option>
-                    <option value="contabilidad">Contabilidad</option>
-                    <option value="medicina">Medicina</option>
+
+                    {/* Categorías */}
+                    <optgroup label="Categorías">
+                      {categories.map((category) => (
+                        <option key={category.value} value={category.value}>
+                          {category.label}
+                        </option>
+                      ))}
+                    </optgroup>
+
+                    {/* Servicios por categoría */}
+                    <optgroup label="Dietas y Nutrición">
+                      {services
+                        .filter((service) =>
+                          service.value.startsWith("dietas/")
+                        )
+                        .map((service) => (
+                          <option key={service.value} value={service.value}>
+                            {service.label}
+                          </option>
+                        ))}
+                    </optgroup>
+
+                    <optgroup label="Terapias Psicológicas">
+                      {services
+                        .filter((service) =>
+                          service.value.startsWith("terapias/")
+                        )
+                        .map((service) => (
+                          <option key={service.value} value={service.value}>
+                            {service.label}
+                          </option>
+                        ))}
+                    </optgroup>
+
+                    <optgroup label="Logopedia y Terapia del Habla">
+                      {services
+                        .filter((service) =>
+                          service.value.startsWith("logopedas/")
+                        )
+                        .map((service) => (
+                          <option key={service.value} value={service.value}>
+                            {service.label}
+                          </option>
+                        ))}
+                    </optgroup>
+
+                    <optgroup label="Desarrollo Personal">
+                      {services
+                        .filter((service) =>
+                          service.value.startsWith("desarrollo-personal/")
+                        )
+                        .map((service) => (
+                          <option key={service.value} value={service.value}>
+                            {service.label}
+                          </option>
+                        ))}
+                    </optgroup>
+
+                    <optgroup label="Consultas Legales">
+                      {services
+                        .filter((service) =>
+                          service.value.startsWith("consultas-legales/")
+                        )
+                        .map((service) => (
+                          <option key={service.value} value={service.value}>
+                            {service.label}
+                          </option>
+                        ))}
+                    </optgroup>
                   </select>
                   <div
                     className={`pointer-events-none absolute inset-y-0 right-4 flex items-center text-primary/80 transition-transform ${
@@ -69,7 +298,13 @@ export default function PurpleSection({
                 </div>
                 <button
                   type="button"
-                  className="w-full bg-white text-primary font-bold py-3 px-6 rounded-xl hover:bg-gray-100 transition-colors duration-200 text-lg"
+                  onClick={handleSearch}
+                  disabled={!selectedOption}
+                  className={`w-full font-bold py-3 px-6 rounded-xl transition-colors duration-200 text-lg ${
+                    selectedOption
+                      ? "bg-white text-primary hover:bg-gray-100 cursor-pointer"
+                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  }`}
                 >
                   Buscar
                 </button>

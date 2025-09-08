@@ -20,16 +20,48 @@ export default function Home() {
       />
       <ServicesSection
         items={[
-          { title: "Dieta para adelgazar", image: nutricion },
-          { title: "Dieta para diabetes", image: nutricion },
-          { title: "Dieta para colesterol", image: nutricion },
-          { title: "Terapia para depresión", image: nutricion },
-          { title: "Divorcio exprés", image: nutricion },
-          { title: "Asesoría legal para herencias", image: nutricion },
-          { title: "Fisioterapia a domicilio", image: nutricion },
-          { title: "Nutrición deportiva", image: nutricion },
-          { title: "Arquitectura de interiores", image: nutricion },
-          { title: "Contabilidad fiscal", image: nutricion },
+          {
+            title: "Pérdida de peso",
+            image: nutricion,
+            href: "/dietas/perdida-de-peso",
+          },
+          {
+            title: "Nutrición deportiva",
+            image: nutricion,
+            href: "/dietas/deportiva",
+          },
+          {
+            title: "Vegetarianos y veganos",
+            image: nutricion,
+            href: "/dietas/vegetarianos-y-veganos",
+          },
+          { title: "Depresión", image: nutricion, href: "/terapias/depresion" },
+          { title: "Ansiedad", image: nutricion, href: "/terapias/ansiedad" },
+          {
+            title: "Divorcio",
+            image: nutricion,
+            href: "/consultas-legales/divorcio",
+          },
+          {
+            title: "Herencias",
+            image: nutricion,
+            href: "/consultas-legales/herencias",
+          },
+          {
+            title: "Trastornos del habla",
+            image: nutricion,
+            href: "/logopedas/trastornos-del-habla",
+          },
+          {
+            title: "Liderazgo",
+            image: nutricion,
+            href: "/desarrollo-personal/liderazgo",
+          },
+          {
+            title: "Habilidades sociales",
+            image: nutricion,
+            href: "/desarrollo-personal/habilidades-sociales",
+          },
         ]}
       />
       <SeparatorSection
