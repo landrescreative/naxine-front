@@ -82,16 +82,16 @@ export default function CategoryServicePage({
 
       {/* Filter Bar */}
       <div className="bg-white border-b border-gray-200">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-center mb-6">
+        <div className="container mx-auto mx-5 sm:mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div className="flex items-center justify-center mb-4 sm:mb-6">
             <h2 className="text-lg font-semibold text-purple-600">
               Profesionales Disponibles
             </h2>
           </div>
 
-          <div className="flex justify-center gap-6">
-            <div className="relative">
-              <select className="appearance-none px-4 py-2 pr-8 border border-gray-300 rounded-lg bg-white text-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-transparent min-w-[140px]">
+          <div className="flex flex-col sm:flex-row justify-center items-stretch sm:items-center gap-3 sm:gap-6">
+            <div className="relative w-full sm:w-auto">
+              <select className="w-full appearance-none px-3 sm:px-4 py-2 pr-8 border border-gray-300 rounded-lg bg-white text-gray-600 text-sm sm:text-base focus:ring-2 focus:ring-purple-500 focus:border-transparent min-w-[140px]">
                 <option value="" disabled selected>
                   Modalidad
                 </option>
@@ -117,8 +117,8 @@ export default function CategoryServicePage({
               </div>
             </div>
 
-            <div className="relative">
-              <select className="appearance-none px-4 py-2 pr-8 border border-gray-300 rounded-lg bg-white text-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-transparent min-w-[140px]">
+            <div className="relative w-full sm:w-auto">
+              <select className="w-full appearance-none px-3 sm:px-4 py-2 pr-8 border border-gray-300 rounded-lg bg-white text-gray-600 text-sm sm:text-base focus:ring-2 focus:ring-purple-500 focus:border-transparent min-w-[140px]">
                 <option value="" disabled selected>
                   Ubicación
                 </option>
@@ -236,8 +236,8 @@ export default function CategoryServicePage({
               </div>
             </div>
 
-            <div className="relative">
-              <select className="appearance-none px-4 py-2 pr-8 border border-gray-300 rounded-lg bg-white text-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-transparent min-w-[140px]">
+            <div className="relative w-full sm:w-auto">
+              <select className="w-full appearance-none px-3 sm:px-4 py-2 pr-8 border border-gray-300 rounded-lg bg-white text-gray-600 text-sm sm:text-base focus:ring-2 focus:ring-purple-500 focus:border-transparent min-w-[140px]">
                 <option value="" disabled selected>
                   Horario
                 </option>
@@ -268,8 +268,8 @@ export default function CategoryServicePage({
       </div>
 
       {/* Professionals Grid */}
-      <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div className="container mx-auto mx-5 sm:mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 lg:py-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
           {currentProfessionals.map((professional) => {
             // Si no hay serviceSlug (página de categoría), usar el primer servicio como fallback
             const effectiveServiceSlug =
@@ -288,22 +288,22 @@ export default function CategoryServicePage({
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="mt-12 flex justify-center">
+          <div className="mt-10 sm:mt-12 flex justify-center">
             <nav
-              className="flex items-center space-x-2"
+              className="flex flex-wrap items-center justify-center gap-2"
               aria-label="Paginación"
             >
               {/* Botón Anterior */}
               <button
                 onClick={goToPreviousPage}
                 disabled={currentPage === 1}
-                className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-2 text-xs sm:text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Anterior
               </button>
 
               {/* Números de página */}
-              <div className="flex space-x-1">
+              <div className="flex flex-wrap gap-1">
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map(
                   (page) => {
                     // Mostrar solo algunas páginas alrededor de la actual
@@ -334,7 +334,7 @@ export default function CategoryServicePage({
                       <button
                         key={page}
                         onClick={() => goToPage(page)}
-                        className={`px-3 py-2 text-sm font-medium rounded-md ${
+                        className={`px-3 py-2 text-xs sm:text-sm font-medium rounded-md ${
                           currentPage === page
                             ? "bg-purple-600 text-white"
                             : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"
@@ -351,7 +351,7 @@ export default function CategoryServicePage({
               <button
                 onClick={goToNextPage}
                 disabled={currentPage === totalPages}
-                className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-2 text-xs sm:text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Siguiente
               </button>
@@ -361,7 +361,7 @@ export default function CategoryServicePage({
 
         {/* Información de paginación */}
         {totalProfessionals > 0 && (
-          <div className="mt-6 text-center text-sm text-gray-500">
+          <div className="mt-6 text-center text-xs sm:text-sm text-gray-500">
             Mostrando {startIndex + 1} -{" "}
             {Math.min(endIndex, totalProfessionals)} de {totalProfessionals}{" "}
             profesionales
@@ -371,7 +371,7 @@ export default function CategoryServicePage({
 
       {/* Empty State */}
       {totalProfessionals === 0 && (
-        <div className="container mx-auto px-4 py-12 text-center">
+        <div className="container mx-auto mx-5 sm:mx-auto px-4 py-12 text-center">
           <div className="max-w-md mx-auto">
             <svg
               className="w-16 h-16 mx-auto text-gray-400 mb-4"

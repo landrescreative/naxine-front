@@ -53,7 +53,7 @@ export default function ProfessionalPageClient({
     <div className="min-h-screen bg-white">
       {/* Header Section */}
       <div className="bg-white">
-        <div className="container mx-auto px-6 pt-10 pb-6">
+        <div className="container mx-auto px-4 sm:px-6 pt-8 sm:pt-10 pb-6">
           {/* Page Title */}
           <div className="text-center mb-8">
             <p className="text-[#A78BFA] text-sm mb-2 font-normal">
@@ -65,8 +65,8 @@ export default function ProfessionalPageClient({
           </div>
 
           {/* Professional Card */}
-          <div className="bg-[#E3DCFF] rounded-3xl p-8">
-            <div className="grid lg:grid-cols-2 gap-8">
+          <div className="bg-[#E3DCFF] rounded-3xl p-5 sm:p-6 md:p-8">
+            <div className="grid lg:grid-cols-2 gap-6 md:gap-8">
               {/* Left Side - Image and Basic Info */}
               <div className="space-y-6">
                 {/* Professional Image with Play Button */}
@@ -76,7 +76,7 @@ export default function ProfessionalPageClient({
                     alt={professional.name}
                     width={300}
                     height={300}
-                    className="rounded-2xl object-cover w-full h-80"
+                    className="rounded-2xl object-cover w-full h-56 sm:h-72 md:h-80"
                   />
                   {/* Play Button Overlay */}
                   <div className="absolute inset-0 flex items-center justify-center">
@@ -97,10 +97,10 @@ export default function ProfessionalPageClient({
 
                 {/* Professional Type and Location */}
                 <div className="space-y-3 flex flex-col items-center">
-                  <button className="bg-[#1a0082] text-white px-6 py-3 rounded-full font-medium">
+                  <button className="bg-[#1a0082] text-white px-5 py-2.5 rounded-full font-medium text-sm sm:text-base">
                     {professional.title}
                   </button>
-                  <button className="bg-[#F37E1F] text-white px-6 py-3 rounded-full font-medium flex items-center space-x-2">
+                  <button className="bg-[#F37E1F] text-white px-5 py-2.5 rounded-full font-medium text-sm sm:text-base flex items-center space-x-2">
                     <svg
                       className="w-4 h-4"
                       fill="currentColor"
@@ -171,10 +171,10 @@ export default function ProfessionalPageClient({
       />
 
       {/* Services Section */}
-      <div className="bg-white py-16">
-        <div className="container mx-auto px-6">
+      <div className="bg-white py-10 sm:py-12 md:py-16">
+        <div className="container mx-auto px-4 sm:px-6">
           {/* Service Cards */}
-          <div className="grid md:grid-cols-3 gap-6 items-stretch">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 sm:gap-6 items-stretch">
             <PricingCard
               title="Primera sesión"
               subtitle="Terapia para la Ansiedad"
@@ -208,16 +208,16 @@ export default function ProfessionalPageClient({
       </div>
 
       {/* Availability Section */}
-      <div className="bg-white py-16">
-        <div className="container mx-auto px-6">
+      <div className="bg-white py-10 sm:py-12 md:py-16">
+        <div className="container mx-auto px-4 sm:px-6">
           <div className="text-center mb-12">
             <p className="text-gray-500 text-sm mb-2">Horarios Disponibles</p>
             <h2 className="text-3xl font-bold text-gray-900">Disponibilidad</h2>
           </div>
 
-          <div className="grid lg:grid-cols-3 gap-10">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 lg:gap-10">
             {/* Left: Calendar and times (2 cols) */}
-            <div className="lg:col-span-2">
+            <div className="md:col-span-2">
               {/* Month header */}
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-gray-700">Julio</h3>
@@ -244,7 +244,7 @@ export default function ProfessionalPageClient({
               </div>
 
               {/* Date chips */}
-              <div className="flex space-x-2 mb-6 overflow-x-auto">
+              <div className="flex w-full max-w-full gap-2 mb-6 overflow-x-auto snap-x snap-mandatory px-1 sm:px-2">
                 {[
                   "Lun 16",
                   "Mar 17",
@@ -258,7 +258,7 @@ export default function ProfessionalPageClient({
                 ].map((date, i) => (
                   <button
                     key={i}
-                    className={`px-3 py-2 rounded-md text-sm whitespace-nowrap ${
+                    className={`px-3 py-2 rounded-md text-sm whitespace-nowrap snap-center ${
                       i === 0
                         ? "bg-orange-500 text-white"
                         : "bg-white text-gray-700 border border-gray-200"
@@ -282,7 +282,7 @@ export default function ProfessionalPageClient({
               ].map((slot, idx) => (
                 <button
                   key={idx}
-                  className={`w-full text-left px-4 py-4 mb-3 rounded-xl border flex items-center justify-between ${
+                  className={`w-full text-left px-3 md:px-4 py-3 md:py-4 mb-3 rounded-xl border flex items-center justify-between ${
                     slot.selected
                       ? "bg-purple-100 border-purple-300 text-purple-800"
                       : "bg-white border-gray-200 hover:bg-gray-50"
@@ -302,7 +302,7 @@ export default function ProfessionalPageClient({
 
             {/* Right: Summary */}
             <aside className="space-y-4">
-              <div className="bg-white border border-gray-200 rounded-2xl p-5">
+              <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5">
                 <div className="flex items-center space-x-3 mb-4">
                   <div className="w-10 h-10 rounded-full overflow-hidden relative">
                     <Image

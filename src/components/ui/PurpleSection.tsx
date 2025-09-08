@@ -183,23 +183,25 @@ export default function PurpleSection({
   };
 
   return (
-    <div className="w-full px-20 py-16 bg-white">
+    <div className="w-full px-4 sm:px-6 md:px-10 lg:px-20 py-10 md:py-14 lg:py-16 bg-white">
       <div className="relative max-w-8xl mx-auto bg-gradient-to-br from-primary to-primary/80 rounded-3xl overflow-hidden ">
-        <div className="px-10 py-16 lg:px-28 lg:py-20">
-          <div className="grid lg:grid-cols-2 gap-32 items-center">
+        <div className="px-5 sm:px-8 md:px-12 lg:px-28 py-10 sm:py-12 md:py-16 lg:py-20">
+          <div className="grid lg:grid-cols-2 gap-8 sm:gap-12 md:gap-16 lg:gap-24 xl:gap-32 items-center">
             {/* Left side - Text and Search */}
-            <div className="text-white space-y-8">
-              <div className="space-y-6">
-                <h1 className="text-4xl lg:text-5xl font-bold leading-tight">
+            <div className="text-white space-y-6 sm:space-y-8">
+              <div className="space-y-4 sm:space-y-6">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight">
                   {title}
                 </h1>
-                <p className="text-xl text-primary-foreground/80">{subtitle}</p>
+                <p className="text-base sm:text-lg md:text-xl text-primary-foreground/80">
+                  {subtitle}
+                </p>
               </div>
 
               <div className="space-y-6">
                 <div className="relative w-full max-w-full sm:max-w-md md:max-w-lg mx-auto md:mx-0">
                   <select
-                    className="peer appearance-none w-full bg-white/95 backdrop-blur text-gray-800 px-4 py-3 pr-10 rounded-xl border border-white/60 shadow-sm transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-primary/30 focus:border-primary/70 focus:bg-white focus:shadow-lg hover:border-white text-lg font-medium"
+                    className="peer appearance-none w-full bg-white/95 backdrop-blur text-gray-800 px-4 py-3 pr-10 rounded-xl border border-white/60 shadow-sm transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-primary/30 focus:border-primary/70 focus:bg-white focus:shadow-lg hover:border-white text-base sm:text-lg font-medium"
                     value={selectedOption}
                     onChange={(e) => setSelectedOption(e.target.value)}
                     aria-label="Buscar servicios"
@@ -300,7 +302,7 @@ export default function PurpleSection({
                   type="button"
                   onClick={handleSearch}
                   disabled={!selectedOption}
-                  className={`w-full font-bold py-3 px-6 rounded-xl transition-colors duration-200 text-lg ${
+                  className={`w-full font-bold py-3 px-6 rounded-xl transition-colors duration-200 text-base sm:text-lg ${
                     selectedOption
                       ? "bg-white text-primary hover:bg-gray-100 cursor-pointer"
                       : "bg-gray-300 text-gray-500 cursor-not-allowed"
@@ -312,14 +314,14 @@ export default function PurpleSection({
             </div>
 
             {/* Right side - Image */}
-            <div className="relative">
+            <div className="relative mt-8 lg:mt-0">
               <div className="relative rounded-2xl overflow-hidden">
                 <Image
                   src={backgroundImage || heroImage}
                   alt="Profesionales en consulta"
                   width={600}
                   height={350}
-                  className="w-full h-[350px] object-cover"
+                  className="w-full h-48 sm:h-64 md:h-80 lg:h-[350px] object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
               </div>
