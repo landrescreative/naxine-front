@@ -57,7 +57,7 @@ export default function Footer() {
                 Como funciona
               </Link>
               <Link
-                href="/register"
+                href="/registro"
                 className="block text-black hover:text-purple-600 transition-colors text-sm"
               >
                 Registrate
@@ -85,7 +85,7 @@ export default function Footer() {
                 href="/politica-privacidad"
                 className="block text-black hover:text-purple-600 transition-colors text-sm"
               >
-                Politica de privacidad
+                Política de privacidad
               </Link>
               <Link
                 href="/terminos-condiciones"
@@ -94,16 +94,16 @@ export default function Footer() {
                 Términos y condiciones
               </Link>
               <Link
-                href="/faq"
+                href="/preguntas-frecuentes"
                 className="block text-black hover:text-purple-600 transition-colors text-sm"
               >
-                FAQS
+                Preguntas frecuentes
               </Link>
               <Link
                 href="/politica-cookies"
                 className="block text-black hover:text-purple-600 transition-colors text-sm"
               >
-                Politica de Cookies
+                Política de cookies
               </Link>
               <Link
                 href="/politica-cancelacion"

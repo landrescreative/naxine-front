@@ -4,25 +4,63 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const [cancellationAccepted, setCancellationAccepted] = useState(false);
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
-      {/* Left Side - Login Form */}
+      {/* Left Side - Registration Form */}
       <div className="flex-1 flex items-center justify-center bg-white px-8 py-12">
         <div className="w-full max-w-md">
           {/* Header */}
           <div className="text-left mb-8">
             <h1 className="text-3xl font-bold text-gray-800 mb-2">
-              Iniciar Sesión
+              Regístrate
             </h1>
-            <p className="text-gray-600">Accede a tu cuenta</p>
+            <p className="text-gray-600">
+              Crea tu cuenta y comienza a encontrar soluciones.
+            </p>
           </div>
 
-          {/* Login Form */}
-          <form className="space-y-6">
+          {/* Registration Form */}
+          <form className="space-y-4">
+            {/* Name Field */}
+            <div>
+              <label
+                htmlFor="nombre"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Nombre
+              </label>
+              <input
+                type="text"
+                id="nombre"
+                defaultValue="john.doe@gmail.com"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                placeholder="Ingresa tu nombre"
+              />
+            </div>
+
+            {/* Last Name Field */}
+            <div>
+              <label
+                htmlFor="apellido"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Apellido
+              </label>
+              <input
+                type="text"
+                id="apellido"
+                defaultValue="john.doe@gmail.com"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                placeholder="Ingresa tu apellido"
+              />
+            </div>
+
             {/* Email Field */}
             <div>
               <label
@@ -40,6 +78,23 @@ export default function LoginPage() {
               />
             </div>
 
+            {/* Phone Field */}
+            <div>
+              <label
+                htmlFor="telefono"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Teléfono
+              </label>
+              <input
+                type="tel"
+                id="telefono"
+                defaultValue="john.doe@gmail.com"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                placeholder="Ingresa tu teléfono"
+              />
+            </div>
+
             {/* Password Field */}
             <div>
               <label
@@ -52,6 +107,7 @@ export default function LoginPage() {
                 <input
                   type={showPassword ? "text" : "password"}
                   id="password"
+                  defaultValue="••••••••••••••••"
                   className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
                   placeholder="Ingresa tu contraseña"
                 />
@@ -99,41 +155,136 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Remember Me & Forgot Password */}
-            <div className="flex items-center justify-between">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
-                />
-                <span className="ml-2 text-sm text-gray-700">Recuérdame</span>
-              </label>
-              <Link
-                href="/olvidaste-contrasena"
-                className="text-sm text-primary hover:text-primary/80"
+            {/* Confirm Password Field */}
+            <div>
+              <label
+                htmlFor="confirmPassword"
+                className="block text-sm font-medium text-gray-700 mb-2"
               >
-                Olvidé mi contraseña
-              </Link>
+                Confirmar Contraseña
+              </label>
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  id="confirmPassword"
+                  defaultValue="••••••••••••••••"
+                  className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                  placeholder="Confirma tu contraseña"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  {showConfirmPassword ? (
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"
+                      />
+                    </svg>
+                  ) : (
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                      />
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
 
-            {/* Login Button */}
+            {/* Checkboxes */}
+            <div className="space-y-3 pt-2">
+              <label className="flex items-start">
+                <input
+                  type="checkbox"
+                  checked={privacyAccepted}
+                  onChange={(e) => setPrivacyAccepted(e.target.checked)}
+                  className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary mt-1"
+                />
+                <span className="ml-3 text-sm text-gray-700">
+                  He leído y acepto la{" "}
+                  <Link
+                    href="/politica-privacidad"
+                    className="text-primary hover:text-primary/80"
+                  >
+                    Política de Privacidad
+                  </Link>{" "}
+                  y los{" "}
+                  <Link
+                    href="/terminos-condiciones"
+                    className="text-primary hover:text-primary/80"
+                  >
+                    Términos y Condiciones
+                  </Link>{" "}
+                  de uso
+                </span>
+              </label>
+
+              <label className="flex items-start">
+                <input
+                  type="checkbox"
+                  checked={cancellationAccepted}
+                  onChange={(e) => setCancellationAccepted(e.target.checked)}
+                  className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary mt-1"
+                />
+                <span className="ml-3 text-sm text-gray-700">
+                  He leído y acepto la{" "}
+                  <Link
+                    href="/politica-cancelacion"
+                    className="text-primary hover:text-primary/80"
+                  >
+                    Política de Cancelación
+                  </Link>{" "}
+                  y la{" "}
+                  <Link
+                    href="/politica-cookies"
+                    className="text-primary hover:text-primary/80"
+                  >
+                    Política de Cookies
+                  </Link>
+                </span>
+              </label>
+            </div>
+
+            {/* Register Button */}
             <button
               type="submit"
-              className="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200"
+              className="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 mt-6"
             >
-              Iniciar sesión
+              Crea tu cuenta
             </button>
 
-            {/* Registration Link */}
-            <div className="text-center">
-              <span className="text-gray-700">¿No tienes una cuenta? </span>
+            {/* Login Link */}
+            <div className="text-center mt-4">
+              <span className="text-gray-700">¿Ya tienes una cuenta? </span>
               <Link
-                href="/register"
+                href="/iniciar-sesion"
                 className="text-primary hover:text-primary/80 font-medium"
               >
-                Regístrate
+                Iniciar sesión
               </Link>
             </div>
 
@@ -144,7 +295,7 @@ export default function LoginPage() {
               </div>
               <div className="relative flex justify-center text-sm">
                 <span className="px-2 bg-white text-gray-500">
-                  O inicia sesión con
+                  O inicia sesión con:
                 </span>
               </div>
             </div>
@@ -206,7 +357,7 @@ export default function LoginPage() {
           <div className="sticky top-4 w-full">
             <div className="w-11/12 h-[400px] lg:h-[600px] relative rounded-3xl overflow-hidden shadow-2xl">
               <Image
-                src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=600&fit=crop"
+                src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
                 alt="Profesional"
                 fill
                 className="object-cover"

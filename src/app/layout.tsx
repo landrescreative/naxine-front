@@ -1,18 +1,20 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Atkinson_Hyperlegible, Nunito } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import GlobalCTA from "@/components/layout/GlobalCTA";
 import Footer from "@/components/layout/Footer";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const atkinsonHyperlegible = Atkinson_Hyperlegible({
+  variable: "--font-atkinson-hyperlegible",
   subsets: ["latin"],
+  weight: ["400", "700"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const nunito = Nunito({
+  variable: "--font-nunito",
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800"],
 });
 
 export const metadata: Metadata = {
@@ -28,7 +30,7 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${atkinsonHyperlegible.variable} ${nunito.variable} antialiased`}
       >
         <Navbar />
         {children}

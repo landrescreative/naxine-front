@@ -1,6 +1,7 @@
 "use client";
 import Image from "next/image";
 import { useState } from "react";
+import { useRouter, useParams } from "next/navigation";
 import thumbnail from "@/assets/screenshot.png";
 import SeparatorSection from "@/components/ui/SeparatorSection";
 import PricingCard from "@/components/ui/PricingCard";
@@ -23,6 +24,12 @@ export default function ProfessionalPageClient({
 }: ProfessionalPageClientProps) {
   // Video popup state
   const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const router = useRouter();
+  const params = useParams<{
+    category: string;
+    service: string;
+    professional: string;
+  }>();
 
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
@@ -182,6 +189,11 @@ export default function ProfessionalPageClient({
               duration="60 min"
               price={`$${professional.price}`}
               onPurchase={() => console.log("Comprar primera sesión")}
+              onDetails={() =>
+                router.push(
+                  `/${params.category}/${params.service}/${params.professional}/detalles`
+                )
+              }
             />
 
             <PricingCard
@@ -191,6 +203,11 @@ export default function ProfessionalPageClient({
               duration="45 min"
               price="$100"
               onPurchase={() => console.log("Comprar seguimiento")}
+              onDetails={() =>
+                router.push(
+                  `/${params.category}/${params.service}/${params.professional}/detalles`
+                )
+              }
             />
 
             <PricingCard
@@ -202,6 +219,11 @@ export default function ProfessionalPageClient({
               savings="Ahorra 15 €"
               isPopular={true}
               onPurchase={() => console.log("Comprar pack x3")}
+              onDetails={() =>
+                router.push(
+                  `/${params.category}/${params.service}/${params.professional}/detalles`
+                )
+              }
             />
           </div>
         </div>

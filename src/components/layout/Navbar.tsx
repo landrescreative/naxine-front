@@ -289,7 +289,7 @@ export default function Navbar() {
                   <div className="absolute left-0 mt-3 w-72 bg-white/80 backdrop-blur rounded-xl shadow-lg border border-gray-200/60 ring-1 ring-black/5 z-50 overflow-hidden">
                     <div className="py-2">
                       <Link
-                        href="/login"
+                        href="/iniciar-sesion"
                         onClick={closeUserMenu}
                         className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors"
                       >
@@ -300,7 +300,7 @@ export default function Navbar() {
                       </Link>
 
                       <Link
-                        href="/register"
+                        href="/registro"
                         onClick={closeUserMenu}
                         className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors"
                       >
@@ -311,7 +311,7 @@ export default function Navbar() {
                       </Link>
 
                       <Link
-                        href="/register-professional"
+                        href="/registro-profesional"
                         onClick={closeUserMenu}
                         className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors"
                       >
@@ -386,7 +386,7 @@ export default function Navbar() {
               <div className="flex items-center space-x-4">
                 {/* Iniciar Sesión */}
                 <Link
-                  href="/login"
+                  href="/iniciar-sesion"
                   className="flex items-center space-x-2 text-gray-800 hover:text-gray-600 transition-colors px-3 py-2"
                 >
                   <User className="h-5 w-5" />
@@ -398,7 +398,7 @@ export default function Navbar() {
 
                 {/* Botón Registrarse como Profesional */}
                 <Link
-                  href="/register-professional"
+                  href="/registro-profesional"
                   className="flex items-center space-x-2 bg-primary-foreground hover:bg-primary-foreground/80 text-white px-4 py-2 rounded-lg transition-colors"
                 >
                   <span className="text-sm font-medium">
@@ -409,7 +409,7 @@ export default function Navbar() {
 
                 {/* Botón Registrarse */}
                 <Link
-                  href="/register"
+                  href="/registro"
                   className="flex items-center space-x-2 bg-primary hover:bg-primary/80 text-white px-4 py-2 rounded-lg transition-colors"
                 >
                   <span className="text-sm font-medium">Regístrate</span>
@@ -439,12 +439,22 @@ export default function Navbar() {
                     <span className="text-sm font-medium">Servicios</span>
                   </Link>
                   <Link
-                    href="/faq"
+                    href="/preguntas-frecuentes"
                     onClick={closeDesktopMenu}
                     className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:text-purple-600 hover:bg-gray-50 transition-colors"
                   >
                     <HelpCircle className="h-5 w-5" />
-                    <span className="text-sm font-medium">FAQ</span>
+                    <span className="text-sm font-medium">
+                      Preguntas Frecuentes
+                    </span>
+                  </Link>
+                  <Link
+                    href="/acerca-de"
+                    onClick={closeDesktopMenu}
+                    className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:text-purple-600 hover:bg-gray-50 transition-colors"
+                  >
+                    <HelpCircle className="h-5 w-5" />
+                    <span className="text-sm font-medium">Acerca de</span>
                   </Link>
                   <Link
                     href="/contacto"
@@ -1051,12 +1061,22 @@ export default function Navbar() {
                     <span className="text-sm font-medium">Servicios</span>
                   </Link>
                   <Link
-                    href="/faq"
+                    href="/preguntas-frecuentes"
                     onClick={closeMobileMenu}
                     className="flex items-center space-x-3 px-3 py-2 text-gray-800 hover:text-purple-600 hover:bg-gray-50 rounded-lg transition-colors"
                   >
                     <HelpCircle className="h-5 w-5" />
-                    <span className="text-sm font-medium">FAQ</span>
+                    <span className="text-sm font-medium">
+                      Preguntas Frecuentes
+                    </span>
+                  </Link>
+                  <Link
+                    href="/acerca-de"
+                    onClick={closeMobileMenu}
+                    className="flex items-center space-x-3 px-3 py-2 text-gray-800 hover:text-purple-600 hover:bg-gray-50 rounded-lg transition-colors"
+                  >
+                    <HelpCircle className="h-5 w-5" />
+                    <span className="text-sm font-medium">Acerca de</span>
                   </Link>
                   <Link
                     href="/contacto"

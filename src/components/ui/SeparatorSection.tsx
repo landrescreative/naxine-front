@@ -6,15 +6,21 @@ type SeparatorSectionProps = {
   title: string;
   subtitle?: string;
   className?: string;
+  transparent?: boolean;
 };
 
 export default function SeparatorSection({
   title,
   subtitle = "",
   className = "",
+  transparent = false,
 }: SeparatorSectionProps) {
   return (
-    <section className={`w-full bg-white py-8 md:py-12 ${className}`}>
+    <section
+      className={`w-full ${
+        transparent ? "bg-transparent" : "bg-white"
+      } py-8 md:py-12 ${className}`}
+    >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         {subtitle ? (
           <p className="text-xs sm:text-sm tracking-wide font-medium text-indigo-500 mb-2">
