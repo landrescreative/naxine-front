@@ -87,6 +87,56 @@ const FAQSection: React.FC = () => {
     );
   };
 
+  // Componente individual para cada pregunta
+  const FAQItem = ({
+    item,
+    isOpen,
+    onToggle,
+  }: {
+    item: FAQItem;
+    isOpen: boolean;
+    onToggle: (id: number) => void;
+  }) => {
+    return (
+      <div className="border border-primary rounded-lg bg-white shadow-sm hover:shadow-md hover:border-primary transition-all duration-300 ease-in-out">
+        <button
+          onClick={() => onToggle(item.id)}
+          className="w-full px-6 py-4 text-left flex justify-between items-center focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50 rounded-lg hover:bg-primary/5 transition-colors duration-200 ease-in-out"
+        >
+          <span
+            className="text-gray-900 !font-bold text-lg pr-4"
+            style={{ fontFamily: "Nunito Bold, sans-serif" }}
+          >
+            {item.question}
+          </span>
+          <div className="flex-shrink-0">
+            <div
+              className={`transform transition-transform duration-300 ease-in-out ${
+                isOpen ? "rotate-180" : "rotate-0"
+              }`}
+            >
+              <ChevronDown className="w-6 h-6 text-primary" />
+            </div>
+          </div>
+        </button>
+
+        <div
+          className={`overflow-hidden transition-all duration-300 ease-in-out ${
+            isOpen ? "max-h-screen opacity-100" : "max-h-0 opacity-0"
+          }`}
+        >
+          <div className="px-6 pb-4">
+            <div className="border-t border-primary/20 pt-4">
+              <div className="text-gray-700 leading-relaxed whitespace-pre-line">
+                {item.answer}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-12">
       <div className="space-y-4">
@@ -94,42 +144,12 @@ const FAQSection: React.FC = () => {
           const isOpen = openItems.includes(item.id);
 
           return (
-            <div
+            <FAQItem
               key={item.id}
-              className="border-2 border-purple-300 rounded-lg bg-white shadow-sm hover:shadow-md hover:border-purple-400 transition-all duration-300 ease-in-out"
-            >
-              <button
-                onClick={() => toggleItem(item.id)}
-                className="w-full px-6 py-4 text-left flex justify-between items-center focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-opacity-50 rounded-lg hover:bg-purple-50 transition-colors duration-200 ease-in-out"
-              >
-                <span className="text-gray-900 font-medium text-lg pr-4">
-                  {item.question}
-                </span>
-                <div className="flex-shrink-0">
-                  <div
-                    className={`transform transition-transform duration-300 ease-in-out ${
-                      isOpen ? "rotate-180" : "rotate-0"
-                    }`}
-                  >
-                    <ChevronDown className="w-6 h-6 text-purple-500" />
-                  </div>
-                </div>
-              </button>
-
-              <div
-                className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                  isOpen ? "max-h-screen opacity-100" : "max-h-0 opacity-0"
-                }`}
-              >
-                <div className="px-6 pb-4">
-                  <div className="border-t border-purple-200 pt-4">
-                    <div className="text-gray-700 leading-relaxed whitespace-pre-line">
-                      {item.answer}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+              item={item}
+              isOpen={isOpen}
+              onToggle={toggleItem}
+            />
           );
         })}
       </div>

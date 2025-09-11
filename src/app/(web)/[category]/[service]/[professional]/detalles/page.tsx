@@ -63,13 +63,13 @@ export default async function DetailsPage({ params }: DetailsPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white mb-20">
       {/* Header Section */}
       <div className="bg-white">
-        <div className="container mx-auto px-4 sm:px-6 pt-8 sm:pt-10 pb-6">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-8 sm:pt-10 pb-6">
           {/* Page Title */}
           <div className="text-center mb-8">
-            <p className="text-[#A78BFA] text-sm mb-2 font-normal">
+            <p className="text-primary text-sm mb-2 font-normal">
               Conoce a tu especialista
             </p>
             <h1 className="text-4xl lg:text-5xl font-bold text-black">
@@ -83,19 +83,19 @@ export default async function DetailsPage({ params }: DetailsPageProps) {
               {/* Left Side - Image and Basic Info */}
               <div className="space-y-6">
                 {/* Professional Image */}
-                <div className="relative">
+                <div className="relative flex justify-center">
                   <Image
                     src={professional.image}
                     alt={professional.name}
                     width={300}
-                    height={300}
-                    className="rounded-2xl object-cover w-full h-56 sm:h-72 md:h-80"
+                    height={225}
+                    className="rounded-2xl object-cover w-full max-w-sm aspect-[4/3]"
                   />
                 </div>
 
                 {/* Professional Type and Location */}
                 <div className="space-y-3 flex flex-col items-center">
-                  <button className="bg-[#1a0082] text-white px-5 py-2.5 rounded-full font-medium text-sm sm:text-base">
+                  <button className="bg-[#1a0082] text-white px-5 py-2.5 rounded-full font-bold text-sm sm:text-base">
                     {professional.title}
                   </button>
                   <button className="bg-[#F37E1F] text-white px-5 py-2.5 rounded-full font-medium text-sm sm:text-base flex items-center space-x-2">
@@ -120,7 +120,7 @@ export default async function DetailsPage({ params }: DetailsPageProps) {
 
                   {/* Modality Buttons */}
                   <div className="flex space-x-3 mb-6">
-                    <button className="bg-primary-foreground text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                    <button className="bg-primary-foreground text-white px-4 py-2 rounded-full flex items-center space-x-2">
                       <svg
                         className="w-4 h-4"
                         fill="currentColor"
@@ -130,7 +130,7 @@ export default async function DetailsPage({ params }: DetailsPageProps) {
                       </svg>
                       <span>Presencial</span>
                     </button>
-                    <button className="bg-primary-foreground text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                    <button className="bg-primary-foreground text-white px-4 py-2 rounded-full flex items-center space-x-2">
                       <svg
                         className="w-4 h-4"
                         fill="currentColor"
@@ -144,7 +144,7 @@ export default async function DetailsPage({ params }: DetailsPageProps) {
 
                   {/* About Section */}
                   <div>
-                    <h3 className="text-xl font-bold text-secondary mb-4">
+                    <h3 className="text-xl font-bold text-secondary mb-2">
                       Sobre mi
                     </h3>
                     <p className="text-secondary leading-relaxed text-sm">
@@ -162,7 +162,7 @@ export default async function DetailsPage({ params }: DetailsPageProps) {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 sm:px-6 py-10">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Left column */}
           <div className="lg:col-span-7">
@@ -243,7 +243,7 @@ export default async function DetailsPage({ params }: DetailsPageProps) {
 
           {/* Right column */}
           <aside className="lg:col-span-5">
-            <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-lg">
+            <div className="bg-white overflow-hidden">
               {/* Image Section */}
               <div className="relative h-64 sm:h-72">
                 <Image
@@ -253,51 +253,42 @@ export default async function DetailsPage({ params }: DetailsPageProps) {
                   className="object-cover"
                 />
                 {/* Discount Badge */}
-                <div className="absolute top-4 left-4">
-                  <span className="bg-[#6D28D9] text-white text-sm font-bold px-3 py-1.5 rounded-lg">
+                <div className="absolute top-0 left-0">
+                  <span className="bg-[#6D28D9] text-white text-sm font-bold px-3 py-1.5 rounded-lg font-heading">
                     -20%
                   </span>
                 </div>
               </div>
 
               {/* Content Section */}
-              <div className="p-6">
+              <div className="mt-6">
                 {/* Title */}
-                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                <h3 className="text-xl font-bold text-[#6D28D9] mb-2">
                   Plan alimenticio
                 </h3>
 
                 {/* Rating */}
                 <div className="flex items-center mb-3">
-                  <div className="flex text-yellow-400 text-lg">
+                  <div className="flex text-yellow-400 text-2xl">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <span key={i}>★</span>
                     ))}
                   </div>
-                  <span className="text-gray-500 ml-2 text-sm">
-                    ({(professional as any).reviewCount ?? 56})
-                  </span>
+                  <span className="text-gray-500 ml-2 text-sm">(56)</span>
                 </div>
 
                 {/* Description */}
-                <p className="text-gray-600 text-sm mb-4 leading-relaxed">
+                <p className="text-gray-600 text-base mb-6 leading-relaxed">
                   Mejora tu calidad de vida con este plan alimenticio listo para
                   ti.
                 </p>
 
-                {/* Price */}
-                <div className="mb-6">
-                  <span className="text-2xl font-bold text-gray-900">
-                    ${professional.price}
-                  </span>
-                </div>
-
                 {/* CTA Button */}
                 <Link
                   href={`/${category}/${service}/${professional.slug}`}
-                  className="w-full bg-[#6D28D9] hover:bg-[#5B21B6] text-white font-bold text-lg py-4 rounded-xl transition-colors duration-200 block text-center uppercase tracking-wide"
+                  className="w-full bg-[#6D28D9] hover:bg-[#5B21B6] text-white font-bold text-lg py-4 rounded transition-colors duration-200 block text-center uppercase tracking-wide"
                 >
-                  Ver paquetes
+                  COMPRAR
                 </Link>
               </div>
             </div>

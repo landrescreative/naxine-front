@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { motion, useInView } from "framer-motion";
 import ServiceCard from "./ServiceCard";
 import { StaticImageData } from "next/image";
 
@@ -21,6 +22,7 @@ export default function ServicesSection({
 }: ServicesSectionProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollStart, setScrollStart] = useState(0);
@@ -32,6 +34,12 @@ export default function ServicesSection({
   const [gapX, setGapX] = useState(24); // default ~ gap-6
   const [numPages, setNumPages] = useState(1);
   const [containerWidth, setContainerWidth] = useState(0);
+
+  // Hook para detectar cuando la sección está en el viewport
+  const isInView = useInView(sectionRef, {
+    once: true,
+    margin: "-100px 0px -100px 0px",
+  });
 
   // medir ancho de columna y separación para los dots/scroll
   useEffect(() => {
@@ -126,7 +134,10 @@ export default function ServicesSection({
   };
 
   return (
-    <section className={`w-full pl-2 md:pl-10 py-4 sm:py-6 ${className}`}>
+    <section
+      ref={sectionRef}
+      className={`w-full pl-2 md:pl-10 py-4 sm:py-6 ${className}`}
+    >
       <div className="relative">
         <div
           ref={scrollRef}
@@ -145,15 +156,49 @@ export default function ServicesSection({
             role="list"
             aria-label="Servicios"
           >
-            {items.map((item, index) => (
-              <ServiceCard
-                key={`${item.title}-${index}`}
-                title={item.title}
-                image={item.image}
-                href={item.href}
-                className="w-full snap-start"
-              />
-            ))}
+            {items.map((item, index) => {
+              // Calcular la fila y columna para el delay escalonado
+              const row = Math.floor(index / 2); // 2 columnas por fila
+              const col = index % 2;
+              const delay = (row * 2 + col) * 0.1; // Delay escalonado
+
+              return (
+                <motion.div
+                  key={`${item.title}-${index}`}
+                  initial={{
+                    scale: 0.8,
+                    opacity: 0,
+                    y: 20,
+                  }}
+                  animate={
+                    isInView
+                      ? {
+                          scale: 1,
+                          opacity: 1,
+                          y: 0,
+                        }
+                      : {
+                          scale: 0.8,
+                          opacity: 0,
+                          y: 20,
+                        }
+                  }
+                  transition={{
+                    duration: 0.6,
+                    ease: [0.25, 0.46, 0.45, 0.94],
+                    delay: delay,
+                  }}
+                  className="w-full snap-start"
+                >
+                  <ServiceCard
+                    title={item.title}
+                    image={item.image}
+                    href={item.href}
+                    className="w-full"
+                  />
+                </motion.div>
+              );
+            })}
           </div>
         </div>
         {/* indicadores de posición */}

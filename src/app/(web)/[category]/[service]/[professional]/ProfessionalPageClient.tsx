@@ -63,7 +63,7 @@ export default function ProfessionalPageClient({
         <div className="container mx-auto px-4 sm:px-6 pt-8 sm:pt-10 pb-6">
           {/* Page Title */}
           <div className="text-center mb-8">
-            <p className="text-[#A78BFA] text-sm mb-2 font-normal">
+            <p className="text-primary text-sm mb-2 font-normal">
               Conoce a tu especialista
             </p>
             <h1 className="text-4xl lg:text-5xl font-bold text-black">
@@ -77,22 +77,22 @@ export default function ProfessionalPageClient({
               {/* Left Side - Image and Basic Info */}
               <div className="space-y-6">
                 {/* Professional Image with Play Button */}
-                <div className="relative">
+                <div className="relative flex justify-center">
                   <Image
                     src={professional.image}
                     alt={professional.name}
                     width={300}
-                    height={300}
-                    className="rounded-2xl object-cover w-full h-56 sm:h-72 md:h-80"
+                    height={225}
+                    className="rounded-2xl object-cover w-full max-w-sm aspect-[4/3]"
                   />
                   {/* Play Button Overlay */}
                   <div className="absolute inset-0 flex items-center justify-center">
                     <button
                       onClick={handlePopupOpen}
-                      className="bg-[#3B82F6] hover:bg-[#2563EB] rounded-full p-6 transition-colors shadow-lg"
+                      className="bg-white hover:bg-gray-50 rounded-full p-6 transition-colors shadow-lg"
                     >
                       <svg
-                        className="w-8 h-8 text-white"
+                        className="w-8 h-8 text-primary"
                         fill="currentColor"
                         viewBox="0 0 24 24"
                       >
@@ -104,7 +104,7 @@ export default function ProfessionalPageClient({
 
                 {/* Professional Type and Location */}
                 <div className="space-y-3 flex flex-col items-center">
-                  <button className="bg-[#1a0082] text-white px-5 py-2.5 rounded-full font-medium text-sm sm:text-base">
+                  <button className="bg-[#1a0082] text-white px-5 py-2.5 rounded-full font-bold text-sm sm:text-base">
                     {professional.title}
                   </button>
                   <button className="bg-[#F37E1F] text-white px-5 py-2.5 rounded-full font-medium text-sm sm:text-base flex items-center space-x-2">
@@ -129,7 +129,7 @@ export default function ProfessionalPageClient({
 
                   {/* Modality Buttons */}
                   <div className="flex space-x-3 mb-6">
-                    <button className="bg-primary-foreground text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                    <button className="bg-primary-foreground text-white px-4 py-2 rounded-full flex items-center space-x-2">
                       <svg
                         className="w-4 h-4"
                         fill="currentColor"
@@ -139,7 +139,7 @@ export default function ProfessionalPageClient({
                       </svg>
                       <span>Presencial</span>
                     </button>
-                    <button className="bg-primary-foreground text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                    <button className="bg-primary-foreground text-white px-4 py-2 rounded-full flex items-center space-x-2">
                       <svg
                         className="w-4 h-4"
                         fill="currentColor"
@@ -153,7 +153,7 @@ export default function ProfessionalPageClient({
 
                   {/* About Section */}
                   <div>
-                    <h3 className="text-xl font-bold text-secondary mb-4">
+                    <h3 className="text-xl font-bold text-secondary mb-2">
                       Sobre mi
                     </h3>
                     <p className="text-secondary leading-relaxed text-sm">

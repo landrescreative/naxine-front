@@ -10,10 +10,10 @@ export default function AboutPage() {
             {/* Left side - Text */}
             <div className="space-y-6">
               <div className="space-y-4">
-                <h2 className="text-sm font-semibold text-secondary uppercase tracking-wider">
+                <h2 className="text-sm font-semibold text-primary uppercase tracking-wider">
                   ACERCA DE
                 </h2>
-                <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-secondary leading-tight">
+                <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl font-bold text-secondary leading-tight">
                   NAXINE es una plataforma digital que facilita el acceso a
                   servicios profesionales
                 </h1>
@@ -48,7 +48,7 @@ export default function AboutPage() {
             <div className="relative">
               <div className="relative rounded-2xl overflow-hidden">
                 <Image
-                  src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
+                  src="/empresarios-felices-trabajando-juntos-en-un-proyecto-en-la-oficina.webp"
                   alt="Profesional de NAXINE"
                   width={500}
                   height={600}
@@ -66,7 +66,7 @@ export default function AboutPage() {
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-2 gap-6 lg:gap-8">
             {/* Mission Card */}
-            <div className="bg-primary/10 rounded-2xl p-6 lg:p-8">
+            <div className="bg-primary/10 rounded-2xl p-8 lg:p-12 text-center">
               <h3 className="text-xl lg:text-2xl font-bold text-secondary mb-4">
                 Misión
               </h3>
@@ -78,7 +78,7 @@ export default function AboutPage() {
             </div>
 
             {/* Vision Card */}
-            <div className="bg-primary/10 rounded-2xl p-6 lg:p-8">
+            <div className="bg-primary/10 rounded-2xl p-8 lg:p-12 text-center">
               <h3 className="text-xl lg:text-2xl font-bold text-secondary mb-4">
                 Visión
               </h3>
@@ -96,10 +96,10 @@ export default function AboutPage() {
       {/* Core Values Section */}
       <section className="px-4 sm:px-6 md:px-10 lg:px-20 py-10 md:py-16">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-12 items-center">
             {/* Trust */}
-            <div className="flex flex-col items-center text-center space-y-4">
-              <div className="w-12 h-12 bg-secondary rounded-full flex items-center justify-center">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
                 <svg
                   className="w-6 h-6 text-white"
                   fill="currentColor"
@@ -107,38 +107,22 @@ export default function AboutPage() {
                 >
                   <path
                     fillRule="evenodd"
-                    d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
                     clipRule="evenodd"
                   />
                 </svg>
               </div>
-              <h3 className="text-lg font-bold text-secondary">Confianza</h3>
-              <p className="text-secondary/80 text-sm leading-relaxed max-w-xs">
-                Solo trabajamos con profesionales colegiados y verificados.
-              </p>
+              <div className="space-y-2">
+                <h3 className="text-lg font-bold text-secondary">Confianza</h3>
+                <p className="text-secondary/80 text-sm leading-relaxed">
+                  Solo trabajamos con profesionales colegiados y verificados.
+                </p>
+              </div>
             </div>
 
             {/* Closeness */}
-            <div className="flex flex-col items-center text-center space-y-4">
-              <div className="w-12 h-12 bg-secondary rounded-full flex items-center justify-center">
-                <svg
-                  className="w-6 h-6 text-white"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-bold text-secondary">Cercanía</h3>
-              <p className="text-secondary/80 text-sm leading-relaxed max-w-xs">
-                Fomentamos una comunicación clara, empática y sin tecnicismos
-                innecesarios.
-              </p>
-            </div>
-
-            {/* Transparency */}
-            <div className="flex flex-col items-center text-center space-y-4">
-              <div className="w-12 h-12 bg-secondary rounded-full flex items-center justify-center">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
                 <svg
                   className="w-6 h-6 text-white"
                   fill="currentColor"
@@ -146,23 +130,49 @@ export default function AboutPage() {
                 >
                   <path
                     fillRule="evenodd"
-                    d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
+                    d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"
                     clipRule="evenodd"
                   />
                 </svg>
               </div>
-              <h3 className="text-lg font-bold text-secondary">
-                Transparencia
-              </h3>
-              <p className="text-secondary/80 text-sm leading-relaxed max-w-xs">
-                Mostramos siempre precios, condiciones y procesos de forma
-                abierta.
-              </p>
+              <div className="space-y-2">
+                <h3 className="text-lg font-bold text-secondary">Cercanía</h3>
+                <p className="text-secondary/80 text-sm leading-relaxed">
+                  Fomentamos una comunicación clara, empática y sin tecnicismos
+                  innecesarios.
+                </p>
+              </div>
+            </div>
+
+            {/* Transparency */}
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+                <svg
+                  className="w-6 h-6 text-white"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-lg font-bold text-secondary">
+                  Transparencia
+                </h3>
+                <p className="text-secondary/80 text-sm leading-relaxed">
+                  Mostramos siempre precios, condiciones y procesos de forma
+                  abierta.
+                </p>
+              </div>
             </div>
 
             {/* Ethical Innovation */}
-            <div className="flex flex-col items-center text-center space-y-4">
-              <div className="w-12 h-12 bg-secondary rounded-full flex items-center justify-center">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
                 <svg
                   className="w-6 h-6 text-white"
                   fill="currentColor"
@@ -175,18 +185,20 @@ export default function AboutPage() {
                   />
                 </svg>
               </div>
-              <h3 className="text-lg font-bold text-secondary">
-                Innovación ética
-              </h3>
-              <p className="text-secondary/80 text-sm leading-relaxed max-w-xs">
-                Apostamos por una tecnología responsable que protege la
-                privacidad y mejora la accesibilidad.
-              </p>
+              <div className="space-y-2">
+                <h3 className="text-lg font-bold text-secondary">
+                  Innovación ética
+                </h3>
+                <p className="text-secondary/80 text-sm leading-relaxed">
+                  Apostamos por una tecnología responsable que protege la
+                  privacidad y mejora la accesibilidad.
+                </p>
+              </div>
             </div>
 
             {/* Inclusive Design */}
-            <div className="flex flex-col items-center text-center space-y-4 sm:col-span-2 lg:col-span-1">
-              <div className="w-12 h-12 bg-secondary rounded-full flex items-center justify-center">
+            <div className="flex items-center space-x-4 sm:col-span-2 lg:col-span-1">
+              <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
                 <svg
                   className="w-6 h-6 text-white"
                   fill="currentColor"
@@ -194,18 +206,20 @@ export default function AboutPage() {
                 >
                   <path
                     fillRule="evenodd"
-                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z"
+                    d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
                     clipRule="evenodd"
                   />
                 </svg>
               </div>
-              <h3 className="text-lg font-bold text-secondary">
-                Diseño inclusivo
-              </h3>
-              <p className="text-secondary/80 text-sm leading-relaxed max-w-xs">
-                Creamos experiencias digitales accesibles para todas las
-                personas, cumpliendo con estándares internacionales.
-              </p>
+              <div className="space-y-2">
+                <h3 className="text-lg font-bold text-secondary">
+                  Diseño inclusivo
+                </h3>
+                <p className="text-secondary/80 text-sm leading-relaxed">
+                  Creamos experiencias digitales accesibles para todas las
+                  personas, cumpliendo con estándares internacionales.
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -246,7 +260,7 @@ export default function AboutPage() {
             <div className="relative">
               <div className="relative rounded-2xl overflow-hidden">
                 <Image
-                  src="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
+                  src="/pexels-kampus-8171189.webp"
                   alt="Profesional de salud de NAXINE"
                   width={500}
                   height={600}
@@ -267,7 +281,7 @@ export default function AboutPage() {
             <div className="relative order-2 lg:order-1">
               <div className="relative rounded-2xl overflow-hidden">
                 <Image
-                  src="https://images.unsplash.com/photo-1521737711867-e3b97375f902?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80"
+                  src="/grupo-de-jovenes-colegas-de-negocios-caminando-juntos.webp"
                   alt="Impacto social de NAXINE"
                   width={500}
                   height={600}

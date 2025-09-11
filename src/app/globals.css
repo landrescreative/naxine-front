@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap");
 @import "tailwindcss";
 
 :root {
@@ -53,23 +54,34 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --font-heading: var(--font-atkinson-hyperlegible);
-  --font-body: var(--font-nunito);
+  --font-heading: "Nunito", sans-serif;
+  --font-body: "Atkinson Hyperlegible", sans-serif;
+}
+
+html,
+body {
+  height: 100%;
+  overflow-x: hidden;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-body), Arial, Helvetica, sans-serif;
+  font-family: "Atkinson Hyperlegible", sans-serif;
+  font-weight: 400;
+  margin: 0;
+  padding: 0;
 }
 
 /* Font utility classes */
 .font-heading {
-  font-family: var(--font-heading), Arial, Helvetica, sans-serif;
+  font-family: "Nunito", sans-serif;
+  font-weight: 700; /* Bold by default */
 }
 
 .font-body {
-  font-family: var(--font-body), Arial, Helvetica, sans-serif;
+  font-family: "Atkinson Hyperlegible", sans-serif;
+  font-weight: 400;
 }
 
 /* Apply fonts to all headings by default */
@@ -79,7 +91,8 @@ h3,
 h4,
 h5,
 h6 {
-  font-family: var(--font-heading), Arial, Helvetica, sans-serif;
+  font-family: "Nunito", sans-serif;
+  font-weight: 700; /* Bold by default */
 }
 
 /* Apply body font to paragraphs and other text elements */
@@ -92,5 +105,6 @@ input,
 textarea,
 select,
 label {
-  font-family: var(--font-body), Arial, Helvetica, sans-serif;
+  font-family: "Atkinson Hyperlegible", sans-serif;
+  font-weight: 400; /* Atkinson Hyperlegible Regular */
 }

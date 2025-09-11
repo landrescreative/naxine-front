@@ -35,7 +35,7 @@ export default function PricingCard({
       {/* Content Container - Centered vertically */}
       <div className="flex flex-col justify-center items-center text-center h-full space-y-3">
         {/* Icon */}
-        <div className="bg-primary w-12 h-12 rounded-lg flex items-center justify-center">
+        <div className="bg-primary mt-8 mb-10 w-12 h-12 rounded-lg flex items-center justify-center ">
           <svg
             className="w-6 h-6 text-white"
             fill="currentColor"
@@ -57,7 +57,7 @@ export default function PricingCard({
         {/* Duration */}
         <div className="flex items-center text-gray-500 text-sm">
           <svg
-            className="w-4 h-4 mr-2 text-primary"
+            className="w-4 h-4 mr-2 text-primary-foreground"
             fill="currentColor"
             viewBox="0 0 24 24"
           >
@@ -74,7 +74,7 @@ export default function PricingCard({
           </div>
           <button
             onClick={onPurchase}
-            className="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors"
+            className="bg-primary text-white px-6 py-2 rounded-md hover:bg-primary/90 transition-colors"
           >
             Comprar ahora
           </button>

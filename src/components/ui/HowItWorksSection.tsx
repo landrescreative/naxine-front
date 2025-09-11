@@ -1,13 +1,8 @@
 "use client";
 
-import React from "react";
-import {
-  Search,
-  BadgeCheck,
-  Lock,
-  MessageSquareText,
-  Star,
-} from "lucide-react";
+import React, { useRef } from "react";
+import { motion, useInView } from "framer-motion";
+import { User, FileCheck, Calendar, Video, Star } from "lucide-react";
 
 type Step = {
   title: string;
@@ -21,7 +16,51 @@ const IconWrap = ({ children }: { children: React.ReactNode }) => (
   </div>
 );
 
+// Componente individual para cada tarjeta con su propia animación
+const AnimatedCard = ({
+  step,
+  className,
+  delay = 0,
+}: {
+  step: Step;
+  className: string;
+  delay?: number;
+}) => {
+  const cardRef = useRef<HTMLElement>(null);
+  const isInView = useInView(cardRef, {
+    once: true,
+    margin: "-50px 0px -50px 0px",
+  });
+
+  return (
+    <motion.article
+      ref={cardRef}
+      className={className}
+      initial={{ y: 50, opacity: 0 }}
+      animate={isInView ? { y: 0, opacity: 1 } : { y: 50, opacity: 0 }}
+      transition={{
+        duration: 0.7,
+        ease: [0.25, 0.46, 0.45, 0.94],
+        delay: delay,
+      }}
+    >
+      {step.icon}
+      <h3
+        className="mt-4 text-2xl text-secondary"
+        style={{ fontWeight: "900 !important" }}
+      >
+        {step.title}
+      </h3>
+      <p className="mt-2 text-sm leading-6 text-primary-foreground">
+        {step.description}
+      </p>
+    </motion.article>
+  );
+};
+
 export default function HowItWorksSection() {
+  const sectionRef = useRef<HTMLElement>(null);
+
   const steps: Step[] = [
     {
       title: "1. Explora los servicios",
@@ -34,7 +73,7 @@ export default function HowItWorksSection() {
       ),
       icon: (
         <IconWrap>
-          <Search className="h-6 w-6" />
+          <User className="h-6 w-6" />
         </IconWrap>
       ),
     },
@@ -48,7 +87,7 @@ export default function HowItWorksSection() {
       ),
       icon: (
         <IconWrap>
-          <BadgeCheck className="h-6 w-6" />
+          <FileCheck className="h-6 w-6" />
         </IconWrap>
       ),
     },
@@ -62,7 +101,7 @@ export default function HowItWorksSection() {
       ),
       icon: (
         <IconWrap>
-          <Lock className="h-6 w-6" />
+          <Calendar className="h-6 w-6" />
         </IconWrap>
       ),
     },
@@ -82,7 +121,7 @@ export default function HowItWorksSection() {
       ),
       icon: (
         <IconWrap>
-          <MessageSquareText className="h-6 w-6" />
+          <Video className="h-6 w-6" />
         </IconWrap>
       ),
     },
@@ -103,64 +142,39 @@ export default function HowItWorksSection() {
   ];
 
   return (
-    <section className="w-full py-8 md:py-14">
+    <section ref={sectionRef} className="w-full py-8 md:py-14">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Grid en zig-zag para replicar la composición del mockup */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12">
           {/* 1 */}
-          <article className="group order-1 lg:order-1 mx-auto w-full max-w-[460px] lg:max-w-[440px] rounded-2xl bg-white p-6 text-center transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_18px_50px_rgba(16,24,40,0.12)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20">
-            {steps[0].icon}
-            <h3 className="mt-4 text-lg font-semibold text-gray-900">
-              {steps[0].title}
-            </h3>
-            <p className="mt-2 text-sm leading-6 text-gray-500">
-              {steps[0].description}
-            </p>
-          </article>
+          <AnimatedCard
+            step={steps[0]}
+            className="group order-1 lg:order-1 mx-auto w-full max-w-[460px] lg:max-w-[440px] h-[320px] rounded-2xl bg-white p-6 text-center transition-all duration-200 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 flex flex-col items-center justify-center"
+          />
 
           {/* 2 */}
-          <article className="group order-2 lg:order-2 mx-auto w-full max-w-[460px] lg:max-w-[440px] rounded-2xl bg-white p-6 text-center shadow-[0_15px_40px_rgba(16,24,40,0.08)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_22px_60px_rgba(16,24,40,0.14)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20">
-            {steps[1].icon}
-            <h3 className="mt-4 text-lg font-semibold text-gray-900">
-              {steps[1].title}
-            </h3>
-            <p className="mt-2 text-sm leading-6 text-gray-500">
-              {steps[1].description}
-            </p>
-          </article>
+          <AnimatedCard
+            step={steps[1]}
+            className="group order-2 lg:order-2 mx-auto w-full max-w-[460px] lg:max-w-[440px] h-[320px] rounded-2xl bg-white p-6 text-center shadow-[0_15px_40px_rgba(16,24,40,0.08)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_22px_60px_rgba(16,24,40,0.14)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 flex flex-col items-center justify-center"
+          />
 
           {/* 3 */}
-          <article className="group order-3 lg:order-3 mx-auto w-full max-w-[460px] lg:max-w-[440px] rounded-2xl bg-white p-6 text-center shadow-[0_15px_40px_rgba(16,24,40,0.08)] xl:translate-x-8 transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_22px_60px_rgba(16,24,40,0.14)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20">
-            {steps[2].icon}
-            <h3 className="mt-4 text-lg font-semibold text-gray-900">
-              {steps[2].title}
-            </h3>
-            <p className="mt-2 text-sm leading-6 text-gray-500">
-              {steps[2].description}
-            </p>
-          </article>
+          <AnimatedCard
+            step={steps[2]}
+            className="group order-3 lg:order-3 mx-auto w-full max-w-[460px] lg:max-w-[440px] h-[320px] rounded-2xl bg-white p-6 text-center shadow-[0_15px_40px_rgba(16,24,40,0.08)] xl:translate-x-8 transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_22px_60px_rgba(16,24,40,0.14)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 flex flex-col items-center justify-center"
+          />
 
           {/* 4 */}
-          <article className="group order-4 lg:order-4 mx-auto w-full max-w-[460px] lg:max-w-[440px] rounded-2xl bg-white p-6 text-center xl:-translate-x-8 transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_18px_50px_rgba(16,24,40,0.12)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20">
-            {steps[3].icon}
-            <h3 className="mt-4 text-lg font-semibold text-gray-900">
-              {steps[3].title}
-            </h3>
-            <p className="mt-2 text-sm leading-6 text-gray-500">
-              {steps[3].description}
-            </p>
-          </article>
+          <AnimatedCard
+            step={steps[3]}
+            className="group order-4 lg:order-4 mx-auto w-full max-w-[460px] lg:max-w-[440px] h-[320px] rounded-2xl bg-white p-6 text-center xl:-translate-x-8 transition-all duration-200 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 flex flex-col items-center justify-center"
+          />
 
           {/* 5 (centrado a lo ancho) */}
-          <article className="group order-5 lg:col-span-2 mx-auto w-full max-w-[460px] lg:max-w-[440px] rounded-2xl bg-white p-6 text-center transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_18px_50px_rgba(16,24,40,0.12)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20">
-            {steps[4].icon}
-            <h3 className="mt-4 text-lg font-semibold text-gray-900">
-              {steps[4].title}
-            </h3>
-            <p className="mt-2 text-sm leading-6 text-gray-500">
-              {steps[4].description}
-            </p>
-          </article>
+          <AnimatedCard
+            step={steps[4]}
+            className="group order-5 lg:col-span-2 mx-auto w-full max-w-[460px] lg:max-w-[440px] h-[320px] rounded-2xl bg-white p-6 text-center shadow-[0_15px_40px_rgba(16,24,40,0.08)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_22px_60px_rgba(16,24,40,0.14)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 flex flex-col items-center justify-center"
+          />
         </div>
       </div>
     </section>

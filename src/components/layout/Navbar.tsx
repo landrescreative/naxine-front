@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Menu,
   X,
@@ -228,6 +229,16 @@ export default function Navbar() {
   const [openMobileCategory, setOpenMobileCategory] = useState<string | null>(
     null
   );
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    // Trigger animation after component mounts
+    const timer = setTimeout(() => {
+      setIsVisible(true);
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -257,7 +268,12 @@ export default function Navbar() {
   };
 
   return (
-    <div className="w-full">
+    <motion.div
+      className="w-full sticky top-0 z-40"
+      initial={{ y: -100, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.7, ease: "easeOut" }}
+    >
       {/* Barra superior gris */}
       <div className="w-full h-1 bg-gray-800"></div>
 
@@ -285,44 +301,52 @@ export default function Navbar() {
                 </button>
 
                 {/* Menú desplegable de usuario */}
-                {isUserMenuOpen && (
-                  <div className="absolute left-0 mt-3 w-72 bg-white/80 backdrop-blur rounded-xl shadow-lg border border-gray-200/60 ring-1 ring-black/5 z-50 overflow-hidden">
-                    <div className="py-2">
-                      <Link
-                        href="/iniciar-sesion"
-                        onClick={closeUserMenu}
-                        className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors"
-                      >
-                        <LogIn className="h-5 w-5" />
-                        <span className="text-sm font-medium">
-                          Iniciar Sesión
-                        </span>
-                      </Link>
+                <AnimatePresence>
+                  {isUserMenuOpen && (
+                    <motion.div
+                      className="absolute left-0 mt-3 w-72 bg-white/80 backdrop-blur rounded-xl shadow-lg border border-gray-200/60 ring-1 ring-black/5 z-50 overflow-hidden"
+                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                      transition={{ duration: 0.2, ease: "easeOut" }}
+                    >
+                      <div className="py-2">
+                        <Link
+                          href="/iniciar-sesion"
+                          onClick={closeUserMenu}
+                          className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors"
+                        >
+                          <LogIn className="h-5 w-5" />
+                          <span className="text-sm font-medium">
+                            Iniciar Sesión
+                          </span>
+                        </Link>
 
-                      <Link
-                        href="/registro"
-                        onClick={closeUserMenu}
-                        className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors"
-                      >
-                        <UserPlus className="h-5 w-5" />
-                        <span className="text-sm font-medium">
-                          Regístrate como Usuario
-                        </span>
-                      </Link>
+                        <Link
+                          href="/registro"
+                          onClick={closeUserMenu}
+                          className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors"
+                        >
+                          <UserPlus className="h-5 w-5" />
+                          <span className="text-sm font-medium">
+                            Regístrate como Usuario
+                          </span>
+                        </Link>
 
-                      <Link
-                        href="/registro-profesional"
-                        onClick={closeUserMenu}
-                        className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors"
-                      >
-                        <Briefcase className="h-5 w-5" />
-                        <span className="text-sm font-medium">
-                          Regístrate como Profesional
-                        </span>
-                      </Link>
-                    </div>
-                  </div>
-                )}
+                        <Link
+                          href="/registro-profesional"
+                          onClick={closeUserMenu}
+                          className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors"
+                        >
+                          <Briefcase className="h-5 w-5" />
+                          <span className="text-sm font-medium">
+                            Regístrate como Profesional
+                          </span>
+                        </Link>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               {/* Logo - Centro */}
@@ -419,54 +443,62 @@ export default function Navbar() {
             </div>
 
             {/* Menú desplegable de desktop */}
-            {isDesktopMenuOpen && (
-              <div className="hidden lg:block absolute left-4 top-16 w-72 bg-white/80 backdrop-blur rounded-xl shadow-lg border border-gray-200/60 ring-1 ring-black/5 z-50 overflow-hidden">
-                <div className="py-2">
-                  <Link
-                    href="/como-funciona"
-                    onClick={closeDesktopMenu}
-                    className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:text-purple-600 hover:bg-gray-50 transition-colors"
-                  >
-                    <HelpCircle className="h-5 w-5" />
-                    <span className="text-sm font-medium">Cómo funciona</span>
-                  </Link>
-                  <Link
-                    href="/servicios"
-                    onClick={closeDesktopMenu}
-                    className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:text-purple-600 hover:bg-gray-50 transition-colors"
-                  >
-                    <Building2 className="h-5 w-5" />
-                    <span className="text-sm font-medium">Servicios</span>
-                  </Link>
-                  <Link
-                    href="/preguntas-frecuentes"
-                    onClick={closeDesktopMenu}
-                    className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:text-purple-600 hover:bg-gray-50 transition-colors"
-                  >
-                    <HelpCircle className="h-5 w-5" />
-                    <span className="text-sm font-medium">
-                      Preguntas Frecuentes
-                    </span>
-                  </Link>
-                  <Link
-                    href="/acerca-de"
-                    onClick={closeDesktopMenu}
-                    className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:text-purple-600 hover:bg-gray-50 transition-colors"
-                  >
-                    <HelpCircle className="h-5 w-5" />
-                    <span className="text-sm font-medium">Acerca de</span>
-                  </Link>
-                  <Link
-                    href="/contacto"
-                    onClick={closeDesktopMenu}
-                    className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:text-purple-600 hover:bg-gray-50 transition-colors"
-                  >
-                    <Mail className="h-5 w-5" />
-                    <span className="text-sm font-medium">Contacto</span>
-                  </Link>
-                </div>
-              </div>
-            )}
+            <AnimatePresence>
+              {isDesktopMenuOpen && (
+                <motion.div
+                  className="hidden lg:block absolute left-4 top-16 w-72 bg-white/80 backdrop-blur rounded-xl shadow-lg border border-gray-200/60 ring-1 ring-black/5 z-50 overflow-hidden"
+                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                >
+                  <div className="py-2">
+                    <Link
+                      href="/como-funciona"
+                      onClick={closeDesktopMenu}
+                      className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:text-purple-600 hover:bg-gray-50 transition-colors"
+                    >
+                      <HelpCircle className="h-5 w-5" />
+                      <span className="text-sm font-medium">Cómo funciona</span>
+                    </Link>
+                    <Link
+                      href="/servicios"
+                      onClick={closeDesktopMenu}
+                      className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:text-purple-600 hover:bg-gray-50 transition-colors"
+                    >
+                      <Building2 className="h-5 w-5" />
+                      <span className="text-sm font-medium">Servicios</span>
+                    </Link>
+                    <Link
+                      href="/preguntas-frecuentes"
+                      onClick={closeDesktopMenu}
+                      className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:text-purple-600 hover:bg-gray-50 transition-colors"
+                    >
+                      <HelpCircle className="h-5 w-5" />
+                      <span className="text-sm font-medium">
+                        Preguntas Frecuentes
+                      </span>
+                    </Link>
+                    <Link
+                      href="/acerca-de"
+                      onClick={closeDesktopMenu}
+                      className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:text-purple-600 hover:bg-gray-50 transition-colors"
+                    >
+                      <HelpCircle className="h-5 w-5" />
+                      <span className="text-sm font-medium">Acerca de</span>
+                    </Link>
+                    <Link
+                      href="/contacto"
+                      onClick={closeDesktopMenu}
+                      className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:text-purple-600 hover:bg-gray-50 transition-colors"
+                    >
+                      <Mail className="h-5 w-5" />
+                      <span className="text-sm font-medium">Contacto</span>
+                    </Link>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
@@ -1108,7 +1140,7 @@ export default function Navbar() {
                 <div
                   className={`opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-150 absolute top-full left-1/2 -translate-x-1/2 ${
                     key === "legales" ? "w-80" : "w-72"
-                  } bg-white/90 backdrop-blur rounded-xl shadow-lg border border-gray-200/60 ring-1 ring-black/5 z-40 text-left`}
+                  } bg-white/90 backdrop-blur rounded-xl shadow-lg border border-gray-200/60 ring-1 ring-black/5 z-50 text-left`}
                 >
                   <div className="py-2">
                     {items.map(({ label, href }) => (
@@ -1127,6 +1159,6 @@ export default function Navbar() {
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

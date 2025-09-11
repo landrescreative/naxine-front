@@ -2,12 +2,14 @@ import HeroSection from "@/components/ui/HeroSection";
 import SeparatorSection from "@/components/ui/SeparatorSection";
 import ServicesSection from "@/components/ui/ServicesSection";
 import HowItWorksSection from "@/components/ui/HowItWorksSection";
-import nutricion from "@/assets/ca48d68e7670363c5191583082e186b99cc6ab67.jpg";
 import OurProcess from "@/components/ui/OurProcess";
 import NuestrasGarantias from "@/components/ui/NuestrasGarantias";
 import BenefitsSection from "@/components/ui/BenefitsSection";
 import AccesibilitySection from "@/components/ui/AccesibilitySection";
 import FAQSection from "@/components/ui/FAQSection";
+
+// Import service images
+import ansiedad from "@/assets/ansiedad.png";
 
 export default function Home() {
   return (
@@ -22,44 +24,48 @@ export default function Home() {
         items={[
           {
             title: "Pérdida de peso",
-            image: nutricion,
+            image: "/DIETA PARA ADELGAZAR.png",
             href: "/dietas/perdida-de-peso",
           },
           {
             title: "Nutrición deportiva",
-            image: nutricion,
+            image: "/DIETA DIABETES.png",
             href: "/dietas/deportiva",
           },
           {
             title: "Vegetarianos y veganos",
-            image: nutricion,
+            image: "/DIETA COLESTEROL_.png",
             href: "/dietas/vegetarianos-y-veganos",
           },
-          { title: "Depresión", image: nutricion, href: "/terapias/depresion" },
-          { title: "Ansiedad", image: nutricion, href: "/terapias/ansiedad" },
+          {
+            title: "Depresión",
+            image: "/TERAPIA PARA DEPRESION.png",
+            href: "/terapias/depresion",
+          },
+          { title: "Ansiedad", image: ansiedad, href: "/terapias/ansiedad" },
           {
             title: "Divorcio",
-            image: nutricion,
+            image: "/DIVORCIO EXPRESS ONLINE.png",
             href: "/consultas-legales/divorcio",
           },
           {
             title: "Herencias",
-            image: nutricion,
+            image: "/ASESORIA LEGAL HERENCIAS.png",
             href: "/consultas-legales/herencias",
           },
           {
             title: "Trastornos del habla",
-            image: nutricion,
+            image: "/FISIOTERAPIA A DOMICILIO.png",
             href: "/logopedas/trastornos-del-habla",
           },
           {
             title: "Liderazgo",
-            image: nutricion,
+            image: "/TERAPIA DE PAREJA (2).png",
             href: "/desarrollo-personal/liderazgo",
           },
           {
             title: "Habilidades sociales",
-            image: nutricion,
+            image: "/TERAPIA DE PAREJA (2).png",
             href: "/desarrollo-personal/habilidades-sociales",
           },
         ]}

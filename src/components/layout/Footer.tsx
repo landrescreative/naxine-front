@@ -7,35 +7,27 @@ import { Instagram, Facebook, Github, Send } from "lucide-react";
 export default function Footer() {
   return (
     <footer className="bg-purple-100 border-t border-black">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 lg:gap-12">
-          {/* Brand Identity Section */}
-          <div className="space-y-4">
+      <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-12 sm:py-16">
+        <div className="grid grid-cols-1 sm:grid-cols-2 sm:grid-rows-2 lg:grid-cols-4 lg:grid-rows-1 gap-6 sm:gap-8 lg:gap-12">
+          {/* Brand Identity Section - Top Left */}
+          <div className="flex flex-col gap-6 sm:col-start-1 sm:row-start-1 lg:col-auto lg:row-auto">
             {/* Logo */}
-            <div className="flex items-center space-x-3">
-              <div className="relative w-10 h-10">
-                {/* Abstract symbol - two intertwined loops with better positioning */}
-                <div className="absolute inset-0">
-                  {/* First loop - blue */}
-                  <div className="w-7 h-7 border-2 border-blue-500 rounded-full absolute top-0 left-0 transform rotate-12"></div>
-                  {/* Second loop - purple, overlapping */}
-                  <div className="w-7 h-7 border-2 border-purple-500 rounded-full absolute bottom-0 right-0 transform -rotate-12"></div>
-                </div>
-              </div>
-              <div className="text-2xl font-bold">
-                <span className="text-blue-600">nax</span>
-                <span className="text-orange-500">ine.</span>
-              </div>
+            <div className="flex items-center">
+              <img
+                src="/PNG-01.png"
+                alt="Naxine Logo"
+                className="w-36 object-contain  h-full"
+              />
             </div>
 
             {/* Tagline */}
-            <p className="text-black text-sm leading-relaxed max-w-xs">
+            <p className="text-black text-sm">
               Explora, elige y contrata al profesional colegiado ideal para ti
             </p>
           </div>
 
-          {/* Sitio Web Links */}
-          <div className="space-y-4">
+          {/* Sitio Web Links - Top Right */}
+          <div className="space-y-4 sm:col-start-2 sm:row-start-1 lg:col-auto lg:row-auto">
             <h3 className="text-black font-bold text-base">Sitio Web</h3>
             <nav className="space-y-2">
               <Link
@@ -77,8 +69,8 @@ export default function Footer() {
             </nav>
           </div>
 
-          {/* Empresa Links */}
-          <div className="space-y-4">
+          {/* Empresa Links - Bottom Left */}
+          <div className="space-y-4 sm:col-start-1 sm:row-start-2 lg:col-auto lg:row-auto">
             <h3 className="text-black font-bold text-base">Empresa</h3>
             <nav className="space-y-2">
               <Link
@@ -97,7 +89,7 @@ export default function Footer() {
                 href="/preguntas-frecuentes"
                 className="block text-black hover:text-purple-600 transition-colors text-sm"
               >
-                Preguntas frecuentes
+                FAQs
               </Link>
               <Link
                 href="/politica-cookies"
@@ -114,8 +106,8 @@ export default function Footer() {
             </nav>
           </div>
 
-          {/* Social Media Section */}
-          <div className="space-y-4 sm:col-span-2 lg:col-span-1">
+          {/* Social Media Section - Bottom Right */}
+          <div className="space-y-4 sm:col-start-2 sm:row-start-2 lg:col-auto lg:row-auto">
             <h3 className="text-black font-bold text-base">Síguenos</h3>
             <div className="flex space-x-6">
               <Link
