@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import Logo from "@/assets/PNG-01.png";
 import Image from "next/image";
+import { useAuth } from "@/hooks/useAuth";
 
 type ServiceItem = { label: string; href: string };
 type ServiceCategory = {
@@ -230,6 +231,11 @@ export default function Navbar() {
     null
   );
   const [isVisible, setIsVisible] = useState(false);
+  const { user, loading, logout } = useAuth();
+  const dashboardHref =
+    user?.role === "profesional"
+      ? "/dashboard/profesional"
+      : "/dashboard/cliente";
 
   useEffect(() => {
     // Trigger animation after component mounts
@@ -311,38 +317,65 @@ export default function Navbar() {
                       transition={{ duration: 0.2, ease: "easeOut" }}
                     >
                       <div className="py-2">
-                        <Link
-                          href="/iniciar-sesion"
-                          onClick={closeUserMenu}
-                          className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors"
-                        >
-                          <LogIn className="h-5 w-5" />
-                          <span className="text-sm font-medium">
-                            Iniciar Sesión
-                          </span>
-                        </Link>
-
-                        <Link
-                          href="/registro"
-                          onClick={closeUserMenu}
-                          className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors"
-                        >
-                          <UserPlus className="h-5 w-5" />
-                          <span className="text-sm font-medium">
-                            Regístrate como Usuario
-                          </span>
-                        </Link>
-
-                        <Link
-                          href="/registro-profesional"
-                          onClick={closeUserMenu}
-                          className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors"
-                        >
-                          <Briefcase className="h-5 w-5" />
-                          <span className="text-sm font-medium">
-                            Regístrate como Profesional
-                          </span>
-                        </Link>
+                        {!loading && user ? (
+                          <>
+                            <Link
+                              href={dashboardHref}
+                              onClick={closeUserMenu}
+                              className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors"
+                            >
+                              <User className="h-5 w-5" />
+                              <span className="text-sm font-medium">
+                                Mi panel
+                              </span>
+                            </Link>
+                            <button
+                              onClick={() => {
+                                logout();
+                                closeUserMenu();
+                              }}
+                              className="w-full text-left flex items-center space-x-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors"
+                            >
+                              <X className="h-5 w-5" />
+                              <span className="text-sm font-medium">
+                                Cerrar sesión
+                              </span>
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <Link
+                              href="/iniciar-sesion"
+                              onClick={closeUserMenu}
+                              className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors"
+                            >
+                              <LogIn className="h-5 w-5" />
+                              <span className="text-sm font-medium">
+                                Iniciar Sesión
+                              </span>
+                            </Link>
+                            <Link
+                              href="/registro"
+                              onClick={closeUserMenu}
+                              className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors"
+                            >
+                              <UserPlus className="h-5 w-5" />
+                              <span className="text-sm font-medium">
+                                Regístrate como Usuario
+                              </span>
+                            </Link>
+                            <Link
+                              href="/registro-profesional"
+                              onClick={closeUserMenu}
+                              className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors"
+                            >
+                              <Briefcase className="h-5 w-5" />
+                              <span className="text-sm font-medium">
+                                Regístrate como Profesional
+                              </span>
+                            </Link>
+                          </>
+                        )}
                       </div>
                     </motion.div>
                   )}
@@ -408,37 +441,53 @@ export default function Navbar() {
 
               {/* Navegación de usuario - Derecha */}
               <div className="flex items-center space-x-4">
-                {/* Iniciar Sesión */}
-                <Link
-                  href="/iniciar-sesion"
-                  className="flex items-center space-x-2 text-gray-800 hover:text-gray-600 transition-colors px-3 py-2"
-                >
-                  <User className="h-5 w-5" />
-                  <span className="text-sm font-medium">Iniciar Sesión</span>
-                </Link>
-
-                {/* Separador */}
-                <div className="h-6 w-px bg-gray-300"></div>
-
-                {/* Botón Registrarse como Profesional */}
-                <Link
-                  href="/registro-profesional"
-                  className="flex items-center space-x-2 bg-primary-foreground hover:bg-primary-foreground/80 text-white px-4 py-2 rounded-lg transition-colors"
-                >
-                  <span className="text-sm font-medium">
-                    Regístrate como profesional
-                  </span>
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-
-                {/* Botón Registrarse */}
-                <Link
-                  href="/registro"
-                  className="flex items-center space-x-2 bg-primary hover:bg-primary/80 text-white px-4 py-2 rounded-lg transition-colors"
-                >
-                  <span className="text-sm font-medium">Regístrate</span>
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
+                {!loading && user ? (
+                  <>
+                    <Link
+                      href={dashboardHref}
+                      className="flex items-center space-x-2 bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors"
+                    >
+                      <span className="text-sm font-medium">Mi panel</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                    <button
+                      onClick={logout}
+                      className="flex items-center space-x-2 text-gray-800 hover:text-gray-600 transition-colors px-3 py-2"
+                    >
+                      <X className="h-5 w-5" />
+                      <span className="text-sm font-medium">Cerrar sesión</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      href="/iniciar-sesion"
+                      className="flex items-center space-x-2 text-gray-800 hover:text-gray-600 transition-colors px-3 py-2"
+                    >
+                      <User className="h-5 w-5" />
+                      <span className="text-sm font-medium">
+                        Iniciar Sesión
+                      </span>
+                    </Link>
+                    <div className="h-6 w-px bg-gray-300"></div>
+                    <Link
+                      href="/registro-profesional"
+                      className="flex items-center space-x-2 bg-primary-foreground hover:bg-primary-foreground/80 text-white px-4 py-2 rounded-lg transition-colors"
+                    >
+                      <span className="text-sm font-medium">
+                        Regístrate como profesional
+                      </span>
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                    <Link
+                      href="/registro"
+                      className="flex items-center space-x-2 bg-primary hover:bg-primary/80 text-white px-4 py-2 rounded-lg transition-colors"
+                    >
+                      <span className="text-sm font-medium">Regístrate</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
 

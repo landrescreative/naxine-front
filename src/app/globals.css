@@ -108,3 +108,19 @@ label {
   font-family: "Atkinson Hyperlegible", sans-serif;
   font-weight: 400; /* Atkinson Hyperlegible Regular */
 }
+
+/* Page transition animation */
+@keyframes pageFade {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.page-anim {
+  animation: pageFade 200ms ease;
+}

@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import { Atkinson_Hyperlegible, Nunito } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/layout/Navbar";
-import GlobalCTA from "@/components/layout/GlobalCTA";
-import Footer from "@/components/layout/Footer";
+import ConditionalLayout from "@/components/layout/ConditionalLayout";
 
 const atkinsonHyperlegible = Atkinson_Hyperlegible({
   variable: "--font-atkinson-hyperlegible",
@@ -32,10 +30,7 @@ export default function RootLayout({
       <body
         className={`${atkinsonHyperlegible.variable} ${nunito.variable} antialiased`}
       >
-        <Navbar />
-        {children}
-        <GlobalCTA />
-        <Footer />
+        <ConditionalLayout>{children}</ConditionalLayout>
       </body>
     </html>
   );
