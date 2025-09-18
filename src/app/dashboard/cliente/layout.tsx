@@ -75,21 +75,12 @@ export default function ClienteLayout({
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50/20">
       {/* Sidebar */}
       <ClientSidebar activeItem={activeItem} onItemClick={handleItemClick} />
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <header className="bg-white shadow-sm border-b">
-          <div className="px-6 py-4">
-            <h1 className="text-xl font-semibold text-gray-900">
-              Dashboard Cliente
-            </h1>
-          </div>
-        </header>
-
         {/* Main Content Area with simple page transition */}
         <main className="flex-1 overflow-y-auto p-6">
           <div key={pathname} className="page-anim">

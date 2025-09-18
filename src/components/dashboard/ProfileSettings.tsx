@@ -127,7 +127,7 @@ export default function ProfileSettings() {
                 type={type}
                 value={tempValue}
                 onChange={(e) => setTempValue(e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
                 autoFocus
               />
               <button
@@ -153,7 +153,7 @@ export default function ProfileSettings() {
               />
               <button
                 onClick={() => handleEditField(field)}
-                className="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg transition-colors"
+                className="px-3 py-2 bg-primary hover:bg-primary/90 text-white text-sm rounded-lg transition-colors"
               >
                 Editar
               </button>
@@ -219,7 +219,7 @@ export default function ProfileSettings() {
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+            className="px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg transition-colors"
           >
             Guardar
           </button>
@@ -258,7 +258,7 @@ export default function ProfileSettings() {
               onChange={(e) =>
                 handlePasswordChange("currentPassword", e.target.value)
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
             />
           </div>
 
@@ -272,7 +272,7 @@ export default function ProfileSettings() {
               onChange={(e) =>
                 handlePasswordChange("newPassword", e.target.value)
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
             />
           </div>
 
@@ -286,7 +286,7 @@ export default function ProfileSettings() {
               onChange={(e) =>
                 handlePasswordChange("confirmPassword", e.target.value)
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
             />
           </div>
         </div>
@@ -315,7 +315,7 @@ export default function ProfileSettings() {
           <div className="flex items-center space-x-3">
             <button
               onClick={() => handleNotificationToggle("appointmentReminders")}
-              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
                 notificationSettings.appointmentReminders
                   ? "bg-green-600"
                   : "bg-gray-200"
@@ -337,7 +337,7 @@ export default function ProfileSettings() {
           <div className="flex items-center space-x-3">
             <button
               onClick={() => handleNotificationToggle("transactionUpdates")}
-              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
                 notificationSettings.transactionUpdates
                   ? "bg-green-600"
                   : "bg-gray-200"
@@ -361,9 +361,9 @@ export default function ProfileSettings() {
       {/* Success Notification */}
       {showSuccessNotification && (
         <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 animate-in slide-in-from-top duration-300">
-          <div className="bg-purple-600 text-white px-6 py-4 rounded-lg shadow-lg flex items-center space-x-4">
+          <div className="bg-primary text-white px-6 py-4 rounded-lg shadow-lg flex items-center space-x-4">
             <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center flex-shrink-0">
-              <Check className="w-6 h-6 text-purple-600" />
+              <Check className="w-6 h-6 text-primary" />
             </div>
             <div className="flex flex-col">
               <span className="font-medium text-sm">Cambios aplicados</span>

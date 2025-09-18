@@ -15,7 +15,10 @@ interface UpcomingSessionsProps {
 
 import Link from "next/link";
 
-export default function UpcomingSessions({ sessions }: UpcomingSessionsProps) {
+export default function UpcomingSessions({
+  sessions,
+  basePath = "/dashboard/cliente",
+}: UpcomingSessionsProps & { basePath?: string }) {
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-bold text-gray-900">Próximas Sesiones</h2>
@@ -46,7 +49,10 @@ export default function UpcomingSessions({ sessions }: UpcomingSessionsProps) {
                 {session.time}
               </div>
 
-              <div className="text-sm font-semibold text-gray-900 mb-2">
+              <div
+                className="text-sm font-bold text-gray-900 mb-2"
+                style={{ fontWeight: "700" }}
+              >
                 {session.professional} - {session.specialty}
               </div>
 
@@ -56,10 +62,9 @@ export default function UpcomingSessions({ sessions }: UpcomingSessionsProps) {
 
               <Link
                 href={
-                  ("/dashboard/cliente/citas/" +
-                    session.id) as `/dashboard/cliente/citas/${string}`
+                  `${basePath}/citas/${session.id}` as `/dashboard/cliente/citas/${string}`
                 }
-                className="inline-block bg-primary hover:bg-primary/90 text-white text-sm font-medium py-2.5 px-4 rounded-lg transition-colors absolute right-5 bottom-5"
+                className="inline-block bg-primary hover:bg-primary/90 text-white text-sm font-medium py-2.5 px-10 rounded-2xl transition-colors absolute right-5 bottom-5"
               >
                 Ver detalles
               </Link>

@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface CalendarAppointment {
+  id: string;
   date: number;
   professional: string;
   specialty: string;
@@ -11,12 +13,15 @@ interface CalendarAppointment {
 
 interface SessionCalendarProps {
   appointments: CalendarAppointment[];
+  basePath?: string;
 }
 
 export default function SessionCalendar({
   appointments,
+  basePath = "/dashboard/cliente",
 }: SessionCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const router = useRouter();
 
   const months = [
     "Enero",
@@ -95,6 +100,10 @@ export default function SessionCalendar({
   const getAppointmentForDate = (day: number, isCurrentMonth: boolean) => {
     if (!isCurrentMonth) return null;
     return appointments.find((apt) => apt.date === day);
+  };
+
+  const handleAppointmentClick = (appointment: CalendarAppointment) => {
+    router.push(`${basePath}/citas/${appointment.id}`);
   };
 
   const days = getDaysInMonth(currentDate);
@@ -196,7 +205,10 @@ export default function SessionCalendar({
                 </div>
 
                 {appointment && (
-                  <div className="bg-primary/15 rounded p-2 text-xs">
+                  <div
+                    className="bg-primary/15 rounded p-2 text-xs cursor-pointer hover:bg-primary/25 transition-colors"
+                    onClick={() => handleAppointmentClick(appointment)}
+                  >
                     <div className="font-medium text-primary truncate">
                       {appointment.specialty}
                     </div>

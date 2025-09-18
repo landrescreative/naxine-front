@@ -237,6 +237,9 @@ export default function Navbar() {
       ? "/dashboard/profesional"
       : "/dashboard/cliente";
 
+  // Considerar que el rol de administracion no cuenta como "usuario logeado" para la navbar
+  const isPublicLoggedIn = !!user && user.role !== "administracion";
+
   useEffect(() => {
     // Trigger animation after component mounts
     const timer = setTimeout(() => {
@@ -317,7 +320,7 @@ export default function Navbar() {
                       transition={{ duration: 0.2, ease: "easeOut" }}
                     >
                       <div className="py-2">
-                        {!loading && user ? (
+                        {!loading && isPublicLoggedIn ? (
                           <>
                             <Link
                               href={dashboardHref}
@@ -441,7 +444,7 @@ export default function Navbar() {
 
               {/* Navegación de usuario - Derecha */}
               <div className="flex items-center space-x-4">
-                {!loading && user ? (
+                {!loading && isPublicLoggedIn ? (
                   <>
                     <Link
                       href={dashboardHref}

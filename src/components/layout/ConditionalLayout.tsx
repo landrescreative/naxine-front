@@ -16,8 +16,10 @@ export default function ConditionalLayout({
 
   // Verificar si estamos en una ruta de dashboard
   const isDashboardRoute = pathname.startsWith("/dashboard/");
+  // Zonas aisladas: admin
+  const isAdminZone = pathname.startsWith("/admin");
 
-  if (isDashboardRoute) {
+  if (isDashboardRoute || isAdminZone) {
     // Para rutas de dashboard, solo mostrar el contenido
     return <>{children}</>;
   }
@@ -32,4 +34,3 @@ export default function ConditionalLayout({
     </>
   );
 }
-

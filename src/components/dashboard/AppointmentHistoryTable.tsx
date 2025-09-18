@@ -56,24 +56,24 @@ export default function AppointmentHistoryTable({
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+            <thead className="bg-white">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
                   Orden
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
                   Fecha
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
                   Cantidad
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
                   Tipo
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
                   Estado
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
                   Acciones
                 </th>
               </tr>
@@ -85,7 +85,7 @@ export default function AppointmentHistoryTable({
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-6 w-6 mr-3">
                         <svg
-                          className="h-6 w-6 text-blue-600"
+                          className="h-6 w-6 text-primary"
                           fill="currentColor"
                           viewBox="0 0 20 20"
                         >
@@ -97,10 +97,10 @@ export default function AppointmentHistoryTable({
                         </svg>
                       </div>
                       <div>
-                        <div className="text-sm font-medium text-gray-900">
+                        <div className="text-sm font-medium text-primary">
                           {appointment.order.specialty}
                         </div>
-                        <div className="text-sm text-gray-500">
+                        <div className="text-sm text-primary">
                           {appointment.order.professional}
                         </div>
                       </div>
@@ -126,7 +126,7 @@ export default function AppointmentHistoryTable({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex space-x-2">
-                      <button className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded transition-colors">
+                      <button className="bg-primary hover:bg-primary/90 text-white text-sm font-medium py-2 px-4 rounded transition-colors">
                         Descargar
                       </button>
                       <button className="bg-gray-800 hover:bg-gray-900 text-white text-sm font-medium py-2 px-4 rounded transition-colors">

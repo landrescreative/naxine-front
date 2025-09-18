@@ -2,6 +2,7 @@
 
 import UpcomingSessions from "@/components/dashboard/UpcomingSessions";
 import SessionCalendar from "@/components/dashboard/SessionCalendar";
+import { getCalendarAppointments } from "@/data/clientAppointments";
 import LatestPayments from "@/components/dashboard/LatestPayments";
 
 export default function ProfesionalDashboard() {
@@ -25,21 +26,8 @@ export default function ProfesionalDashboard() {
     },
   ];
 
-  // Sample data for calendar appointments
-  const calendarAppointments = [
-    {
-      date: 3,
-      professional: "Amanda Bryan",
-      specialty: "Fisioterapeuta",
-      time: "5:30 AM",
-    },
-    {
-      date: 16,
-      professional: "Janie Wells",
-      specialty: "Nutrióloga",
-      time: "10:30 AM",
-    },
-  ];
+  // Centralized calendar appointments with IDs
+  const calendarAppointments = getCalendarAppointments();
 
   // Sample data for latest payments (últimas transacciones)
   const latestPayments = [
@@ -83,8 +71,14 @@ export default function ProfesionalDashboard() {
 
   return (
     <div className="space-y-8">
-      <UpcomingSessions sessions={upcomingSessions} />
-      <SessionCalendar appointments={calendarAppointments} />
+      <UpcomingSessions
+        sessions={upcomingSessions}
+        basePath="/dashboard/profesional"
+      />
+      <SessionCalendar
+        appointments={calendarAppointments}
+        basePath="/dashboard/profesional"
+      />
       <LatestPayments payments={latestPayments} />
     </div>
   );

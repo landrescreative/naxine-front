@@ -2,6 +2,7 @@
 
 import UpcomingSessions from "@/components/dashboard/UpcomingSessions";
 import SessionCalendar from "@/components/dashboard/SessionCalendar";
+import { getCalendarAppointments } from "@/data/clientAppointments";
 import PendingSessionsTable from "@/components/dashboard/PendingSessionsTable";
 
 export default function CitasPage() {
@@ -24,20 +25,7 @@ export default function CitasPage() {
     },
   ];
 
-  const calendarAppointmentsData = [
-    {
-      date: 3,
-      professional: "Amanda Bryan",
-      specialty: "Fisioterapeuta",
-      time: "5:30 AM",
-    },
-    {
-      date: 16,
-      professional: "Janie Wells",
-      specialty: "Nutriologa",
-      time: "10:39 AM",
-    },
-  ];
+  const calendarAppointmentsData = getCalendarAppointments();
 
   const pendingSessionsData = [
     {
@@ -74,9 +62,18 @@ export default function CitasPage() {
 
   return (
     <div className="space-y-8">
-      <UpcomingSessions sessions={upcomingSessionsData} />
-      <SessionCalendar appointments={calendarAppointmentsData} />
-      <PendingSessionsTable sessions={pendingSessionsData} />
+      <UpcomingSessions
+        sessions={upcomingSessionsData}
+        basePath="/dashboard/profesional"
+      />
+      <SessionCalendar
+        appointments={calendarAppointmentsData}
+        basePath="/dashboard/profesional"
+      />
+      <PendingSessionsTable
+        sessions={pendingSessionsData}
+        basePath="/dashboard/profesional"
+      />
     </div>
   );
 }

@@ -20,12 +20,7 @@ const fakeUsers = {
     role: "profesional",
     name: "María García",
   },
-  admin: {
-    email: "admin@naxine.com",
-    password: "admin123",
-    role: "administracion",
-    name: "Carlos Admin",
-  },
+  // Admin no accesible desde el login general
 };
 
 export default function LoginPage() {
@@ -224,8 +219,8 @@ export default function LoginPage() {
                   <strong>Profesional:</strong> profesional@naxine.com /
                   profesional123
                 </div>
-                <div>
-                  <strong>Admin:</strong> admin@naxine.com / admin123
+                <div className="text-[11px] text-blue-600/80">
+                  Acceso administración: visitar /admin
                 </div>
               </div>
             </div>

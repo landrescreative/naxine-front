@@ -30,6 +30,11 @@ export default function PerfilPage() {
   });
 
   const [showToast, setShowToast] = useState(false);
+  const [showCancelToast, setShowCancelToast] = useState(false);
+  const [showSupportToast, setShowSupportToast] = useState(false);
+  const [animateSaveToast, setAnimateSaveToast] = useState(false);
+  const [animateCancelToast, setAnimateCancelToast] = useState(false);
+  const [animateSupportToast, setAnimateSupportToast] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -40,6 +45,30 @@ export default function PerfilPage() {
       email: user.email || prev.email,
     }));
   }, [user]);
+
+  // Trigger entrance animation for Save popup
+  useEffect(() => {
+    if (showToast) {
+      setAnimateSaveToast(false);
+      requestAnimationFrame(() => setAnimateSaveToast(true));
+    }
+  }, [showToast]);
+
+  // Trigger entrance animation for Cancel popup
+  useEffect(() => {
+    if (showCancelToast) {
+      setAnimateCancelToast(false);
+      requestAnimationFrame(() => setAnimateCancelToast(true));
+    }
+  }, [showCancelToast]);
+
+  // Trigger entrance animation for Support popup
+  useEffect(() => {
+    if (showSupportToast) {
+      setAnimateSupportToast(false);
+      requestAnimationFrame(() => setAnimateSupportToast(true));
+    }
+  }, [showSupportToast]);
 
   const toggle = (key: keyof typeof notif) =>
     setNotif((p) => ({ ...p, [key]: !p[key] }));
@@ -56,10 +85,16 @@ export default function PerfilPage() {
   return (
     <div className="space-y-6">
       {showToast && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top duration-300">
-          <div className="bg-purple-600 text-white px-6 py-4 rounded-lg shadow-lg flex items-center space-x-4">
+        <div
+          className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 ease-out ${
+            animateSaveToast
+              ? "opacity-100 translate-y-0"
+              : "opacity-0 -translate-y-3"
+          }`}
+        >
+          <div className="bg-primary text-white px-6 py-4 rounded-lg shadow-lg flex items-center space-x-4">
             <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
-              <Check className="w-6 h-6 text-purple-600" />
+              <Check className="w-6 h-6 text-primary" />
             </div>
             <div className="flex flex-col">
               <span className="font-medium text-sm">Cambios aplicados</span>
@@ -98,7 +133,7 @@ export default function PerfilPage() {
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
+            className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors"
           >
             Guardar
           </button>
@@ -196,20 +231,32 @@ export default function PerfilPage() {
             </div>
           </div>
         </div>
-        <div className="bg-primary rounded-lg p-4 text-white">
-          <h4 className="font-semibold mb-2">NOTA:</h4>
-          <p className="text-xs opacity-90 mb-4">
+        <div className="bg-primary text-white rounded-2xl p-6 md:p-8">
+          <h4 className="text-white text-lg mb-2" style={{ fontWeight: 900 }}>
+            NOTA:
+          </h4>
+          <p className="text-base leading-7 opacity-95 mb-6">
             La información personal no es editable por el usuario, contacta con
             soporte para cambiar tu información.
           </p>
-          <label className="block text-sm font-medium mb-2">
+          <label
+            className="block text-white text-lg mb-3"
+            style={{ fontWeight: 900 }}
+          >
             Deja tu mensaje:
           </label>
           <textarea
-            className="w-full h-28 rounded-md bg-white/20 placeholder-white/70 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-white/50"
+            className="w-full h-32 rounded-xl bg-white/30 placeholder-white/80 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/60"
             placeholder="Escribe tu mensaje..."
           />
-          <button className="mt-3 w-full bg-white text-gray-900 font-medium py-2 rounded-md hover:bg-gray-100 transition-colors">
+          <button
+            onClick={() => {
+              setShowSupportToast(true);
+              setTimeout(() => setShowSupportToast(false), 3000);
+            }}
+            className="mt-5 w-full bg-white text-black uppercase tracking-wide py-4 rounded-2xl hover:bg-gray-100 transition-colors"
+            style={{ fontWeight: 900 }}
+          >
             CONTACTAR A SOPORTE
           </button>
         </div>
@@ -337,10 +384,59 @@ export default function PerfilPage() {
           Al pulsar el botón “Solicitar” confirmas el envío de una solicitud de
           baja de tu cuenta profesional.
         </p>
-        <button className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm">
+        <button
+          onClick={() => {
+            setShowCancelToast(true);
+            setTimeout(() => setShowCancelToast(false), 3000);
+          }}
+          className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors text-sm"
+        >
           Solicitar
         </button>
       </div>
+      {showCancelToast && (
+        <div
+          className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 ease-out ${
+            animateCancelToast
+              ? "opacity-100 translate-y-0"
+              : "opacity-0 -translate-y-3"
+          }`}
+        >
+          <div className="bg-primary text-white px-6 py-4 rounded-lg shadow-lg flex items-center space-x-4">
+            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
+              <Check className="w-6 h-6 text-primary" />
+            </div>
+            <div className="flex flex-col">
+              <span className="font-medium text-sm">Solicitud enviada</span>
+              <span className="font-medium text-sm">
+                El administrador será notificado para procesar la cancelación.
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSupportToast && (
+        <div
+          className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 ease-out ${
+            animateSupportToast
+              ? "opacity-100 translate-y-0"
+              : "opacity-0 -translate-y-3"
+          }`}
+        >
+          <div className="bg-primary text-white px-6 py-4 rounded-lg shadow-lg flex items-center space-x-4">
+            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
+              <Check className="w-6 h-6 text-primary" />
+            </div>
+            <div className="flex flex-col">
+              <span className="font-medium text-sm">Mensaje enviado</span>
+              <span className="font-medium text-sm">
+                Te contactaremos pronto para ayudarte.
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

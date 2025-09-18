@@ -1,7 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { use } from "react";
+import { use, useState } from "react";
+import { SiMastercard } from "react-icons/si";
+import { getSessionDetailsById } from "@/data/clientAppointments";
+import SuccessPopup from "@/components/ui/SuccessPopup";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -10,12 +13,60 @@ interface PageProps {
 export default function SessionDetailsPage({ params }: PageProps) {
   const router = useRouter();
   const { id } = use(params);
+  const [showInvoicePopup, setShowInvoicePopup] = useState(false);
+
+  // Obtener detalles de la sesión desde datos centralizados
+  const appointmentDetails = getSessionDetailsById(id);
+
+  // Si no se encuentra la sesión, mostrar mensaje de error
+  if (!appointmentDetails) {
+    return (
+      <div className="p-6">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+            Sesión no encontrada
+          </h1>
+          <p className="text-gray-600 mb-4">
+            La sesión que buscas no existe o ha sido eliminada.
+          </p>
+          <button
+            className="bg-primary hover:bg-primary/90 text-white text-sm font-semibold py-2.5 px-4 rounded-lg"
+            onClick={() => router.back()}
+          >
+            Volver
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
-      <h1 className="text-[22px] font-bold text-gray-900 mb-4">
-        Detalles de la sesión
-      </h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-[22px] font-bold text-gray-900">
+          Detalles de la sesión
+        </h1>
+        <button
+          className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold py-2.5 px-4 rounded-lg transition-colors flex items-center gap-2"
+          onClick={() => router.back()}
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+          Volver
+        </button>
+      </div>
 
       <div className="max-w-6xl mx-auto bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
         <div className="flex items-center justify-between mb-6">
@@ -24,28 +75,50 @@ export default function SessionDetailsPage({ params }: PageProps) {
           </h2>
           <button
             className="bg-primary hover:bg-primary/90 text-white text-sm font-semibold py-2.5 px-4 rounded-lg"
-            onClick={() => alert("Solicitar Factura al Profesional")}
+            onClick={() => setShowInvoicePopup(true)}
           >
             Solicitar Factura al Profesional
           </button>
         </div>
 
         {/* Top meta */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
-          <div className="space-y-1">
+        <div className="space-y-4 mb-8">
+          <div className="flex items-center gap-2">
             <div className="text-sm text-gray-500">Número de pedido:</div>
-            <div className="text-sm font-semibold text-gray-900">{id}</div>
-          </div>
-          <div className="space-y-1">
-            <div className="text-sm text-gray-500">Fecha:</div>
             <div className="text-sm font-semibold text-gray-900">
-              25 Junio, 2025
+              {appointmentDetails.orderNumber}
             </div>
           </div>
-          <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <div className="text-sm text-gray-500">Fecha:</div>
+            <div className="text-sm font-semibold text-gray-900">
+              {appointmentDetails.dateTime.toLocaleDateString("es-ES", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
             <div className="text-sm text-gray-500">Estado:</div>
-            <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-semibold bg-green-100 text-green-700">
-              Confirmada
+            <span
+              className={`inline-flex items-center px-3 py-1 rounded-md text-xs font-semibold ${
+                appointmentDetails.status === "confirmed"
+                  ? "bg-green-100 text-green-700"
+                  : appointmentDetails.status === "pending"
+                  ? "bg-yellow-100 text-yellow-700"
+                  : appointmentDetails.status === "cancelled"
+                  ? "bg-red-100 text-red-700"
+                  : "bg-blue-100 text-blue-700"
+              }`}
+            >
+              {appointmentDetails.status === "confirmed"
+                ? "Confirmada"
+                : appointmentDetails.status === "pending"
+                ? "Pendiente"
+                : appointmentDetails.status === "cancelled"
+                ? "Cancelada"
+                : "Completada"}
             </span>
           </div>
         </div>
@@ -72,11 +145,11 @@ export default function SessionDetailsPage({ params }: PageProps) {
                 </div>
                 <div className="text-sm text-gray-700">
                   <div className="font-semibold text-gray-900">
-                    Primera Sesión
+                    {appointmentDetails.product.name}
                   </div>
-                  <div>$100 USD</div>
-                  <div>Dieta para diabetes</div>
-                  <div>Nutriología</div>
+                  <div>${appointmentDetails.product.price} USD</div>
+                  <div>{appointmentDetails.product.description}</div>
+                  <div>{appointmentDetails.product.category}</div>
                 </div>
               </div>
             </div>
@@ -92,21 +165,21 @@ export default function SessionDetailsPage({ params }: PageProps) {
                 <div>
                   <div className="text-gray-500">Nombre</div>
                   <div className="font-semibold text-gray-900">
-                    Dr. Pramod Mehta - Nutrióloga
+                    {appointmentDetails.professional.name}
                   </div>
                 </div>
                 <div>
                   <div className="text-gray-500">Correo Electrónico</div>
-                  <div>drpramodmehta@gmail.com</div>
+                  <div>{appointmentDetails.professional.email}</div>
                 </div>
                 <div>
                   <div className="text-gray-500">Teléfono</div>
-                  <div>+52 55 31 953 893</div>
+                  <div>{appointmentDetails.professional.phone}</div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="text-gray-500">Info</div>
-                  <div className="w-5 h-5 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center">
-                    ?
+                  <div className="text-gray-500">Especialidad</div>
+                  <div className="font-semibold text-gray-900">
+                    {appointmentDetails.professional.specialty}
                   </div>
                 </div>
               </div>
@@ -118,18 +191,23 @@ export default function SessionDetailsPage({ params }: PageProps) {
             <h3 className="text-base font-semibold text-gray-900 mb-3">
               Método de Pago
             </h3>
-            <div className="bg-white border border-gray-200 rounded-xl p-5 text-sm text-gray-700">
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <div className="font-semibold text-gray-900">Master Card</div>
-                  <div>Master 1234 **** 58745</div>
-                  <div>Expira 12/23</div>
-                  <div>Juan Perez</div>
+            <div className="bg-white border border-gray-200 rounded-xl p-5 text-sm text-gray-700 relative">
+              <div className="space-y-1">
+                <div className="font-semibold text-gray-900">
+                  {appointmentDetails.payment.method}
                 </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded-full bg-orange-500"></div>
-                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                <div className="text-gray-400">
+                  {appointmentDetails.payment.cardNumber}
                 </div>
+                <div className="text-gray-400">
+                  Expira {appointmentDetails.payment.expiryDate}
+                </div>
+                <div className="font-semibold text-gray-900">
+                  {appointmentDetails.payment.cardholderName}
+                </div>
+              </div>
+              <div className="absolute bottom-4 right-4">
+                <SiMastercard className="w-8 h-8 text-gray-400" />
               </div>
             </div>
           </div>
@@ -141,30 +219,30 @@ export default function SessionDetailsPage({ params }: PageProps) {
             </h3>
             <div className="bg-white border border-gray-200 rounded-xl p-5 text-sm text-gray-700">
               <div className="grid grid-cols-2 gap-y-2">
-                <div className="text-gray-500">Product Price :</div>
+                <div className="text-gray-500">Precio del Producto:</div>
                 <div className="text-right font-semibold text-gray-900">
-                  $100 USD
+                  ${appointmentDetails.payment.subtotal} USD
                 </div>
                 <div className="text-gray-500">Impuestos:</div>
-                <div className="text-right">$20</div>
-                <div className="text-gray-900 font-semibold">Total :</div>
+                <div className="text-right">
+                  ${appointmentDetails.payment.taxes}
+                </div>
+                <div className="text-gray-900 font-semibold">Total:</div>
                 <div className="text-right font-semibold text-gray-900">
-                  $120
+                  ${appointmentDetails.payment.total}
                 </div>
               </div>
             </div>
           </div>
         </div>
-
-        <div className="mt-6">
-          <button
-            className="text-sm text-gray-600 hover:text-gray-900"
-            onClick={() => router.back()}
-          >
-            Volver
-          </button>
-        </div>
       </div>
+
+      {/* Success Popup */}
+      <SuccessPopup
+        isVisible={showInvoicePopup}
+        onClose={() => setShowInvoicePopup(false)}
+        message="Factura solicitada"
+      />
     </div>
   );
 }

@@ -47,7 +47,7 @@ export default function ProfessionalPaymentsTable({
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+          <thead className="bg-white">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Orden
@@ -127,10 +127,29 @@ export default function ProfessionalPaymentsTable({
                 {/* Acciones */}
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center space-x-2">
-                    <button className="px-3 py-1.5 text-xs font-medium rounded-md bg-primary hover:bg-primary/90 text-white transition-colors">
+                    <label className="px-3 py-1.5 text-xs font-medium rounded-md bg-primary hover:bg-primary/90 text-white transition-colors cursor-pointer">
                       Subir Factura
-                    </button>
-                    <button className="px-3 py-1.5 text-xs font-medium rounded-md bg-primary/90 hover:bg-primary text-white transition-colors">
+                      <input
+                        type="file"
+                        accept="application/pdf,image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          // Simular subida
+                          const reader = new FileReader();
+                          reader.onload = () => {
+                            console.log(
+                              "Factura subida (simulada):",
+                              file.name
+                            );
+                          };
+                          reader.readAsArrayBuffer(file);
+                          e.currentTarget.value = "";
+                        }}
+                      />
+                    </label>
+                    <button className="px-3 py-1.5 text-xs font-medium rounded-md bg-secondary hover:bg-secondary/90 text-white transition-colors">
                       Descargar Factura Naxine
                     </button>
                   </div>

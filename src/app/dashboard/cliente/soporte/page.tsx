@@ -48,24 +48,18 @@ export default function SoportePage() {
           {/* User Information */}
           <div className="flex items-center mb-8">
             {/* User Icon */}
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-orange-500 rounded-full flex items-center justify-center mr-4 flex-shrink-0">
-              <svg
-                className="w-6 h-6 text-white"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 1H5C3.89 1 3 1.89 3 3V21C3 22.11 3.89 23 5 23H19C20.11 23 21 22.11 21 21V9M19 9H14V4H5V21H19V9Z" />
-              </svg>
-            </div>
+            <img
+              src="/PNG-03.png"
+              alt="Usuario"
+              className="w-12 h-12 mr-4 flex-shrink-0"
+            />
 
             {/* User Info */}
             <div>
               <h3 className="text-lg font-semibold text-black">
                 {user?.name || "Usuario"}
               </h3>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-primary underline">
                 Ésta información es confidencial.
               </p>
             </div>
@@ -86,7 +80,7 @@ export default function SoportePage() {
                 value={message}
                 onChange={handleMessageChange}
                 placeholder="Escribe tu mensaje aquí..."
-                className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg bg-purple-50 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                className="w-full h-32 px-4 py-3 rounded-lg bg-primary/10 border border-transparent focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
                 required
               />
             </div>
@@ -95,7 +89,7 @@ export default function SoportePage() {
             <button
               type="submit"
               disabled={isSubmitting || !message.trim()}
-              className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200"
+              className="inline-flex items-center justify-center bg-primary hover:bg-primary/90 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-2.5 px-6 rounded-md transition-colors duration-200"
             >
               {isSubmitting ? "Enviando..." : "Enviar"}
             </button>

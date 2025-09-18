@@ -1,43 +1,15 @@
 import UpcomingSessions from "@/components/dashboard/UpcomingSessions";
 import SessionCalendar from "@/components/dashboard/SessionCalendar";
 import LatestPayments from "@/components/dashboard/LatestPayments";
+import {
+  getUpcomingSessions,
+  getCalendarAppointments,
+} from "@/data/clientAppointments";
 
 export default function ClienteDashboard() {
-  // Sample data for upcoming sessions
-  const upcomingSessions = [
-    {
-      id: "1",
-      time: "Hoy 5:30 PM",
-      professional: "Dr. Pramod Mehta",
-      specialty: "Nutriologa",
-      description: "Tienes una videollamada con Dr.Pramod Mehta hoy.",
-      isToday: true,
-    },
-    {
-      id: "2",
-      time: "Mañana 5:30 PM",
-      professional: "Dr. Pramod Mehta",
-      specialty: "Nutriologa",
-      description: "Tienes una videollamada con Dr.Pramod Mehta mañana.",
-      isToday: false,
-    },
-  ];
-
-  // Sample data for calendar appointments
-  const calendarAppointments = [
-    {
-      date: 3,
-      professional: "Amanda Bryan",
-      specialty: "Fisioterapeuta",
-      time: "5:30 AM",
-    },
-    {
-      date: 16,
-      professional: "Janie Wells",
-      specialty: "Nutriologa",
-      time: "10:30 AM",
-    },
-  ];
+  // Usar datos centralizados - ahora ambos vienen de la misma fuente
+  const upcomingSessionsData = getUpcomingSessions();
+  const calendarAppointmentsData = getCalendarAppointments();
 
   // Sample data for latest payments
   const latestPayments = [
@@ -82,10 +54,10 @@ export default function ClienteDashboard() {
   return (
     <div className="space-y-2">
       {/* Upcoming Sessions Section */}
-      <UpcomingSessions sessions={upcomingSessions} />
+      <UpcomingSessions sessions={upcomingSessionsData} />
 
       {/* Session Calendar Section */}
-      <SessionCalendar appointments={calendarAppointments} />
+      <SessionCalendar appointments={calendarAppointmentsData} />
 
       {/* Latest Payments Section */}
       <LatestPayments payments={latestPayments} />
