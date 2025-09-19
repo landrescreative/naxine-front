@@ -7,7 +7,6 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
-  MessageCircle,
   Mail,
   CheckCircle,
 } from "lucide-react";
@@ -258,11 +257,6 @@ export default function AdminSoportePage() {
     setSelectedTicket(null);
   };
 
-  const handleSendWhatsApp = () => {
-    console.log("Sending WhatsApp message to:", selectedTicket?.professional);
-    // Add WhatsApp functionality here
-  };
-
   const handleSendEmail = () => {
     console.log("Sending email to:", selectedTicket?.professional);
     // Add email functionality here
@@ -497,13 +491,6 @@ export default function AdminSoportePage() {
 
                 {/* Action Buttons */}
                 <div className="flex items-center justify-between gap-4">
-                  <button
-                    onClick={handleSendWhatsApp}
-                    className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
-                  >
-                    <MessageCircle className="w-5 h-5" />
-                    Enviar WhatsApp
-                  </button>
                   <button
                     onClick={handleSendEmail}
                     className="px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"

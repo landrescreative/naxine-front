@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useRouter, usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import ClientSidebar from "@/components/dashboard/ClientSidebar";
+import { MessageCircle } from "lucide-react";
 
 export default function ClienteLayout({
   children,
@@ -74,6 +75,16 @@ export default function ClienteLayout({
     router.push("/iniciar-sesion");
   };
 
+  const handleWhatsAppClick = () => {
+    // WhatsApp number - you can change this to your business number
+    const phoneNumber = "1234567890"; // Replace with actual WhatsApp number
+    const message = "Hola, necesito ayuda con mi cuenta de cliente.";
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(
+      message
+    )}`;
+    window.open(whatsappUrl, "_blank");
+  };
+
   return (
     <div className="flex h-screen bg-gray-50/20">
       {/* Sidebar */}
@@ -88,6 +99,18 @@ export default function ClienteLayout({
           </div>
         </main>
       </div>
+
+      {/* Floating WhatsApp Button */}
+      <button
+        onClick={handleWhatsAppClick}
+        className="fixed bottom-6 right-6 z-50 bg-green-500 hover:bg-green-600 text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110 group"
+        aria-label="Contactar por WhatsApp"
+      >
+        <MessageCircle className="w-6 h-6" />
+        <div className="absolute right-full mr-3 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white text-sm px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+          Contactar por WhatsApp
+        </div>
+      </button>
     </div>
   );
 }

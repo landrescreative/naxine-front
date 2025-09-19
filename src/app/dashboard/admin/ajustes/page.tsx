@@ -25,6 +25,10 @@ export default function AdminAjustesPage() {
   );
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [selectedPolicy, setSelectedPolicy] = useState("");
+  const [isAddSpecialtyModalOpen, setIsAddSpecialtyModalOpen] = useState(false);
+  const [newSpecialtyName, setNewSpecialtyName] = useState("");
+  const [newSpecialtySubcategories, setNewSpecialtySubcategories] =
+    useState("");
   const [policyContent, setPolicyContent] = useState({
     "Politica de Privacidad": `Última actualización: 30 de julio de 2025
 
@@ -202,8 +206,7 @@ Estos términos se rigen por la legislación española.`,
   };
 
   const [servicesData, setServicesData] = useState(specialtyServices);
-
-  const categories = [
+  const [categoriesData, setCategoriesData] = useState([
     {
       id: 1,
       specialty: "Nutriología",
@@ -242,7 +245,7 @@ Estos términos se rigen por la legislación española.`,
       services: 6,
       professionals: 6,
     },
-  ];
+  ]);
 
   const nutritionProfessionals = [
     {
@@ -418,6 +421,39 @@ Estos términos se rigen por la legislación española.`,
     alert(`Política "${selectedPolicy}" guardada exitosamente`);
   };
 
+  const handleAddSpecialty = () => {
+    setIsAddSpecialtyModalOpen(true);
+  };
+
+  const handleCloseAddSpecialtyModal = () => {
+    setIsAddSpecialtyModalOpen(false);
+    setNewSpecialtyName("");
+    setNewSpecialtySubcategories("");
+  };
+
+  const handleConfirmAddSpecialty = () => {
+    if (newSpecialtyName.trim()) {
+      const newSpecialty = {
+        id: Date.now(), // Simple ID generation
+        specialty: newSpecialtyName.trim(),
+        subcategories:
+          newSpecialtySubcategories.trim() || "Sin subcategorías especificadas",
+        services: 0,
+        professionals: 0,
+      };
+
+      setCategoriesData((prev) => [...prev, newSpecialty]);
+
+      // Also add to servicesData with empty array
+      setServicesData((prev) => ({
+        ...prev,
+        [newSpecialtyName.trim()]: [],
+      }));
+
+      handleCloseAddSpecialtyModal();
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -499,6 +535,17 @@ Estos términos se rigen por la legislación española.`,
         <div className="flex-1 p-6">
           {activeSection === "categorias" && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+              {/* Add Specialty Button */}
+              <div className="p-6 border-b border-gray-200">
+                <button
+                  onClick={handleAddSpecialty}
+                  className="bg-primary text-white px-6 py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors flex items-center gap-2"
+                >
+                  <Plus className="w-5 h-5" />
+                  Agregar Especialidad
+                </button>
+              </div>
+
               {/* Table Header */}
               <div className="border-b border-gray-200">
                 <div className="grid grid-cols-5 gap-4 px-6 py-4 bg-gray-50">
@@ -522,7 +569,7 @@ Estos términos se rigen por la legislación española.`,
 
               {/* Table Body */}
               <div className="divide-y divide-gray-200">
-                {categories.map((category) => (
+                {categoriesData.map((category) => (
                   <div
                     key={category.id}
                     className="grid grid-cols-5 gap-4 px-6 py-4 hover:bg-gray-50 transition-colors"
@@ -1215,6 +1262,76 @@ Estos términos se rigen por la legislación española.`,
                   className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors"
                 >
                   Confirmar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Specialty Modal */}
+      {isAddSpecialtyModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-md mx-4">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900">
+                Agregar nueva especialidad
+              </h2>
+              <button
+                onClick={handleCloseAddSpecialtyModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nombre de la especialidad
+                </label>
+                <input
+                  type="text"
+                  value={newSpecialtyName}
+                  onChange={(e) => setNewSpecialtyName(e.target.value)}
+                  placeholder="Ej: Terapia Ocupacional"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                />
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Subcategorías (opcional)
+                </label>
+                <textarea
+                  value={newSpecialtySubcategories}
+                  onChange={(e) => setNewSpecialtySubcategories(e.target.value)}
+                  placeholder="Ej: Terapia de mano, rehabilitación neurológica, terapia pediátrica..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  onClick={handleCloseAddSpecialtyModal}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleConfirmAddSpecialty}
+                  disabled={!newSpecialtyName.trim()}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    newSpecialtyName.trim()
+                      ? "text-white bg-primary hover:bg-primary/90"
+                      : "text-gray-400 bg-gray-200 cursor-not-allowed"
+                  }`}
+                >
+                  Agregar
                 </button>
               </div>
             </div>
