@@ -111,6 +111,21 @@ export default function ClienteDashboard() {
         setLoading(true);
         setError(null);
 
+        // Verificar que el token esté disponible antes de hacer peticiones
+        const userData = localStorage.getItem("user");
+        if (!userData) {
+          setError("No se encontró información de sesión. Por favor, inicia sesión nuevamente.");
+          setLoading(false);
+          return;
+        }
+
+        const parsedUser = JSON.parse(userData);
+        if (!parsedUser.token) {
+          setError("Token de autenticación no disponible. Por favor, inicia sesión nuevamente.");
+          setLoading(false);
+          return;
+        }
+
         // Cargar citas
         const citasResponse = await citasService.getCitasCliente(user.id);
         if (citasResponse.success && citasResponse.data) {

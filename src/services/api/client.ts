@@ -335,25 +335,40 @@ class ApiClient {
 
   private getAuthToken(): string | null {
     if (typeof window !== "undefined") {
-      const userData = localStorage.getItem("user");
-      if (userData) {
-        try {
-          const user = JSON.parse(userData);
-          const token = user.token || null;
-          
-          logger.debug("Token obtenido", { 
-            hasToken: !!token,
-            userId: user.id,
-            email: user.email 
-          }, "ApiClient");
-          
-          return token;
-        } catch (error) {
-          logger.error("Error parsing user data", error, "ApiClient");
-          return null;
+      try {
+        const userData = localStorage.getItem("user");
+        if (userData) {
+          try {
+            const user = JSON.parse(userData);
+            const token = user.token || null;
+            
+            if (token) {
+              logger.debug("Token obtenido", { 
+                hasToken: true,
+                userId: user.id,
+                email: user.email,
+                tokenLength: token.length
+              }, "ApiClient");
+            } else {
+              logger.warn("Token no encontrado en user data", { 
+                hasUserData: true,
+                userId: user.id,
+                email: user.email,
+                userKeys: Object.keys(user)
+              }, "ApiClient");
+            }
+            
+            return token;
+          } catch (error) {
+            logger.error("Error parsing user data", error, "ApiClient");
+            return null;
+          }
+        } else {
+          logger.debug("No hay user data en localStorage", undefined, "ApiClient");
         }
-      } else {
-        logger.debug("No hay user data en localStorage", undefined, "ApiClient");
+      } catch (error) {
+        logger.error("Error accediendo a localStorage", error, "ApiClient");
+        return null;
       }
     }
     return null;

@@ -240,14 +240,36 @@ export const useAuth = () => {
         // Mapear el formato del backend al formato esperado
         const userData = mapBackendResponseToAuthUser(actualData);
 
-        localStorage.setItem("user", JSON.stringify(userData));
+        // Verificar que el token esté presente antes de guardar
+        if (!userData.token) {
+          logger.error("Token no presente en userData después del login", { userData }, "useAuth");
+          setError("Error: No se recibió token de autenticación del servidor.");
+          return false;
+        }
+
+        // Guardar en localStorage
+        try {
+          localStorage.setItem("user", JSON.stringify(userData));
+          logger.debug("Usuario guardado en localStorage", { 
+            userId: userData.id,
+            email: userData.email,
+            hasToken: !!userData.token 
+          }, "useAuth");
+        } catch (error) {
+          logger.error("Error guardando usuario en localStorage", error, "useAuth");
+          setError("Error al guardar la sesión. Por favor, intenta nuevamente.");
+          return false;
+        }
+
         // Guardar token en cookies para que el middleware pueda acceder
         if (userData.token) {
           setCookie("auth-token", userData.token);
+          logger.debug("Token guardado en cookie", undefined, "useAuth");
         }
         
         setUser(userData);
         window.dispatchEvent(new CustomEvent("userLogin"));
+        logger.info("Login exitoso", { userId: userData.id, email: userData.email }, "useAuth");
         return true;
       } else {
         // Verificar si el error es de cuenta no verificada

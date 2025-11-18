@@ -53,6 +53,26 @@ function LoginForm() {
       }
 
       if (result === true) {
+        // Esperar un momento para asegurar que el token se haya guardado en localStorage
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Verificar que el token esté guardado antes de redirigir
+        const userData = localStorage.getItem("user");
+        if (userData) {
+          try {
+            const parsedUser = JSON.parse(userData);
+            if (!parsedUser.token) {
+              logger.warn("Token no encontrado después del login", undefined, "LoginPage");
+              setError("Error al guardar la sesión. Por favor, intenta nuevamente.");
+              return;
+            }
+          } catch (error) {
+            logger.error("Error verificando token después del login", error, "LoginPage");
+            setError("Error al verificar la sesión. Por favor, intenta nuevamente.");
+            return;
+          }
+        }
+        
         // Redirigir a la página de destino o a la principal
         const redirectTo = searchParams.get("redirect") || "/";
         logger.info("Login exitoso, redirigiendo", { redirectTo }, "LoginPage");
