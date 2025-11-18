@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Eye,
@@ -9,226 +9,84 @@ import {
   X,
   Mail,
   CheckCircle,
+  Loader2,
+  Filter,
 } from "lucide-react";
+import { useTickets } from "@/hooks/useTickets";
+import { Ticket, TicketStatus } from "@/services/api/tickets";
+
+// Helper function to map API status to UI display
+const getStatusDisplay = (status: TicketStatus) => {
+  switch (status) {
+    case "abierto":
+      return { label: "Pendiente", color: "bg-red-100 text-red-800" };
+    case "en proceso":
+      return { label: "En Proceso", color: "bg-yellow-100 text-yellow-800" };
+    case "cerrado":
+      return { label: "Resuelto", color: "bg-green-100 text-green-800" };
+    default:
+      return { label: status, color: "bg-gray-100 text-gray-800" };
+  }
+};
+
+// Helper function to format date
+const formatDate = (dateString: string) => {
+  if (!dateString) return "Fecha no disponible";
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return "Fecha inválida";
+    }
+    return date.toLocaleDateString("es-ES", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+  } catch (error) {
+    return "Fecha inválida";
+  }
+};
 
 export default function AdminSoportePage() {
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
-  const [selectedTicket, setSelectedTicket] = useState<any>(null);
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [statusFilter, setStatusFilter] = useState<TicketStatus | undefined>(
+    undefined
+  );
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const prevStatusFilterRef = useRef<TicketStatus | undefined>(undefined);
 
-  // Mock data for support tickets
-  const [supportTickets, setSupportTickets] = useState([
-    {
-      id: 1,
-      professional: "Dr. Ernesto Almeida",
-      title: "Nutriologo",
-      message: "No puedo acceder a mi perfil profesional..",
-      fullMessage:
-        "Hola, tengo un problema con el acceso a mi perfil profesional. Cuando intento iniciar sesión, me aparece un error y no puedo ver mis citas pendientes. Necesito ayuda urgente porque tengo pacientes esperando.",
-      client: "Juan Perez",
-      phone: "+32 55 1049 2408",
-      email: "juanperez@gmail.com",
-      date: "2025-10-12",
-      status: "Pendiente",
-      statusColor: "bg-red-100 text-red-800",
-    },
-    {
-      id: 2,
-      professional: "Dr. María González",
-      title: "Psicóloga",
-      message: "Problema con el sistema de pagos..",
-      fullMessage:
-        "Buenos días, he tenido problemas con el sistema de pagos. Los pagos de mis clientes no se están reflejando en mi cuenta y ya han pasado varios días. ¿Podrían revisar esto?",
-      client: "Ana Martínez",
-      phone: "+32 55 1234 5678",
-      email: "anamartinez@gmail.com",
-      date: "2025-10-11",
-      status: "Resuelto",
-      statusColor: "bg-green-100 text-green-800",
-    },
-    {
-      id: 3,
-      professional: "Dr. Carlos López",
-      title: "Fisioterapeuta",
-      message: "No recibo notificaciones de citas..",
-      fullMessage:
-        "Estimados, no estoy recibiendo las notificaciones de las citas programadas. Esto me está causando problemas porque no sé cuándo tengo pacientes. ¿Hay alguna configuración que deba cambiar?",
-      client: "Pedro Silva",
-      phone: "+32 55 9876 5432",
-      email: "pedrosilva@gmail.com",
-      date: "2025-10-10",
-      status: "Pendiente",
-      statusColor: "bg-red-100 text-red-800",
-    },
-    {
-      id: 4,
-      professional: "Dr. Laura Fernández",
-      title: "Cardióloga",
-      message: "Error al subir documentos..",
-      fullMessage:
-        "Tengo problemas para subir los certificados médicos de mis pacientes. El sistema me dice que el archivo es muy grande, pero es un PDF normal. ¿Cuál es el límite de tamaño?",
-      client: "Carmen Ruiz",
-      phone: "+32 55 2468 1357",
-      email: "carmenruiz@gmail.com",
-      date: "2025-10-09",
-      status: "Resuelto",
-      statusColor: "bg-green-100 text-green-800",
-    },
-    {
-      id: 5,
-      professional: "Dr. Miguel Torres",
-      title: "Dermatólogo",
-      message: "No puedo cancelar una cita..",
-      fullMessage:
-        "Necesito cancelar una cita de emergencia pero no encuentro la opción en la plataforma. El paciente canceló y necesito liberar el horario para otro paciente urgente.",
-      client: "Roberto Vega",
-      phone: "+32 55 3691 2580",
-      email: "robertovega@gmail.com",
-      date: "2025-10-08",
-      status: "Pendiente",
-      statusColor: "bg-red-100 text-red-800",
-    },
-    {
-      id: 6,
-      professional: "Dr. Patricia Herrera",
-      title: "Ginecóloga",
-      message: "Problema con la videollamada..",
-      fullMessage:
-        "Las videollamadas se cortan constantemente durante las consultas. Esto es muy frustrante tanto para mí como para mis pacientes. ¿Hay alguna solución?",
-      client: "Isabel Morales",
-      phone: "+32 55 7410 8520",
-      email: "isabelmorales@gmail.com",
-      date: "2025-10-07",
-      status: "Resuelto",
-      statusColor: "bg-green-100 text-green-800",
-    },
-    {
-      id: 7,
-      professional: "Dr. Javier Ramos",
-      title: "Pediatra",
-      message: "No puedo ver el historial de pacientes..",
-      fullMessage:
-        "El historial médico de mis pacientes no se está cargando correctamente. Solo veo información parcial y esto es crítico para dar un buen diagnóstico.",
-      client: "Sofia Castro",
-      phone: "+32 55 8520 7410",
-      email: "sofiacastro@gmail.com",
-      date: "2025-10-06",
-      status: "Pendiente",
-      statusColor: "bg-red-100 text-red-800",
-    },
-    {
-      id: 8,
-      professional: "Dr. Elena Vargas",
-      title: "Oftalmóloga",
-      message: "Error en la facturación..",
-      fullMessage:
-        "Las facturas que estoy generando tienen precios incorrectos. Los montos no coinciden con los que acordé con mis pacientes. Esto es muy serio.",
-      client: "Diego Herrera",
-      phone: "+32 55 9630 1470",
-      email: "diegoherrera@gmail.com",
-      date: "2025-10-05",
-      status: "Resuelto",
-      statusColor: "bg-green-100 text-green-800",
-    },
-    {
-      id: 9,
-      professional: "Dr. Fernando Jiménez",
-      title: "Neurólogo",
-      message: "No puedo programar citas..",
-      fullMessage:
-        "El calendario no me permite programar citas para la próxima semana. Me dice que no hay horarios disponibles, pero mi agenda está libre.",
-      client: "Valentina López",
-      phone: "+32 55 1470 9630",
-      email: "valentinalopez@gmail.com",
-      date: "2025-10-04",
-      status: "Pendiente",
-      statusColor: "bg-red-100 text-red-800",
-    },
-    {
-      id: 10,
-      professional: "Dr. Gabriela Santos",
-      title: "Endocrinóloga",
-      message: "Problema con los recordatorios..",
-      fullMessage:
-        "Los recordatorios automáticos no se están enviando a mis pacientes. Varios han llegado sin cita porque no recibieron la confirmación.",
-      client: "Andrés Moreno",
-      phone: "+32 55 2580 3691",
-      email: "andresmoreno@gmail.com",
-      date: "2025-10-03",
-      status: "Resuelto",
-      statusColor: "bg-green-100 text-green-800",
-    },
-    {
-      id: 11,
-      professional: "Dr. Ricardo Peña",
-      title: "Urología",
-      message: "Error al actualizar perfil..",
-      fullMessage:
-        "Estoy intentando actualizar mi información profesional pero los cambios no se guardan. He intentado varias veces y siempre vuelve a la información anterior.",
-      client: "Natalia Díaz",
-      phone: "+32 55 3691 2580",
-      email: "nataliadiaz@gmail.com",
-      date: "2025-10-02",
-      status: "Pendiente",
-      statusColor: "bg-red-100 text-red-800",
-    },
-    {
-      id: 12,
-      professional: "Dr. Claudia Rojas",
-      title: "Reumatóloga",
-      message: "Problema con la app móvil..",
-      fullMessage:
-        "La aplicación móvil se cierra inesperadamente cuando estoy en una consulta. Esto es muy molesto y me hace perder tiempo valioso con mis pacientes.",
-      client: "Hugo Mendoza",
-      phone: "+32 55 4701 8520",
-      email: "hugomendoza@gmail.com",
-      date: "2025-10-01",
-      status: "Resuelto",
-      statusColor: "bg-green-100 text-green-800",
-    },
-    {
-      id: 13,
-      professional: "Dr. Alejandro Cruz",
-      title: "Gastroenterólogo",
-      message: "No puedo descargar reportes..",
-      fullMessage:
-        "Necesito descargar el reporte mensual de mis consultas pero el botón no funciona. He probado en diferentes navegadores y el problema persiste.",
-      client: "María Elena",
-      phone: "+32 55 5810 9630",
-      email: "mariaelena@gmail.com",
-      date: "2025-09-30",
-      status: "Pendiente",
-      statusColor: "bg-red-100 text-red-800",
-    },
-    {
-      id: 14,
-      professional: "Dr. Beatriz Ortega",
-      title: "Neumóloga",
-      message: "Problema con la sincronización..",
-      fullMessage:
-        "Los datos de mis pacientes no se sincronizan correctamente entre la web y la app móvil. Veo información diferente en cada plataforma.",
-      client: "Carlos Alberto",
-      phone: "+32 55 6920 1470",
-      email: "carlosalberto@gmail.com",
-      date: "2025-09-29",
-      status: "Resuelto",
-      statusColor: "bg-green-100 text-green-800",
-    },
-    {
-      id: 15,
-      professional: "Dr. Manuel Delgado",
-      title: "Hematólogo",
-      message: "Error en la configuración de horarios..",
-      fullMessage:
-        "Configuré mis horarios de atención pero el sistema no los está respetando. Me están asignando citas fuera de mi horario laboral.",
-      client: "Patricia Solís",
-      phone: "+32 55 7030 2580",
-      email: "patriciasolis@gmail.com",
-      date: "2025-09-28",
-      status: "Pendiente",
-      statusColor: "bg-red-100 text-red-800",
-    },
-  ]);
+  const {
+    tickets,
+    loading,
+    error,
+    total,
+    currentOffset,
+    limit,
+    updateTicketStatus,
+    getTicketById,
+    nextPage,
+    prevPage,
+    goToPage,
+    refreshTickets,
+  } = useTickets({
+    estado: statusFilter,
+    limit: 15,
+    offset: 0,
+    autoLoad: true,
+  });
+
+  // Reset offset when filter changes
+  useEffect(() => {
+    const prevFilter = prevStatusFilterRef.current;
+    prevStatusFilterRef.current = statusFilter;
+    
+    // Only reset if filter actually changed (not on initial mount)
+    if (prevFilter !== undefined && prevFilter !== statusFilter && currentOffset !== 0) {
+      goToPage(0);
+    }
+  }, [statusFilter, currentOffset, goToPage]);
 
   const handleSelectRow = (id: number) => {
     setSelectedRows((prev) =>
@@ -237,18 +95,33 @@ export default function AdminSoportePage() {
   };
 
   const handleSelectAll = () => {
-    if (selectedRows.length === supportTickets.length) {
+    if (selectedRows.length === tickets.length) {
       setSelectedRows([]);
     } else {
-      setSelectedRows(supportTickets.map((ticket) => ticket.id));
+      setSelectedRows(tickets.map((ticket) => ticket.id_ticket));
     }
   };
 
-  const handleViewTicket = (id: number) => {
-    const ticket = supportTickets.find((t) => t.id === id);
-    if (ticket) {
-      setSelectedTicket(ticket);
-      setIsTicketModalOpen(true);
+  const handleViewTicket = async (id: number) => {
+    try {
+      // Primero intentar usar el ticket de la lista si está disponible
+      const ticketFromList = tickets.find((t) => t.id_ticket === id);
+      if (ticketFromList) {
+        setSelectedTicket(ticketFromList);
+        setIsTicketModalOpen(true);
+        return;
+      }
+
+      // Si no está en la lista, obtenerlo del API
+      const result = await getTicketById(id);
+      if (result.success && result.data) {
+        setSelectedTicket(result.data);
+        setIsTicketModalOpen(true);
+      } else {
+        console.error("[AdminSoportePage] Error al obtener ticket:", result.error);
+      }
+    } catch (error) {
+      console.error("[AdminSoportePage] Error en handleViewTicket:", error);
     }
   };
 
@@ -258,32 +131,65 @@ export default function AdminSoportePage() {
   };
 
   const handleSendEmail = () => {
-    console.log("Sending email to:", selectedTicket?.professional);
-    // Add email functionality here
+    if (selectedTicket?.correo) {
+      window.location.href = `mailto:${selectedTicket.correo}`;
+    } else if (selectedTicket?.usuario?.email) {
+      window.location.href = `mailto:${selectedTicket.usuario.email}`;
+    }
   };
 
-  const handleMarkResolved = () => {
-    if (selectedTicket) {
-      setSupportTickets((prev) =>
-        prev.map((ticket) =>
-          ticket.id === selectedTicket.id
-            ? {
-                ...ticket,
-                status: "Resuelto",
-                statusColor: "bg-green-100 text-green-800",
-              }
-            : ticket
-        )
-      );
-      console.log("Marking ticket as resolved:", selectedTicket.id);
+  const handleUpdateStatus = async (newStatus: TicketStatus) => {
+    if (!selectedTicket) return;
+
+    setIsUpdatingStatus(true);
+    const result = await updateTicketStatus(selectedTicket.id_ticket, newStatus);
+
+    if (result.success && result.data) {
+      // Cerrar el modal después de actualizar exitosamente
+      setIsTicketModalOpen(false);
+      setSelectedTicket(null);
+      // Refresh the list para actualizar el ticket en la lista
+      refreshTickets();
+    } else {
+      // Si falla, mostrar error pero mantener el modal abierto
+      console.error("Error al actualizar estado:", result.error);
     }
-    handleCloseModal();
+    setIsUpdatingStatus(false);
   };
+
+  const handleMarkResolved = async () => {
+    await handleUpdateStatus("cerrado");
+  };
+
+  const handleMarkInProcess = async () => {
+    await handleUpdateStatus("en proceso");
+  };
+
+  const handleReopen = async () => {
+    await handleUpdateStatus("abierto");
+  };
+
+  const currentPage = Math.floor(currentOffset / limit) + 1;
+  const totalPages = Math.ceil(total / limit);
+  const startItem = currentOffset + 1;
+  const endItem = Math.min(currentOffset + limit, total);
+
+  // Bloquear scroll del body cuando el modal está abierto
+  useEffect(() => {
+    if (isTicketModalOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isTicketModalOpen]);
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-6">
+      <div className="bg-white border-b border-gray-200 py-6 -mx-6 px-6 mb-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
           Tickets de Soporte
         </h1>
@@ -297,118 +203,238 @@ export default function AdminSoportePage() {
       </div>
 
       {/* Main Content */}
-      <div className="p-6">
+      <div>
+        {/* Filters */}
+        <div className="mb-4 flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-gray-500" />
+            <span className="text-sm font-medium text-gray-700">Filtrar por:</span>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setStatusFilter(undefined)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                statusFilter === undefined
+                  ? "bg-primary text-white"
+                  : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              Todos
+            </button>
+            <button
+              onClick={() => setStatusFilter("abierto")}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                statusFilter === "abierto"
+                  ? "bg-red-600 text-white"
+                  : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              Pendientes
+            </button>
+            <button
+              onClick={() => setStatusFilter("en proceso")}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                statusFilter === "en proceso"
+                  ? "bg-yellow-600 text-white"
+                  : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              En Proceso
+            </button>
+            <button
+              onClick={() => setStatusFilter("cerrado")}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                statusFilter === "cerrado"
+                  ? "bg-green-600 text-white"
+                  : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              Resueltos
+            </button>
+          </div>
+        </div>
+
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          {error && (
+            <div className="p-4 bg-red-50 border-b border-red-200">
+              <p className="text-sm text-red-800">{error}</p>
+            </div>
+          )}
+
           {/* Table */}
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="w-12 py-4 px-6">
-                    <input
-                      type="checkbox"
-                      checked={selectedRows.length === supportTickets.length}
-                      onChange={handleSelectAll}
-                      className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
-                    />
-                  </th>
-                  <th className="text-left py-4 px-6 text-sm font-medium text-gray-900">
-                    Profesional
-                  </th>
-                  <th className="text-left py-4 px-6 text-sm font-medium text-gray-900">
-                    Mensaje
-                  </th>
-                  <th className="text-left py-4 px-6 text-sm font-medium text-gray-900">
-                    Fecha
-                  </th>
-                  <th className="text-left py-4 px-6 text-sm font-medium text-gray-900">
-                    Estado
-                  </th>
-                  <th className="text-left py-4 px-6 text-sm font-medium text-gray-900">
-                    Acción
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {supportTickets.map((ticket) => (
-                  <tr key={ticket.id} className="hover:bg-gray-50">
-                    <td className="py-4 px-6">
+            {loading && tickets.length === 0 ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="ml-2 text-gray-600">Cargando tickets...</span>
+              </div>
+            ) : tickets.length === 0 ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <p className="text-gray-500 mb-2">No hay tickets disponibles</p>
+                  {total > 0 && (
+                    <p className="text-xs text-gray-400">
+                      Total en servidor: {total} | Tickets cargados: {tickets.length}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="w-12 py-4 px-6">
                       <input
                         type="checkbox"
-                        checked={selectedRows.includes(ticket.id)}
-                        onChange={() => handleSelectRow(ticket.id)}
+                        checked={
+                          tickets.length > 0 &&
+                          selectedRows.length === tickets.length
+                        }
+                        onChange={handleSelectAll}
                         className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
                       />
-                    </td>
-                    <td className="py-4 px-6">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {ticket.professional}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {ticket.title}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="text-sm text-gray-900 max-w-xs truncate">
-                        {ticket.message}
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="text-sm text-gray-900">{ticket.date}</div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${ticket.statusColor}`}
-                      >
-                        {ticket.status}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6">
-                      <button
-                        onClick={() => handleViewTicket(ticket.id)}
-                        className="text-gray-400 hover:text-gray-600"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </button>
-                    </td>
+                    </th>
+                    <th className="text-left py-4 px-6 text-sm font-medium text-gray-900">
+                      Usuario
+                    </th>
+                    <th className="text-left py-4 px-6 text-sm font-medium text-gray-900">
+                      Asunto
+                    </th>
+                    <th className="text-left py-4 px-6 text-sm font-medium text-gray-900">
+                      Mensaje
+                    </th>
+                    <th className="text-left py-4 px-6 text-sm font-medium text-gray-900">
+                      Fecha
+                    </th>
+                    <th className="text-left py-4 px-6 text-sm font-medium text-gray-900">
+                      Estado
+                    </th>
+                    <th className="text-left py-4 px-6 text-sm font-medium text-gray-900">
+                      Acción
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {tickets.map((ticket, index) => {
+                    const statusDisplay = getStatusDisplay(ticket.estado);
+                    return (
+                      <tr key={ticket.id_ticket || `ticket-${index}`} className="hover:bg-gray-50">
+                        <td className="py-4 px-6">
+                          <input
+                            type="checkbox"
+                            checked={selectedRows.includes(ticket.id_ticket)}
+                            onChange={() => handleSelectRow(ticket.id_ticket)}
+                            className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                          />
+                        </td>
+                        <td className="py-4 px-6">
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {ticket.usuario?.nombre || "Usuario desconocido"}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {ticket.usuario?.rol || "N/A"}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="text-sm font-medium text-gray-900">
+                            {ticket.asunto}
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="text-sm text-gray-900 max-w-xs truncate">
+                            {ticket.mensaje}
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="text-sm text-gray-900">
+                            {formatDate(ticket.fecha_creacion)}
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusDisplay.color}`}
+                          >
+                            {statusDisplay.label}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6">
+                          <button
+                            onClick={() => handleViewTicket(ticket.id_ticket)}
+                            className="text-gray-400 hover:text-gray-600"
+                            disabled={loading}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
-            <div className="text-sm text-gray-600">Mostrando 15 de 204</div>
-            <div className="flex items-center space-x-2">
-              <button className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50">
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <button className="px-3 py-2 rounded-lg bg-primary text-white text-sm font-medium">
-                1
-              </button>
-              <button className="px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium hover:bg-gray-50">
-                2
-              </button>
-              <button className="px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium hover:bg-gray-50">
-                3
-              </button>
-              <button className="px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium hover:bg-gray-50">
-                4
-              </button>
-              <button className="px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium hover:bg-gray-50">
-                5
-              </button>
-              <button className="px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium hover:bg-gray-50">
-                ...
-              </button>
-              <button className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50">
-                <ChevronRight className="h-4 w-4" />
-              </button>
+          {tickets.length > 0 && (
+            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
+              <div className="text-sm text-gray-600">
+                Mostrando {startItem} - {endItem} de {total}
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={prevPage}
+                  disabled={currentOffset === 0 || loading}
+                  className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => {
+                          const newOffset = (pageNum - 1) * limit;
+                          goToPage(newOffset);
+                        }}
+                        disabled={loading}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium ${
+                          currentPage === pageNum
+                            ? "bg-primary text-white"
+                            : "border border-gray-300 text-gray-700 hover:bg-gray-50"
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                  {totalPages > 5 && currentPage < totalPages - 2 && (
+                    <span className="px-2 text-gray-500">...</span>
+                  )}
+                </div>
+                <button
+                  onClick={nextPage}
+                  disabled={currentOffset + limit >= total || loading}
+                  className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -420,88 +446,162 @@ export default function AdminSoportePage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto"
+            onClick={handleCloseModal}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4"
+              className="bg-white rounded-xl shadow-2xl w-full max-w-2xl my-auto max-h-[calc(100vh-2rem)] flex flex-col"
+              onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="p-6 border-b border-gray-200">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-bold text-gray-900">
-                    Ticket de soporte
-                  </h2>
+              <div className="p-4 sm:p-6 border-b border-gray-200 flex-shrink-0">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+                      Ticket #{selectedTicket.id_ticket}
+                    </h2>
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-2 ${getStatusDisplay(selectedTicket.estado).color}`}
+                    >
+                      {getStatusDisplay(selectedTicket.estado).label}
+                    </span>
+                  </div>
                   <button
                     onClick={handleCloseModal}
-                    className="text-gray-400 hover:text-gray-600"
+                    className="text-gray-400 hover:text-gray-600 flex-shrink-0"
                   >
                     <X className="h-5 w-5" />
                   </button>
                 </div>
               </div>
 
-              {/* Content */}
-              <div className="p-6">
-                {/* Client Information */}
-                <div className="flex items-start justify-between mb-6">
-                  {/* Client Info */}
-                  <div className="flex items-center space-x-4">
-                    <div className="relative">
-                      <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-orange-500 rounded-full flex items-center justify-center">
-                        <div className="w-12 h-12 bg-white/20 rounded-full"></div>
+              {/* Content - Scrollable */}
+              <div className="p-4 sm:p-6 overflow-y-auto flex-1">
+                {/* User Information */}
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+                  {/* User Info */}
+                  <div className="flex items-center space-x-3 sm:space-x-4">
+                    <div className="relative flex-shrink-0">
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-purple-500 to-orange-500 rounded-full flex items-center justify-center">
+                        <div className="w-8 h-8 sm:w-12 sm:h-12 bg-white/20 rounded-full"></div>
                       </div>
-                      <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
-                        <div className="w-3 h-3 bg-white rounded-full"></div>
+                      <div className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-primary rounded-full flex items-center justify-center">
+                        <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-white rounded-full"></div>
                       </div>
                     </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-gray-900">
-                        {selectedTicket.client}
+                    <div className="min-w-0">
+                      <h3 className="text-base sm:text-lg font-bold text-gray-900 truncate">
+                        {selectedTicket.usuario?.nombre || "Usuario desconocido"}
                       </h3>
-                      <p className="text-sm text-gray-500">Cliente</p>
+                      <p className="text-xs sm:text-sm text-gray-500">
+                        {selectedTicket.usuario?.rol || "N/A"}
+                      </p>
                     </div>
                   </div>
 
                   {/* Contact Details */}
-                  <div className="text-right">
-                    <p className="text-sm text-gray-900 font-medium">
-                      Teléfono: {selectedTicket.phone}
-                    </p>
-                    <p className="text-sm text-gray-900 font-medium">
-                      Correo: {selectedTicket.email}
+                  <div className="text-left sm:text-right">
+                    {selectedTicket.telefono && (
+                      <p className="text-xs sm:text-sm text-gray-900 font-medium break-words">
+                        Teléfono: {selectedTicket.telefono}
+                      </p>
+                    )}
+                    {(selectedTicket.correo || selectedTicket.usuario?.email) && (
+                      <p className="text-xs sm:text-sm text-gray-900 font-medium break-all">
+                        Correo: {selectedTicket.correo || selectedTicket.usuario?.email}
+                      </p>
+                    )}
+                    {selectedTicket.fecha_creacion && (
+                      <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                        Fecha: {formatDate(selectedTicket.fecha_creacion)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Subject */}
+                <div className="mb-4">
+                  <h4 className="text-xs sm:text-sm font-semibold text-gray-700 mb-1">
+                    Asunto
+                  </h4>
+                  <p className="text-sm sm:text-base text-gray-900 break-words">
+                    {selectedTicket.asunto}
+                  </p>
+                </div>
+
+                {/* Message Section */}
+                <div className="mb-6 sm:mb-8">
+                  <h4 className="text-base sm:text-lg font-bold text-gray-900 mb-2 sm:mb-3">
+                    Mensaje
+                  </h4>
+                  <div className="bg-gray-100 rounded-lg p-3 sm:p-4">
+                    <p className="text-sm sm:text-base text-gray-700 leading-relaxed whitespace-pre-wrap break-words">
+                      {selectedTicket.mensaje}
                     </p>
                   </div>
                 </div>
 
-                {/* Message Section */}
-                <div className="mb-8">
-                  <h4 className="text-lg font-bold text-gray-900 mb-3">
-                    Mensaje
+                {/* Status Actions */}
+                <div className="mb-4 sm:mb-6">
+                  <h4 className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 sm:mb-3">
+                    Cambiar Estado
                   </h4>
-                  <div className="bg-gray-100 rounded-lg p-4">
-                    <p className="text-gray-700 leading-relaxed">
-                      {selectedTicket.fullMessage}
-                    </p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedTicket.estado !== "abierto" && (
+                      <button
+                        onClick={handleReopen}
+                        disabled={isUpdatingStatus}
+                        className="px-3 sm:px-4 py-1.5 sm:py-2 bg-red-600 text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                      >
+                        {isUpdatingStatus ? (
+                          <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                        ) : (
+                          "Reabrir"
+                        )}
+                      </button>
+                    )}
+                    {selectedTicket.estado !== "en proceso" && (
+                      <button
+                        onClick={handleMarkInProcess}
+                        disabled={isUpdatingStatus}
+                        className="px-3 sm:px-4 py-1.5 sm:py-2 bg-yellow-600 text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-yellow-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                      >
+                        {isUpdatingStatus ? (
+                          <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                        ) : (
+                          "En Proceso"
+                        )}
+                      </button>
+                    )}
+                    {selectedTicket.estado !== "cerrado" && (
+                      <button
+                        onClick={handleMarkResolved}
+                        disabled={isUpdatingStatus}
+                        className="px-3 sm:px-4 py-1.5 sm:py-2 bg-green-600 text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                      >
+                        {isUpdatingStatus ? (
+                          <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                        ) : (
+                          "Resuelto"
+                        )}
+                      </button>
+                    )}
                   </div>
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center justify-center sm:justify-start gap-4 pt-4 border-t border-gray-200">
                   <button
                     onClick={handleSendEmail}
-                    className="px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
+                    className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 bg-primary text-white rounded-lg text-sm sm:text-base font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
                   >
-                    Enviar correo electrónico
-                  </button>
-                  <button
-                    onClick={handleMarkResolved}
-                    className="px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
-                  >
-                    Marcar como resuelto
+                    <Mail className="h-4 w-4" />
+                    <span className="hidden sm:inline">Enviar correo electrónico</span>
+                    <span className="sm:hidden">Enviar correo</span>
                   </button>
                 </div>
               </div>

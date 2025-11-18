@@ -1,6 +1,27 @@
+import type { Metadata } from "next";
 import FAQSection from "@/components/ui/FAQSection";
 import SeparatorSection from "@/components/ui/SeparatorSection";
 import React from "react";
+
+export const metadata: Metadata = {
+  title: "Preguntas Frecuentes",
+  description:
+    "Encuentra respuestas a las preguntas más frecuentes sobre NAXINE. Información sobre servicios, reservas, pagos, cancelaciones y más.",
+  keywords: [
+    "preguntas frecuentes",
+    "FAQ",
+    "ayuda",
+    "dudas",
+    "información",
+    "preguntas comunes",
+  ],
+  openGraph: {
+    title: "Preguntas Frecuentes | NAXINE",
+    description:
+      "Encuentra respuestas a las preguntas más frecuentes sobre NAXINE, servicios, reservas y pagos.",
+    type: "website",
+  },
+};
 
 export default function PreguntasFrecuentesPage() {
   return (

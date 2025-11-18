@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -14,12 +14,18 @@ import {
   Star,
   X,
 } from "lucide-react";
+import { valoracionesService, ValoracionItem } from "@/services/api/valoraciones";
 
 export default function AdminValoracionesPage() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(15);
+  const [total, setTotal] = useState(0);
   const [filters, setFilters] = useState({
     rating: {
       "4.0-5.0": false,
@@ -32,174 +38,64 @@ export default function AdminValoracionesPage() {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [selectedReview, setSelectedReview] = useState<any>(null);
 
-  // Mock ratings data
-  const [ratings, setRatings] = useState([
-    {
-      id: 1,
-      client: "John Store",
-      product: "Primera Sesión",
-      rating: 4.8,
-      professional: "Dr. Ernesto Almeida",
-      message: "Personalmente considero que la...",
-      date: "2025 - 10 - 12",
-      status: "Pendiente",
-      statusColor: "bg-red-100 text-red-800",
-    },
-    {
-      id: 2,
-      client: "Laura Stuff",
-      product: "Primera Sesión",
-      rating: 5.0,
-      professional: "Dr. Ernesto Almeida",
-      message: "Excelente servicio y atención...",
-      date: "2025 - 10 - 11",
-      status: "Aprobada",
-      statusColor: "bg-green-100 text-green-800",
-    },
-    {
-      id: 3,
-      client: "Laura Perez",
-      product: "Primera Sesión",
-      rating: 3.9,
-      professional: "Dr. Ernesto Almeida",
-      message: "Buen servicio pero podría mejorar...",
-      date: "2025 - 10 - 10",
-      status: "Aprobada",
-      statusColor: "bg-green-100 text-green-800",
-    },
-    {
-      id: 4,
-      client: "Maria Garcia",
-      product: "Primera Sesión",
-      rating: 4.5,
-      professional: "Dr. Ernesto Almeida",
-      message: "Muy satisfecha con el resultado...",
-      date: "2025 - 10 - 09",
-      status: "Pendiente",
-      statusColor: "bg-red-100 text-red-800",
-    },
-    {
-      id: 5,
-      client: "Carlos Rodriguez",
-      product: "Primera Sesión",
-      rating: 4.2,
-      professional: "Dr. Ernesto Almeida",
-      message: "Profesional muy competente...",
-      date: "2025 - 10 - 08",
-      status: "Aprobada",
-      statusColor: "bg-green-100 text-green-800",
-    },
-    {
-      id: 6,
-      client: "Ana Martinez",
-      product: "Primera Sesión",
-      rating: 4.7,
-      professional: "Dr. Ernesto Almeida",
-      message: "Recomiendo ampliamente este servicio...",
-      date: "2025 - 10 - 07",
-      status: "Aprobada",
-      statusColor: "bg-green-100 text-green-800",
-    },
-    {
-      id: 7,
-      client: "Pedro Lopez",
-      product: "Primera Sesión",
-      rating: 3.5,
-      professional: "Dr. Ernesto Almeida",
-      message: "Servicio aceptable pero esperaba más...",
-      date: "2025 - 10 - 06",
-      status: "Pendiente",
-      statusColor: "bg-red-100 text-red-800",
-    },
-    {
-      id: 8,
-      client: "Sofia Herrera",
-      product: "Primera Sesión",
-      rating: 4.9,
-      professional: "Dr. Ernesto Almeida",
-      message: "Increíble experiencia, muy recomendado...",
-      date: "2025 - 10 - 05",
-      status: "Aprobada",
-      statusColor: "bg-green-100 text-green-800",
-    },
-    {
-      id: 9,
-      client: "Miguel Torres",
-      product: "Primera Sesión",
-      rating: 4.1,
-      professional: "Dr. Ernesto Almeida",
-      message: "Buen servicio, cumplió mis expectativas...",
-      date: "2025 - 10 - 04",
-      status: "Aprobada",
-      statusColor: "bg-green-100 text-green-800",
-    },
-    {
-      id: 10,
-      client: "Isabella Cruz",
-      product: "Primera Sesión",
-      rating: 4.6,
-      professional: "Dr. Ernesto Almeida",
-      message: "Muy profesional y atento a los detalles...",
-      date: "2025 - 10 - 03",
-      status: "Pendiente",
-      statusColor: "bg-red-100 text-red-800",
-    },
-    {
-      id: 11,
-      client: "Diego Morales",
-      product: "Primera Sesión",
-      rating: 4.3,
-      professional: "Dr. Ernesto Almeida",
-      message: "Servicio de calidad, lo recomiendo...",
-      date: "2025 - 10 - 02",
-      status: "Aprobada",
-      statusColor: "bg-green-100 text-green-800",
-    },
-    {
-      id: 12,
-      client: "Valentina Ruiz",
-      product: "Primera Sesión",
-      rating: 4.8,
-      professional: "Dr. Ernesto Almeida",
-      message: "Excelente atención y resultados...",
-      date: "2025 - 10 - 01",
-      status: "Aprobada",
-      statusColor: "bg-green-100 text-green-800",
-    },
-    {
-      id: 13,
-      client: "Sebastian Vega",
-      product: "Primera Sesión",
-      rating: 3.8,
-      professional: "Dr. Ernesto Almeida",
-      message: "Buen servicio pero podría ser mejor...",
-      date: "2025 - 09 - 30",
-      status: "Pendiente",
-      statusColor: "bg-red-100 text-red-800",
-    },
-    {
-      id: 14,
-      client: "Camila Silva",
-      product: "Primera Sesión",
-      rating: 4.4,
-      professional: "Dr. Ernesto Almeida",
-      message: "Muy satisfecha con la atención recibida...",
-      date: "2025 - 09 - 29",
-      status: "Aprobada",
-      statusColor: "bg-green-100 text-green-800",
-    },
-    {
-      id: 15,
-      client: "Nicolas Ramos",
-      product: "Primera Sesión",
-      rating: 4.7,
-      professional: "Dr. Ernesto Almeida",
-      message: "Profesional excepcional, muy recomendado...",
-      date: "2025 - 09 - 28",
-      status: "Aprobada",
-      statusColor: "bg-green-100 text-green-800",
-    },
-  ]);
+  const [items, setItems] = useState<ValoracionItem[]>([]);
+
+  const [modalLoading, setModalLoading] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [modalSuccess, setModalSuccess] = useState<string | null>(null);
+
+  const ratings = useMemo(() => {
+    return items.map((v) => {
+      const rating = typeof v.calificacion === "number" ? v.calificacion : 0;
+      const status = v.estado === "aprobada" ? "Aprobada" : v.estado === "rechazada" ? "Rechazada" : "Pendiente";
+      const statusColor =
+        v.estado === "aprobada"
+          ? "bg-green-100 text-green-800"
+          : v.estado === "rechazada"
+          ? "bg-red-100 text-red-800"
+          : "bg-yellow-100 text-yellow-800";
+      const date =
+        v.fecha_valoracion
+          ? new Date(v.fecha_valoracion).toLocaleDateString("es-ES")
+          : "-";
+      return {
+        id: v.id_valoracion,
+        client: v.clientes_nombre || "Cliente",
+        product: "Sesión",
+        rating,
+        professional: v.profesional_nombre || "Profesional",
+        message: v.comentario || "",
+        date,
+        status,
+        statusColor,
+      };
+    });
+  }, [items]);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const offset = (page - 1) * pageSize;
+        const resp = await valoracionesService.getAll({ limit: pageSize, offset });
+        if (resp.success && resp.data) {
+          const list: ValoracionItem[] = resp.data.valoraciones || [];
+          const pag = resp.data.paginacion || { total: list.length };
+          setItems(list);
+          setTotal(pag.total || list.length);
+          setSelectedRows([]);
+        } else {
+          setError(resp.error || "Error al cargar valoraciones");
+        }
+      } catch (e: any) {
+        setError(e?.message || "Error al cargar valoraciones");
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [page, pageSize]);
 
   const handleSelectRow = (id: number) => {
     setSelectedRows((prev) =>
@@ -215,48 +111,70 @@ export default function AdminValoracionesPage() {
     }
   };
 
-  const handleViewRating = (id: number) => {
-    const review = ratings.find((rating) => rating.id === id);
-    if (review) {
-      setSelectedReview(review);
-      setIsReviewModalOpen(true);
+  const handleViewRating = async (id: number) => {
+    setIsReviewModalOpen(true);
+    setModalLoading(true);
+    setModalError(null);
+    setModalSuccess(null);
+    try {
+      const response = await valoracionesService.getById(id);
+      if (response.success && response.data) {
+        const valoracion = response.data.valoracion;
+        setSelectedReview(valoracion);
+      } else {
+        setModalError(response.error || "Error al cargar la valoración");
+        setSelectedReview(null);
+      }
+    } catch (error: any) {
+      setModalError(error?.message || "Error al cargar la valoración.");
+      setSelectedReview(null);
+    } finally {
+      setModalLoading(false);
     }
   };
 
-  const handleApproveReview = () => {
-    if (selectedReview) {
-      setRatings((prev) =>
-        prev.map((rating) =>
-          rating.id === selectedReview.id
-            ? {
-                ...rating,
-                status: "Aprobada",
-                statusColor: "bg-green-100 text-green-800",
-              }
-            : rating
-        )
-      );
+  const handleApproveReview = async () => {
+    if (!selectedReview) return;
+    try {
+      const resp = await valoracionesService.cambiarEstado(selectedReview.id_valoracion || selectedReview.id, 'aprobada');
+      if (!resp.success) {
+        setModalError(resp.error || 'No se pudo aprobar la reseña');
+        return;
+      }
+      setModalSuccess('Valoración aprobada correctamente');
+      // refrescar listado
+      const offset = (page - 1) * pageSize;
+      const refreshed = await valoracionesService.getAll({ limit: pageSize, offset });
+      if (refreshed.success && refreshed.data) {
+        setItems(refreshed.data.valoraciones || []);
+        setTotal((refreshed.data.paginacion && refreshed.data.paginacion.total) || (refreshed.data.valoraciones || []).length || 0);
+      }
+      setIsReviewModalOpen(false);
+    } catch (e: any) {
+      setModalError(e?.message || 'Error al aprobar la reseña');
     }
-    setIsReviewModalOpen(false);
   };
 
-  const handleMarkInappropriate = () => {
-    if (selectedReview) {
-      setRatings((prev) =>
-        prev.map((rating) =>
-          rating.id === selectedReview.id
-            ? {
-                ...rating,
-                status: "Inapropiada",
-                statusColor: "bg-red-100 text-red-800",
-              }
-            : rating
-        )
-      );
+  const handleMarkInappropriate = async () => {
+    if (!selectedReview) return;
+    try {
+      const resp = await valoracionesService.cambiarEstado(selectedReview.id_valoracion || selectedReview.id, 'rechazada');
+      if (!resp.success) {
+        setModalError(resp.error || 'No se pudo marcar como inapropiada');
+        return;
+      }
+      setModalSuccess('Valoración marcada como inapropiada');
+      const offset = (page - 1) * pageSize;
+      const refreshed = await valoracionesService.getAll({ limit: pageSize, offset });
+      if (refreshed.success && refreshed.data) {
+        setItems(refreshed.data.valoraciones || []);
+        setTotal((refreshed.data.paginacion && refreshed.data.paginacion.total) || (refreshed.data.valoraciones || []).length || 0);
+      }
+      setIsReviewModalOpen(false);
+    } catch (e: any) {
+      setModalError(e?.message || 'Error al marcar como inapropiada');
     }
-    setIsReviewModalOpen(false);
   };
-
   const handleFilterChange = (category: string, filter: string) => {
     setFilters((prev) => ({
       ...prev,
@@ -289,7 +207,7 @@ export default function AdminValoracionesPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-6">
+      <div className="bg-white border-b border-gray-200 py-6 -mx-6 px-6 mb-6">
         <div className="mb-4">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Valoraciones
@@ -324,8 +242,14 @@ export default function AdminValoracionesPage() {
       </div>
 
       {/* Main Content */}
-      <div className="p-6">
+      <div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          {loading ? (
+            <div className="p-8 text-center text-gray-600">Cargando valoraciones...</div>
+          ) : error ? (
+            <div className="p-8 text-center text-red-600">{error}</div>
+          ) : (
+          <>
           {/* Table */}
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -436,34 +360,34 @@ export default function AdminValoracionesPage() {
 
           {/* Pagination */}
           <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
-            <div className="text-sm text-gray-600">Mostrando 15 de 204</div>
+            <div className="text-sm text-gray-600">
+              Mostrando {items.length} de {total}
+            </div>
             <div className="flex items-center space-x-2">
-              <button className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
+              >
                 <ChevronLeft className="h-4 w-4" />
               </button>
-              <button className="px-3 py-2 rounded-lg bg-primary text-white text-sm font-medium">
-                1
-              </button>
-              <button className="px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium hover:bg-gray-50">
-                2
-              </button>
-              <button className="px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium hover:bg-gray-50">
-                3
-              </button>
-              <button className="px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium hover:bg-gray-50">
-                4
-              </button>
-              <button className="px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium hover:bg-gray-50">
-                5
-              </button>
-              <button className="px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium hover:bg-gray-50">
-                ...
-              </button>
-              <button className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50">
+              <span className="px-3 py-2 rounded-lg bg-primary text-white text-sm font-medium">
+                {page}
+              </span>
+              <button
+                onClick={() => {
+                  const nextOffset = page * pageSize;
+                  if (nextOffset < total) setPage((p) => p + 1);
+                }}
+                disabled={page * pageSize >= total}
+                className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
+              >
                 <ChevronRight className="h-4 w-4" />
               </button>
             </div>
           </div>
+          </>
+          )}
         </div>
       </div>
 
@@ -612,7 +536,7 @@ export default function AdminValoracionesPage() {
                     </div>
                     <div>
                       <h3 className="text-lg font-bold text-gray-900">
-                        {selectedReview.client}
+                        {selectedReview.clientes_nombre || 'Cliente'}
                       </h3>
                       <p className="text-sm text-gray-500">Cliente</p>
                     </div>
@@ -627,7 +551,7 @@ export default function AdminValoracionesPage() {
                     />
                     <div>
                       <h3 className="text-lg font-bold text-gray-900">
-                        {selectedReview.professional}
+                        {selectedReview.profesional_nombre || 'Profesional'}
                       </h3>
                       <p className="text-sm text-gray-500">Profesional</p>
                     </div>
@@ -641,10 +565,7 @@ export default function AdminValoracionesPage() {
                   </h4>
                   <div className="bg-gray-100 rounded-lg p-4">
                     <p className="text-gray-700 leading-relaxed">
-                      Considero que el profesional realizó un trabajo impecable,
-                      me encantó la atención y el seguimiento que le dio a mi
-                      caso. Personalmente lo recomiendo ampliamente y espero que
-                      pueda ayudar a mas personas.
+                      {selectedReview?.comentario || 'Sin mensaje'}
                     </p>
                   </div>
                 </div>
@@ -656,7 +577,7 @@ export default function AdminValoracionesPage() {
                       <Star
                         key={i}
                         className={`h-6 w-6 ${
-                          i < Math.floor(selectedReview.rating)
+                          i < Math.floor(selectedReview?.calificacion || 0)
                             ? "text-yellow-400 fill-current"
                             : "text-gray-300"
                         }`}

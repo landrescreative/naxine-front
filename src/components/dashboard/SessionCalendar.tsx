@@ -5,7 +5,10 @@ import { useRouter } from "next/navigation";
 
 interface CalendarAppointment {
   id: string;
-  date: number;
+  date: number; // Día del mes (1-31)
+  month?: number; // Mes (0-11, opcional para compatibilidad)
+  year?: number; // Año (opcional para compatibilidad)
+  dateTime?: string; // Fecha completa ISO string (preferido)
   professional: string;
   specialty: string;
   time: string;
@@ -14,11 +17,13 @@ interface CalendarAppointment {
 interface SessionCalendarProps {
   appointments: CalendarAppointment[];
   basePath?: string;
+  onAppointmentClick?: (appointmentId: string) => void;
 }
 
 export default function SessionCalendar({
   appointments,
   basePath = "/dashboard/cliente",
+  onAppointmentClick,
 }: SessionCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const router = useRouter();
@@ -99,11 +104,41 @@ export default function SessionCalendar({
 
   const getAppointmentForDate = (day: number, isCurrentMonth: boolean) => {
     if (!isCurrentMonth) return null;
-    return appointments.find((apt) => apt.date === day);
+    
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth();
+    
+    return appointments.find((apt) => {
+      // Si tiene dateTime (fecha completa ISO), comparar por fecha completa
+      if (apt.dateTime) {
+        const aptDate = new Date(apt.dateTime);
+        return (
+          aptDate.getDate() === day &&
+          aptDate.getMonth() === currentMonth &&
+          aptDate.getFullYear() === currentYear
+        );
+      }
+      
+      // Si tiene month y year, comparar con esos valores
+      if (apt.month !== undefined && apt.year !== undefined) {
+        return (
+          apt.date === day &&
+          apt.month === currentMonth &&
+          apt.year === currentYear
+        );
+      }
+      
+      // Fallback: solo comparar por día (comportamiento anterior)
+      return apt.date === day;
+    });
   };
 
   const handleAppointmentClick = (appointment: CalendarAppointment) => {
+    if (onAppointmentClick) {
+      onAppointmentClick(appointment.id);
+    } else {
     router.push(`${basePath}/citas/${appointment.id}`);
+    }
   };
 
   const days = getDaysInMonth(currentDate);

@@ -1,55 +1,71 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { logger } from "@/lib/logger";
 
-// Usuarios ficticios para testing
-const fakeUsers = {
-  cliente: {
-    email: "cliente@naxine.com",
-    password: "cliente123",
-    role: "cliente",
-    name: "Juan Pérez",
-  },
-  profesional: {
-    email: "profesional@naxine.com",
-    password: "profesional123",
-    role: "profesional",
-    name: "María García",
-  },
-  // Admin no accesible desde el login general
-};
-
-export default function LoginPage() {
+function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const router = useRouter();
-  const { login } = useAuth();
+  const searchParams = useSearchParams();
+  const { login, error: authError, loading } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    // Buscar usuario por email y contraseña
-    const user = Object.values(fakeUsers).find(
-      (u) => u.email === email && u.password === password
-    );
+    // Obtener el valor directamente del input para evitar problemas con el estado
+    const emailInput = document.getElementById("email") as HTMLInputElement;
+    const emailValue = emailInput?.value || email;
 
-    if (user) {
-      console.log("Login: Usuario encontrado:", user);
-      // Usar el hook de autenticación
-      login(user);
+    try {
+      // Normalizar el email antes de enviarlo
+      const normalizedEmail = emailValue.trim().toLowerCase();
 
-      // Redirigir a la página principal después del login
-      router.push("/");
-    } else {
-      setError("Email o contraseña incorrectos");
+      logger.debug("Intentando login", { email: normalizedEmail }, "LoginPage");
+
+      // Llamar a la API real con las credenciales
+      const result = await login({
+        email: normalizedEmail,
+        password,
+      });
+
+      // Verificar si el resultado indica que necesita verificación
+      if (
+        result &&
+        typeof result === "object" &&
+        "needsVerification" in result &&
+        result.needsVerification
+      ) {
+        // Redirigir a la página de verificación con el email
+        const emailToVerify = result.email || normalizedEmail;
+        router.push(
+          `/verificar-codigo?email=${encodeURIComponent(emailToVerify)}`
+        );
+        return;
+      }
+
+      if (result === true) {
+        // Redirigir a la página de destino o a la principal
+        const redirectTo = searchParams.get("redirect") || "/";
+        logger.info("Login exitoso, redirigiendo", { redirectTo }, "LoginPage");
+        router.push(redirectTo);
+      } else {
+        // El error ya está manejado por el hook useAuth
+        setError(authError || "Email o contraseña incorrectos");
+      }
+    } catch (err) {
+      const errorMessage =
+        "Ocurrió un error al iniciar sesión. Por favor, intenta de nuevo.";
+      setError(errorMessage);
+      logger.error("Error en login", err, "LoginPage");
     }
   };
 
@@ -87,10 +103,13 @@ export default function LoginPage() {
                 type="email"
                 id="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                }}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
                 placeholder="Ingresa tu email"
                 required
+                autoComplete="email"
               />
             </div>
 
@@ -178,9 +197,10 @@ export default function LoginPage() {
             {/* Login Button */}
             <button
               type="submit"
-              className="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200"
+              disabled={loading}
+              className="w-full bg-primary hover:bg-primary/90 disabled:bg-primary/50 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200"
             >
-              Iniciar sesión
+              {loading ? "Iniciando sesión..." : "Iniciar sesión"}
             </button>
 
             {/* Registration Link */}
@@ -205,25 +225,6 @@ export default function LoginPage() {
                 </span>
               </div>
             </div>
-
-            {/* Usuarios de Prueba */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="text-sm font-medium text-blue-800 mb-2">
-                Usuarios de Prueba:
-              </h3>
-              <div className="text-xs text-blue-700 space-y-1">
-                <div>
-                  <strong>Cliente:</strong> cliente@naxine.com / cliente123
-                </div>
-                <div>
-                  <strong>Profesional:</strong> profesional@naxine.com /
-                  profesional123
-                </div>
-                <div className="text-[11px] text-blue-600/80">
-                  Acceso administración: visitar /admin
-                </div>
-              </div>
-            </div>
           </form>
         </div>
       </div>
@@ -232,9 +233,9 @@ export default function LoginPage() {
       <div className="flex flex-1 relative">
         <div className="relative w-full h-full flex items-center lg:items-start justify-center p-2">
           <div className="sticky top-4 w-full">
-            <div className="w-11/12 h-[400px] lg:h-[600px] relative rounded-3xl overflow-hidden shadow-2xl">
+            <div className="w-11/12 h-[400px] lg:h-[600px] relative rounded-3xl overflow-hidden">
               <Image
-                src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=600&fit=crop"
+                src="/smk_Snapchat-Picture.webp"
                 alt="Profesional"
                 fill
                 className="object-cover"
@@ -246,5 +247,20 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando...</p>
+        </div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }

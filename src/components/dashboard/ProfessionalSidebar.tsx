@@ -1,6 +1,8 @@
 "use client";
 
 import { useAuth } from "@/hooks/useAuth";
+import { useRouter } from "next/navigation";
+import { logger } from "@/lib/logger";
 
 interface ProfessionalSidebarProps {
   activeItem?: string;
@@ -11,7 +13,8 @@ export default function ProfessionalSidebar({
   activeItem = "inicio",
   onItemClick,
 }: ProfessionalSidebarProps) {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const router = useRouter();
 
   const handleItemClick = (item: string) => {
     if (onItemClick) {
@@ -159,14 +162,25 @@ export default function ProfessionalSidebar({
       {/* Action Buttons */}
       <div className="p-4 space-y-3">
         <button
-          onClick={() => handleItemClick("contacto")}
+          onClick={() => handleItemClick("soporte")}
           className="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 px-4 rounded-lg transition-colors"
         >
-          Contacto
+          Soporte
         </button>
 
         <button
-          onClick={() => handleItemClick("logout")}
+          onClick={async () => {
+            try {
+              // Llamar al logout que hace la petición a la API y limpia la sesión
+              await logout();
+              // Redirigir al login después del logout
+              router.push("/iniciar-sesion");
+            } catch (error) {
+              logger.error("Error durante el logout", error, "ProfessionalSidebar");
+              // Aún así, redirigir al login si hay error
+              router.push("/iniciar-sesion");
+            }
+          }}
           className="w-full bg-primary/40 hover:bg-primary/50 text-white font-medium py-3 px-4 rounded-lg transition-colors"
         >
           Cerrar Sesión

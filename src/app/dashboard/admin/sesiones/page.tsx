@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Search,
@@ -12,18 +12,40 @@ import {
   X,
   ChevronUp,
   DollarSign,
+  Loader2,
 } from "lucide-react";
+import { citasService, Cita } from "@/services/api/citas";
+
+interface SessionDisplay {
+  id: number;
+  session: string;
+  specialty: string;
+  date: string;
+  time: string;
+  sessionNumber: string;
+  price: string;
+  professional: string;
+  status: string;
+  statusColor: string;
+}
 
 export default function AdminSesionesPage() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [sessions, setSessions] = useState<SessionDisplay[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalSessions, setTotalSessions] = useState(0);
+  const pageSize = 10;
 
   // Filter states
   const [filters, setFilters] = useState({
     status: {
       activo: false,
       pendiente: false,
+      cancelada: false,
     },
     income: {
       min: "",
@@ -61,6 +83,7 @@ export default function AdminSesionesPage() {
       status: {
         activo: false,
         pendiente: false,
+        cancelada: false,
       },
       income: {
         min: "",
@@ -69,8 +92,166 @@ export default function AdminSesionesPage() {
     });
   };
 
+  // Función para mapear cita de la API al formato de la UI
+  const mapCitaToSession = (cita: Cita): SessionDisplay => {
+    const fechaInicio = new Date(cita.fecha_inicio);
+    const fechaFormateada = fechaInicio.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+    const horaFormateada = fechaInicio.toLocaleTimeString('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+
+    // Determinar el tipo de sesión basado en el número de cita o tipo de atención
+    const tipoSesion = cita.tipo_atencion === 'en_linea' 
+      ? 'Sesión en Línea' 
+      : cita.tipo_atencion === 'a_domicilio'
+      ? 'Sesión a Domicilio'
+      : 'Sesión Presencial';
+
+    // Formatear precio - convertir a número si es string o null/undefined
+    const montoNumero = cita.pago_monto 
+      ? (typeof cita.pago_monto === 'string' 
+          ? parseFloat(cita.pago_monto) 
+          : Number(cita.pago_monto))
+      : null;
+    const precio = montoNumero && !isNaN(montoNumero)
+      ? `$${montoNumero.toFixed(2)} USD`
+      : 'N/A';
+
+    // Mapear estado
+    let status = cita.estado;
+    let statusColor = "bg-gray-100 text-gray-800";
+    
+    if (cita.estado === 'pendiente') {
+      status = 'Pendiente';
+      statusColor = "bg-orange-100 text-orange-800";
+    } else if (cita.estado === 'confirmada' || cita.estado === 'activa') {
+      status = 'Activo';
+      statusColor = "bg-green-100 text-green-800";
+    } else if (cita.estado === 'cancelada') {
+      status = 'Cancelada';
+      statusColor = "bg-red-100 text-red-800";
+    } else if (cita.estado === 'completada') {
+      status = 'Completada';
+      statusColor = "bg-blue-100 text-blue-800";
+    }
+
+    return {
+      id: cita.id_cita,
+      session: tipoSesion,
+      specialty: "Nutriología", // TODO: Obtener especialidad del profesional
+      date: fechaFormateada,
+      time: horaFormateada,
+      sessionNumber: String(cita.id_cita).padStart(8, '0'),
+      price: precio,
+      professional: cita.profesional_nombre || 'Profesional desconocido',
+      status,
+      statusColor,
+    };
+  };
+
+  // Cargar citas desde la API
+  const loadCitas = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Construir parámetros de filtro
+      const params: any = {
+        limit: pageSize,
+        offset: (currentPage - 1) * pageSize,
+      };
+
+      // Aplicar filtro de estado si está activo
+      const estadosActivos: string[] = [];
+      if (filters.status.activo) estadosActivos.push('confirmada', 'activa');
+      if (filters.status.pendiente) estadosActivos.push('pendiente');
+      if (filters.status.cancelada) estadosActivos.push('cancelada');
+      
+      if (estadosActivos.length > 0) {
+        // Si hay múltiples estados, necesitamos hacer múltiples llamadas o filtrar en el frontend
+        // Por ahora, usamos el primero o hacemos la llamada sin filtro y filtramos después
+        params.estado = estadosActivos[0]; // El backend solo acepta un estado a la vez
+      }
+
+      const response = await citasService.getAllCitas(params);
+
+      if (response.success && response.data) {
+        // El apiClient envuelve la respuesta
+        const citas = response.data.citas || [];
+        const paginacion = response.data.paginacion || { total: 0 };
+
+        // Verificar que citas sea un array
+        if (!Array.isArray(citas)) {
+          console.error('Las citas no son un array:', citas);
+          setError('Error: formato de respuesta inválido');
+          setSessions([]);
+          return;
+        }
+
+        let citasFiltradas = [...citas];
+
+        // Filtrar por múltiples estados en el frontend si es necesario
+        if (estadosActivos.length > 0) {
+          citasFiltradas = citasFiltradas.filter(cita => 
+            estadosActivos.includes(cita.estado)
+          );
+        }
+
+        // Filtrar por rango de ingresos si está configurado
+        if (filters.income.min || filters.income.max) {
+          const min = filters.income.min ? parseFloat(filters.income.min) : 0;
+          const max = filters.income.max ? parseFloat(filters.income.max) : Infinity;
+          citasFiltradas = citasFiltradas.filter(cita => {
+            // Convertir pago_monto a número si es necesario
+            const monto = cita.pago_monto 
+              ? (typeof cita.pago_monto === 'string' 
+                  ? parseFloat(cita.pago_monto) 
+                  : Number(cita.pago_monto))
+              : 0;
+            return !isNaN(monto) && monto >= min && monto <= max;
+          });
+        }
+
+        // Filtrar por término de búsqueda
+        if (searchTerm) {
+          const term = searchTerm.toLowerCase();
+          citasFiltradas = citasFiltradas.filter(cita => 
+            cita.profesional_nombre?.toLowerCase().includes(term) ||
+            cita.cliente_nombre?.toLowerCase().includes(term) ||
+            String(cita.id_cita).includes(term)
+          );
+        }
+
+        // Mapear citas al formato de la UI
+        const sessionsMapped = citasFiltradas.map(mapCitaToSession);
+        setSessions(sessionsMapped);
+        setTotalSessions(paginacion.total || citasFiltradas.length);
+      } else {
+        setError(response.error || 'Error al cargar las citas');
+        setSessions([]);
+      }
+    } catch (err) {
+      console.error('Error al cargar citas:', err);
+      setError('Error al cargar las citas. Por favor, intenta nuevamente.');
+      setSessions([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, filters, searchTerm, pageSize]);
+
+  // Cargar citas cuando cambian los filtros, página o término de búsqueda
+  useEffect(() => {
+    loadCitas();
+  }, [loadCitas]);
+
   const handleApplyFilters = () => {
-    // Filter logic will be implemented here
+    setCurrentPage(1); // Resetear a la primera página al aplicar filtros
     setIsFilterOpen(false);
   };
 
@@ -78,134 +259,12 @@ export default function AdminSesionesPage() {
     router.push(`/dashboard/admin/sesiones/${sessionId}`);
   };
 
-  // Mock session data
-  const sessions = [
-    {
-      id: 1,
-      session: "Primera Sesión",
-      specialty: "Nutriología",
-      date: "05-12-2025",
-      time: "15:00 AM",
-      sessionNumber: "00000001",
-      price: "$150 USD",
-      professional: "Dr. Ernesto Almeida",
-      status: "Pendiente",
-      statusColor: "bg-orange-100 text-orange-800",
-    },
-    {
-      id: 2,
-      session: "Primera Sesión",
-      specialty: "Nutriología",
-      date: "05-12-2025",
-      time: "15:00 AM",
-      sessionNumber: "00000001",
-      price: "$150 USD",
-      professional: "Dr. Ernesto Almeida",
-      status: "Activo",
-      statusColor: "bg-green-100 text-green-800",
-    },
-    {
-      id: 3,
-      session: "Primera Sesión",
-      specialty: "Nutriología",
-      date: "05-12-2025",
-      time: "15:00 AM",
-      sessionNumber: "00000001",
-      price: "$150 USD",
-      professional: "Dr. Ernesto Almeida",
-      status: "Pendiente",
-      statusColor: "bg-orange-100 text-orange-800",
-    },
-    {
-      id: 4,
-      session: "Primera Sesión",
-      specialty: "Nutriología",
-      date: "05-12-2025",
-      time: "15:00 AM",
-      sessionNumber: "00000001",
-      price: "$150 USD",
-      professional: "Dr. Ernesto Almeida",
-      status: "Pendiente",
-      statusColor: "bg-orange-100 text-orange-800",
-    },
-    {
-      id: 5,
-      session: "Primera Sesión",
-      specialty: "Nutriología",
-      date: "05-12-2025",
-      time: "15:00 AM",
-      sessionNumber: "00000001",
-      price: "$150 USD",
-      professional: "Dr. Ernesto Almeida",
-      status: "Activo",
-      statusColor: "bg-green-100 text-green-800",
-    },
-    {
-      id: 6,
-      session: "Primera Sesión",
-      specialty: "Nutriología",
-      date: "05-12-2025",
-      time: "15:00 AM",
-      sessionNumber: "00000001",
-      price: "$150 USD",
-      professional: "Dr. Ernesto Almeida",
-      status: "Activo",
-      statusColor: "bg-green-100 text-green-800",
-    },
-    {
-      id: 7,
-      session: "Primera Sesión",
-      specialty: "Nutriología",
-      date: "05-12-2025",
-      time: "15:00 AM",
-      sessionNumber: "00000001",
-      price: "$150 USD",
-      professional: "Dr. Ernesto Almeida",
-      status: "Cancelada",
-      statusColor: "bg-red-100 text-red-800",
-    },
-    {
-      id: 8,
-      session: "Primera Sesión",
-      specialty: "Nutriología",
-      date: "05-12-2025",
-      time: "15:00 AM",
-      sessionNumber: "00000001",
-      price: "$150 USD",
-      professional: "Dr. Ernesto Almeida",
-      status: "Activo",
-      statusColor: "bg-green-100 text-green-800",
-    },
-    {
-      id: 9,
-      session: "Primera Sesión",
-      specialty: "Nutriología",
-      date: "05-12-2025",
-      time: "15:00 AM",
-      sessionNumber: "00000001",
-      price: "$150 USD",
-      professional: "Dr. Ernesto Almeida",
-      status: "Activo",
-      statusColor: "bg-green-100 text-green-800",
-    },
-    {
-      id: 10,
-      session: "Primera Sesión",
-      specialty: "Nutriología",
-      date: "05-12-2025",
-      time: "15:00 AM",
-      sessionNumber: "00000001",
-      price: "$150 USD",
-      professional: "Dr. Ernesto Almeida",
-      status: "Activo",
-      statusColor: "bg-green-100 text-green-800",
-    },
-  ];
+  // Mock session data (removido - ahora usamos datos reales)
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-6">
+      <div className="bg-white border-b border-gray-200 py-6 -mx-6 px-6 mb-6">
         <div className="mb-4">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Administración de Sesiones
@@ -242,7 +301,7 @@ export default function AdminSesionesPage() {
       </div>
 
       {/* Main Content */}
-      <div className="p-6">
+      <div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           {/* Table */}
           <div className="overflow-x-auto">
@@ -273,7 +332,38 @@ export default function AdminSesionesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {sessions.map((session) => (
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                        <span className="text-gray-600">Cargando sesiones...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : error ? (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center">
+                      <div className="text-red-600">
+                        <p className="font-medium">Error al cargar las sesiones</p>
+                        <p className="text-sm mt-1">{error}</p>
+                        <button
+                          onClick={loadCitas}
+                          className="mt-4 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+                        >
+                          Reintentar
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ) : sessions.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center text-gray-500">
+                      No se encontraron sesiones
+                    </td>
+                  </tr>
+                ) : (
+                  sessions.map((session) => (
                   <tr key={session.id} className="hover:bg-gray-50">
                     <td className="py-4 px-6">
                       <div>
@@ -331,37 +421,51 @@ export default function AdminSesionesPage() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  ))
+                )}
               </tbody>
             </table>
           </div>
 
           {/* Pagination */}
           <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
-            <div className="text-sm text-gray-600">Showing 1-10 from 100</div>
+            <div className="text-sm text-gray-600">
+              Mostrando {sessions.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}-
+              {Math.min(currentPage * pageSize, totalSessions)} de {totalSessions}
+            </div>
             <div className="flex items-center space-x-2">
-              <button className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1 || loading}
+                className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 <ChevronLeft className="h-4 w-4" />
               </button>
-              <button className="px-3 py-2 rounded-lg bg-primary text-white text-sm font-medium">
-                1
-              </button>
-              <button className="px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium hover:bg-gray-50">
-                2
-              </button>
-              <button className="px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium hover:bg-gray-50">
-                3
-              </button>
-              <button className="px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium hover:bg-gray-50">
-                4
-              </button>
-              <button className="px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium hover:bg-gray-50">
-                5
-              </button>
-              <button className="px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium hover:bg-gray-50">
-                ...
-              </button>
-              <button className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50">
+              {Array.from({ length: Math.min(5, Math.ceil(totalSessions / pageSize)) }, (_, i) => {
+                const page = i + 1;
+                return (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    disabled={loading}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium ${
+                      currentPage === page
+                        ? 'bg-primary text-white'
+                        : 'border border-gray-300 hover:bg-gray-50'
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  >
+                    {page}
+                  </button>
+                );
+              })}
+              {Math.ceil(totalSessions / pageSize) > 5 && (
+                <span className="px-2 text-gray-500">...</span>
+              )}
+              <button
+                onClick={() => setCurrentPage(prev => prev + 1)}
+                disabled={currentPage >= Math.ceil(totalSessions / pageSize) || loading}
+                className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 <ChevronRight className="h-4 w-4" />
               </button>
             </div>
@@ -418,6 +522,15 @@ export default function AdminSesionesPage() {
                       className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
                     />
                     <span className="text-sm text-gray-700">Pendiente</span>
+                  </label>
+                  <label className="flex items-center space-x-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={filters.status.cancelada}
+                      onChange={() => handleFilterChange("status", "cancelada")}
+                      className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                    />
+                    <span className="text-sm text-gray-700">Cancelada</span>
                   </label>
                 </div>
               </div>

@@ -1,42 +1,39 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+/**
+ * Middleware para proteger rutas que requieren autenticación
+ * 
+ * Protege todas las rutas del dashboard (incluyendo /dashboard/admin)
+ * verificando que el usuario tenga un token de autenticación válido.
+ * 
+ * La validación real del token y verificación de roles se hace en el backend.
+ */
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Protect only the admin entry route with HTTP Basic Auth
-  if (pathname.startsWith("/admin")) {
-    const authHeader = request.headers.get("authorization") || "";
-
-    const expectedUser = process.env.ADMIN_USER || "naxine";
-    const expectedPass = process.env.ADMIN_PASS || "access2024";
-
-    if (authHeader.startsWith("Basic ")) {
-      try {
-        const base64 = authHeader.slice(6).trim();
-        // Use web standard decoder in the Edge runtime
-        const decoded = atob(base64);
-        const [user, pass] = decoded.split(":");
-        if (user === expectedUser && pass === expectedPass) {
-          return NextResponse.next();
-        }
-      } catch (err) {
-        // ignore and fall through to challenge
-      }
+  // Proteger rutas del dashboard - verificar autenticación
+  if (pathname.startsWith("/dashboard")) {
+    // Obtener token de las cookies
+    const token = request.cookies.get("auth-token")?.value;
+    
+    // Si no hay token en cookies, redirigir a login
+    // El token se guarda en cookies cuando el usuario hace login (ver useAuth.ts)
+    if (!token) {
+      const loginUrl = new URL("/iniciar-sesion", request.url);
+      loginUrl.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(loginUrl);
     }
-
-    return new NextResponse("Authentication required", {
-      status: 401,
-      headers: {
-        "WWW-Authenticate": 'Basic realm="Admin"',
-        "Cache-Control": "no-store",
-      },
-    });
+    
+    // El token está presente, permitir acceso
+    // La validación real del token y verificación de roles se hace en el backend
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: [
+    "/dashboard/:path*",
+  ],
 };

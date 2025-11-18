@@ -1,11 +1,11 @@
 "use client";
 
-import { useAuth } from "@/hooks/useAuth";
+import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import AdminSidebar from "@/components/dashboard/AdminSidebar";
 
-export default function AdminLayout({
+export default function AdminDashboardLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -13,21 +13,29 @@ export default function AdminLayout({
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const [activeItem, setActiveItem] = useState("usuarios");
+  const [activeItem, setActiveItem] = useState("inicio");
 
+  // Auth guard: require session and admin role
   useEffect(() => {
     if (loading) return;
     if (!user) {
-      router.replace("/admin");
+      router.replace("/iniciar-sesion");
       return;
     }
-    if (user.role !== "administracion") {
-      router.replace("/iniciar-sesion");
+    if (user.role !== "admin") {
+      // Redirigir según el rol
+      if (user.role === "client") {
+        router.replace("/dashboard/cliente");
+      } else if (user.role === "professional") {
+        router.replace("/dashboard/profesional");
+      } else {
+        router.replace("/iniciar-sesion");
+      }
     }
   }, [user, loading, router]);
 
+  // Actualizar activeItem basado en la ruta actual
   useEffect(() => {
-    // Set active item based on current path
     if (pathname.includes("/clientes")) {
       setActiveItem("clientes");
     } else if (pathname.includes("/profesionales")) {
@@ -43,21 +51,30 @@ export default function AdminLayout({
     } else if (pathname.includes("/ajustes")) {
       setActiveItem("ajustes");
     } else {
-      setActiveItem("usuarios");
+      setActiveItem("inicio");
     }
   }, [pathname]);
 
   const handleItemClick = (item: string) => {
     setActiveItem(item);
 
-    // Navigate to different pages based on the selected item
+    // Navegar a diferentes páginas según el item seleccionado
     switch (item) {
-      case "usuarios":
+      case "inicio":
+        router.push("/dashboard/admin");
+        break;
       case "clientes":
         router.push("/dashboard/admin/clientes");
         break;
       case "profesionales":
         router.push("/dashboard/admin/profesionales");
+        break;
+      case "usuarios":
+        // Si está expandido, no navegar, solo expandir/colapsar
+        // Si está colapsado, navegar a clientes por defecto
+        if (activeItem !== "clientes" && activeItem !== "profesionales") {
+          router.push("/dashboard/admin/clientes");
+        }
         break;
       case "sesiones":
         router.push("/dashboard/admin/sesiones");
@@ -79,19 +96,33 @@ export default function AdminLayout({
     }
   };
 
+  // Mostrar loading mientras se verifica autenticación
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Si no hay usuario o no es admin, no mostrar nada (el redirect se maneja en el useEffect)
+  if (!user || user.role !== "admin") {
+    return null;
+  }
+
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
       {/* Sidebar */}
       <AdminSidebar activeItem={activeItem} onItemClick={handleItemClick} />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto p-6">
-          <div key={pathname} className="page-anim">
-            {children}
-          </div>
-        </main>
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-6">
+          {children}
+        </div>
       </div>
     </div>
   );

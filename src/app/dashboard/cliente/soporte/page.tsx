@@ -2,30 +2,92 @@
 
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { ticketsService } from "@/services/api/tickets";
 
 export default function SoportePage() {
   const { user } = useAuth();
+  const [asunto, setAsunto] = useState("");
   const [message, setMessage] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [correo, setCorreo] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     setIsSubmitting(true);
 
-    // Simular envío del mensaje
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const response = await ticketsService.createTicket({
+        asunto: asunto.trim() || "Consulta de soporte",
+        mensaje: message.trim(),
+        telefono: telefono.trim() || undefined,
+        correo: correo.trim() || undefined,
+      });
 
-    setIsSubmitting(false);
-    setIsSubmitted(true);
-    setMessage("");
-
-    // Ocultar mensaje de éxito después de 3 segundos
-    setTimeout(() => setIsSubmitted(false), 3000);
+      if (response.success) {
+        setIsSubmitted(true);
+        setMessage("");
+        setAsunto("");
+        setTelefono("");
+        setCorreo("");
+        // Ocultar mensaje de éxito después de 5 segundos
+        setTimeout(() => setIsSubmitted(false), 5000);
+      } else {
+        // Manejar errores de validación del backend
+        if (response.errorDetails?.errors) {
+          const validationErrors = response.errorDetails.errors;
+          const errorMessages = Array.isArray(validationErrors)
+            ? validationErrors.map((err: any) => err.message || err).join(", ")
+            : JSON.stringify(validationErrors);
+          setError(errorMessages);
+        } else {
+          setError(
+            response.error ||
+              "Error al enviar el ticket. Por favor, intenta nuevamente."
+          );
+        }
+      }
+    } catch (err: any) {
+      console.error("[SoportePage] Error al enviar ticket:", err);
+      setError(
+        err?.message ||
+          "Ocurrió un error al enviar el ticket. Por favor, intenta nuevamente."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setMessage(e.target.value);
+    const value = e.target.value;
+    if (value.length <= 2000) {
+      setMessage(value);
+    }
+  };
+
+  const handleAsuntoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value.length <= 255) {
+      setAsunto(value);
+    }
+  };
+
+  const handleTelefonoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Permitir números, espacios, guiones y paréntesis
+    if (/^[\d\s\-\(\)]*$/.test(value) && value.length <= 20) {
+      setTelefono(value);
+    }
+  };
+
+  const handleCorreoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value.length <= 255) {
+      setCorreo(value);
+    }
   };
 
   return (
@@ -67,12 +129,38 @@ export default function SoportePage() {
 
           {/* Message Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Asunto */}
+            <div>
+              <label
+                htmlFor="asunto"
+                className="block text-sm font-medium text-black mb-2"
+              >
+                Asunto <span className="text-gray-500 text-xs">(opcional)</span>
+              </label>
+              <input
+                id="asunto"
+                name="asunto"
+                type="text"
+                value={asunto}
+                onChange={handleAsuntoChange}
+                placeholder="Ej: Problema con mi cita..."
+                maxLength={255}
+                className="w-full px-4 py-3 rounded-lg bg-primary/10 border border-transparent focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              />
+              {asunto.length > 0 && (
+                <p className="text-xs text-gray-500 mt-1">
+                  {asunto.length}/255 caracteres
+                </p>
+              )}
+            </div>
+
+            {/* Mensaje */}
             <div>
               <label
                 htmlFor="message"
                 className="block text-sm font-medium text-black mb-2"
               >
-                Mensaje
+                Mensaje <span className="text-red-500">*</span>
               </label>
               <textarea
                 id="message"
@@ -80,10 +168,83 @@ export default function SoportePage() {
                 value={message}
                 onChange={handleMessageChange}
                 placeholder="Escribe tu mensaje aquí..."
+                maxLength={2000}
                 className="w-full h-32 px-4 py-3 rounded-lg bg-primary/10 border border-transparent focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
                 required
               />
+              <p className="text-xs text-gray-500 mt-1">
+                {message.length}/2000 caracteres
+              </p>
             </div>
+
+            {/* Teléfono (opcional) */}
+            <div>
+              <label
+                htmlFor="telefono"
+                className="block text-sm font-medium text-black mb-2"
+              >
+                Teléfono <span className="text-gray-500 text-xs">(opcional)</span>
+              </label>
+              <input
+                id="telefono"
+                name="telefono"
+                type="tel"
+                value={telefono}
+                onChange={handleTelefonoChange}
+                placeholder="Ej: +32 55 1234 5678"
+                maxLength={20}
+                className="w-full px-4 py-3 rounded-lg bg-primary/10 border border-transparent focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Para que podamos contactarte más rápido
+              </p>
+            </div>
+
+            {/* Correo (opcional) */}
+            <div>
+              <label
+                htmlFor="correo"
+                className="block text-sm font-medium text-black mb-2"
+              >
+                Correo electrónico{" "}
+                <span className="text-gray-500 text-xs">(opcional)</span>
+              </label>
+              <input
+                id="correo"
+                name="correo"
+                type="email"
+                value={correo}
+                onChange={handleCorreoChange}
+                placeholder={user?.email || "tu@email.com"}
+                maxLength={255}
+                className="w-full px-4 py-3 rounded-lg bg-primary/10 border border-transparent focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                {user?.email
+                  ? `Tu correo actual: ${user.email} (puedes cambiarlo)`
+                  : "Para recibir actualizaciones sobre tu ticket"}
+              </p>
+            </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-center">
+                  <svg
+                    className="w-5 h-5 text-red-500 mr-2 flex-shrink-0"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <span className="text-red-700 text-sm">{error}</span>
+                </div>
+              </div>
+            )}
 
             {/* Submit Button */}
             <button
@@ -111,7 +272,7 @@ export default function SoportePage() {
                   />
                 </svg>
                 <span className="text-green-700 font-medium">
-                  Mensaje enviado correctamente. Te contactaremos pronto.
+                  Ticket creado correctamente. Te contactaremos pronto.
                 </span>
               </div>
             </div>

@@ -1,5 +1,36 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Configuración Inicial
+
+### Variables de Entorno
+
+Antes de ejecutar el proyecto, necesitas configurar las variables de entorno. Crea un archivo `.env.local` en la raíz del proyecto:
+
+```env
+# API Configuration
+NEXT_PUBLIC_API_URL=https://api.naxine.com/api
+NEXT_PUBLIC_API_TIMEOUT=15000
+
+# Stripe Configuration
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_xxxxxxxxxxxxx
+
+# Frontend URL
+NEXT_PUBLIC_FRONTEND_URL=https://naxine.com
+
+# Backend URL (sin /api)
+NEXT_PUBLIC_BACKEND_URL=https://api.naxine.com
+```
+
+**Para desarrollo local**, usa:
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3000/api
+NEXT_PUBLIC_FRONTEND_URL=http://localhost:3001
+NEXT_PUBLIC_BACKEND_URL=http://localhost:3000
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxx
+```
+
+📖 Ver [ENV_CONFIG.md](./ENV_CONFIG.md) para más detalles sobre la configuración.
+
 ## Getting Started
 
 First, run the development server:
@@ -14,7 +45,9 @@ pnpm dev
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3001](http://localhost:3001) with your browser to see the result.
+
+**Nota**: El frontend corre en el puerto 3001 por defecto, mientras que el backend corre en el puerto 3000.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 

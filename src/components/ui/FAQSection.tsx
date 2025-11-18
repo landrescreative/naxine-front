@@ -100,6 +100,7 @@ const FAQSection: React.FC = () => {
     return (
       <div className="border border-primary rounded-lg bg-white shadow-sm hover:shadow-md hover:border-primary transition-all duration-300 ease-in-out">
         <button
+          type="button"
           onClick={() => onToggle(item.id)}
           className="w-full px-6 py-4 text-left flex justify-between items-center focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50 rounded-lg hover:bg-primary/5 transition-colors duration-200 ease-in-out"
         >

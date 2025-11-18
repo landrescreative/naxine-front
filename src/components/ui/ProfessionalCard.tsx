@@ -67,14 +67,6 @@ export default function ProfessionalCard({
           {professional.description}
         </p>
 
-        {/* Rating and Reviews */}
-        <div className="flex items-center space-x-1">
-          <span className="text-primary text-2xl">★</span>
-          <span className="text-gray-700 text-sm font-medium">
-            {professional.rating} ({professional.reviewCount})
-          </span>
-        </div>
-
         {/* Price */}
         <div className="pt-2">
           <span className="text-xl font-bold text-primary">

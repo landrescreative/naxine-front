@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Search,
@@ -10,10 +10,8 @@ import {
   MoreVertical,
   ChevronUp,
 } from "lucide-react";
-import {
-  ADMIN_PROFESSIONALS,
-  type AdminProfessional,
-} from "@/data/adminProfessionals";
+import { type AdminProfessional } from "@/data/adminProfessionals";
+import { professionalsService } from "@/services/api/professionals";
 
 // Status Badge Component
 function StatusBadge({ status }: { status: AdminProfessional["status"] }) {
@@ -254,12 +252,225 @@ export default function AdminProfesionalesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
   const [activeFilters, setActiveFilters] = useState<any>({});
+  const [professionals, setProfessionals] = useState<AdminProfessional[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const itemsPerPage = 10;
 
+  // Función para mapear los datos del backend al formato AdminProfessional
+  const mapBackendProfessionalToAdminProfessional = (
+    backendProfessional: any
+  ): AdminProfessional => {
+    // Mapear estado del backend al frontend
+    const statusMap: Record<
+      string,
+      "activo" | "inactivo" | "pendiente" | "suspendido"
+    > = {
+      activo: "activo",
+      inactivo: "inactivo",
+      pendiente: "pendiente",
+      suspendido: "suspendido",
+      activa: "activo",
+      inactiva: "inactivo",
+      aprobado: "activo", // Mapear "aprobado" a "activo" si cumple condiciones
+    };
+
+    // Calcular el estado basándose en:
+    // 1. Aprobación del admin (estado_aprobacion)
+    // 2. Verificación de Stripe (charges_enabled && payouts_enabled)
+    const estadoAprobacion = 
+      backendProfessional.estado_aprobacion ||
+      backendProfessional.estado ||
+      "pendiente";
+    
+    // Normalizar valores booleanos de Stripe
+    const normalizeBool = (v: any) =>
+      v === true || v === "true" || v === 1 || v === "1";
+    
+    const chargesEnabled = normalizeBool(backendProfessional.charges_enabled);
+    const payoutsEnabled = normalizeBool(backendProfessional.payouts_enabled);
+    const stripeVerified = chargesEnabled && payoutsEnabled;
+    
+    // También considerar usuario_verificado si está disponible
+    const usuarioVerificado = normalizeBool(backendProfessional.usuario_verificado);
+    const isStripeVerified = stripeVerified || usuarioVerificado;
+    
+    // Verificar Google Calendar (el backend ahora incluye tiene_google_calendar)
+    const tieneGoogleCalendar = normalizeBool(backendProfessional.tiene_google_calendar);
+    
+    // Determinar el estado final
+    // Un profesional está "activo" cuando:
+    // 1. Está aprobado por admin (estado_aprobacion === "aprobado")
+    // 2. Tiene Stripe verificado (charges_enabled && payouts_enabled)
+    // 3. Tiene Google Calendar conectado (tiene_google_calendar === true)
+    let mappedStatus: "activo" | "inactivo" | "pendiente" | "suspendido";
+    
+    if (estadoAprobacion.toLowerCase() === "aprobado") {
+      // Si está aprobado por admin, tiene Stripe verificado Y tiene Google Calendar, está activo
+      if (isStripeVerified && tieneGoogleCalendar) {
+        mappedStatus = "activo";
+      } else {
+        // Aprobado pero sin Stripe o sin Google Calendar = pendiente de verificación
+        mappedStatus = "pendiente";
+      }
+    } else if (estadoAprobacion.toLowerCase() === "suspendido" || estadoAprobacion.toLowerCase() === "rechazado") {
+      mappedStatus = "suspendido";
+    } else if (estadoAprobacion.toLowerCase() === "inactivo" || estadoAprobacion.toLowerCase() === "inactiva") {
+      mappedStatus = "inactivo";
+    } else {
+      // Por defecto, pendiente (incluye "pendiente" y cualquier otro estado)
+      mappedStatus = "pendiente";
+    }
+
+    return {
+      id: String(
+        backendProfessional.id_profesional ||
+          backendProfessional.id_usuario ||
+          backendProfessional.id ||
+          ""
+      ),
+      name:
+        `${backendProfessional.nombre || ""} ${
+          backendProfessional.apellidos || ""
+        }`.trim() ||
+        backendProfessional.nombre_completo ||
+        backendProfessional.name ||
+        "",
+      fullName:
+        `${backendProfessional.nombre || ""} ${
+          backendProfessional.apellidos || ""
+        }`.trim() ||
+        backendProfessional.nombre_completo ||
+        backendProfessional.fullName ||
+        "",
+      email:
+        backendProfessional.email || backendProfessional.email_usuario || "",
+      phone: backendProfessional.telefono || backendProfessional.phone || "",
+      username: (backendProfessional.email || "").split("@")[0] || "",
+      city: backendProfessional.ciudad || backendProfessional.city || "",
+      postalCode:
+        backendProfessional.codigo_postal ||
+        backendProfessional.postalCode ||
+        "",
+      specialty:
+        backendProfessional.especialidad || backendProfessional.specialty || "",
+      licenseNumber:
+        backendProfessional.numero_colegiado ||
+        backendProfessional.licenseNumber ||
+        "",
+      experience:
+        backendProfessional.experiencia_años ||
+        backendProfessional.experience ||
+        0,
+      rating:
+        backendProfessional.calificacion || backendProfessional.rating || 0,
+      totalSessions:
+        backendProfessional.total_sesiones ||
+        backendProfessional.totalSessions ||
+        0,
+      incomeUsd:
+        backendProfessional.ingreso || backendProfessional.incomeUsd || 0,
+      status: mappedStatus,
+      joinDate:
+        backendProfessional.created_at ||
+        backendProfessional.joinDate ||
+        new Date().toISOString(),
+      lastActive:
+        backendProfessional.ultimo_acceso ||
+        backendProfessional.lastActive ||
+        new Date().toISOString(),
+      profileImage:
+        backendProfessional.imagen_perfil || backendProfessional.profileImage,
+      bio: backendProfessional.descripcion || backendProfessional.bio || "",
+      education:
+        backendProfessional.educacion || backendProfessional.education || [],
+      certifications:
+        backendProfessional.certificaciones ||
+        backendProfessional.certifications ||
+        [],
+      languages:
+        backendProfessional.idiomas || backendProfessional.languages || [],
+      availability: backendProfessional.disponibilidad ||
+        backendProfessional.availability || {
+          monday: [],
+          tuesday: [],
+          wednesday: [],
+          thursday: [],
+          friday: [],
+          saturday: [],
+          sunday: [],
+        },
+    };
+  };
+
+  // Cargar profesionales desde la API
+  useEffect(() => {
+    const fetchProfessionals = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await professionalsService.getAdminProfessionals();
+
+        console.log("[AdminProfesionalesPage] Respuesta completa:", response);
+        console.log(
+          "[AdminProfesionalesPage] response.success:",
+          response.success
+        );
+        console.log("[AdminProfesionalesPage] response.data:", response.data);
+
+        if (response.success && response.data) {
+          let professionalsData: any[] = [];
+
+          if (Array.isArray(response.data)) {
+            professionalsData = response.data;
+          } else if (
+            response.data.data &&
+            response.data.data.profesionales &&
+            Array.isArray(response.data.data.profesionales)
+          ) {
+            professionalsData = response.data.data.profesionales;
+          } else if (response.data.data && Array.isArray(response.data.data)) {
+            professionalsData = response.data.data;
+          } else if (
+            response.data.profesionales &&
+            Array.isArray(response.data.profesionales)
+          ) {
+            professionalsData = response.data.profesionales;
+          }
+
+          console.log(
+            "[AdminProfesionalesPage] professionalsData encontrados:",
+            professionalsData.length
+          );
+
+          // Mapear los datos del backend al formato AdminProfessional
+          const mappedProfessionals = professionalsData.map(
+            mapBackendProfessionalToAdminProfessional
+          );
+          console.log(
+            "[AdminProfesionalesPage] Profesionales mapeados:",
+            mappedProfessionals.length
+          );
+
+          setProfessionals(mappedProfessionals);
+        } else {
+          setError(response.error || "Error al cargar los profesionales");
+        }
+      } catch (err) {
+        setError("Ocurrió un error al cargar los profesionales");
+        console.error("Error al cargar profesionales:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfessionals();
+  }, []);
+
   // Filter and search logic
   const filteredProfessionals = useMemo(() => {
-    let filtered = ADMIN_PROFESSIONALS;
+    let filtered = professionals;
 
     // Text search
     if (query) {
@@ -312,7 +523,7 @@ export default function AdminProfesionalesPage() {
     }
 
     return filtered;
-  }, [query, activeFilters]);
+  }, [professionals, query, activeFilters]);
 
   // Pagination
   const totalPages = Math.ceil(filteredProfessionals.length / itemsPerPage);
@@ -411,191 +622,229 @@ export default function AdminProfesionalesPage() {
         )}
       </div>
 
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-gray-600">Cargando profesionales...</div>
+        </div>
+      )}
+
       {/* Table */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left">
-                  <input
-                    type="checkbox"
-                    checked={
-                      pageItems.length > 0 &&
-                      pageItems.every((item) => selected[item.id])
-                    }
-                    onChange={toggleAll}
-                  />
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Nombre Profesional
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Teléfono
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Número de Profesional
-                </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Ingreso
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Estado
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Acción
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {pageItems.map((professional) => (
-                <tr key={professional.id} className="hover:bg-gray-50/60">
-                  <td className="px-4 py-4 align-middle">
+      {!loading && !error && (
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left">
                     <input
                       type="checkbox"
-                      checked={!!selected[professional.id]}
-                      onChange={() => toggleRow(professional.id)}
+                      checked={
+                        pageItems.length > 0 &&
+                        pageItems.every((item) => selected[item.id])
+                      }
+                      onChange={toggleAll}
                     />
-                  </td>
-                  <td className="px-4 py-4">
-                    <div className="flex items-center gap-3">
-                      <Avatar
-                        name={professional.name}
-                        image={professional.profileImage}
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    ID
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Nombre Profesional
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Teléfono
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Número de Profesional
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Ingreso
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Estado
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Acción
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {pageItems.map((professional) => (
+                  <tr key={professional.id} className="hover:bg-gray-50/60">
+                    <td className="px-4 py-4 align-middle">
+                      <input
+                        type="checkbox"
+                        checked={!!selected[professional.id]}
+                        onChange={() => toggleRow(professional.id)}
                       />
-                      <div>
-                        <div className="font-medium text-gray-900">
-                          {professional.name}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {professional.email}
+                    </td>
+                    <td className="px-4 py-4 text-gray-700 font-mono text-sm">
+                      {professional.id}
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-3">
+                        <Avatar
+                          name={professional.name}
+                          image={professional.profileImage}
+                        />
+                        <div>
+                          <div className="font-medium text-gray-900">
+                            {professional.name}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {professional.email}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 text-gray-700">
-                    {professional.phone}
-                  </td>
-                  <td className="px-4 py-4 text-gray-700">
-                    {String(parseInt(professional.id.split("-")[1])).padStart(
-                      8,
-                      "0"
-                    )}
-                  </td>
-                  <td className="px-4 py-4 text-gray-700 text-center">
-                    ${professional.incomeUsd.toFixed(2)}
-                  </td>
-                  <td className="px-4 py-4">
-                    <StatusBadge status={professional.status} />
-                  </td>
-                  <td className="px-4 py-4">
-                    <div className="flex items-center gap-2">
-                      <button className="p-1 text-gray-400 hover:text-gray-600">
-                        <svg
-                          className="h-4 w-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
+                    </td>
+                    <td className="px-4 py-4 text-gray-700">
+                      {professional.phone || "-"}
+                    </td>
+                    <td className="px-4 py-4 text-gray-700">
+                      {String(professional.id).padStart(8, "0")}
+                    </td>
+                    <td className="px-4 py-4 text-gray-700 text-center">
+                      ${professional.incomeUsd.toFixed(2)}
+                    </td>
+                    <td className="px-4 py-4">
+                      <StatusBadge status={professional.status} />
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-2">
+                        <button className="p-1 text-gray-400 hover:text-gray-600">
+                          <svg
+                            className="h-4 w-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                            />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => {
+                            window.location.href = `/dashboard/admin/profesionales/${professional.id}`;
+                          }}
+                          className="p-1 text-gray-400 hover:text-gray-600"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                          />
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                          />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => {
-                          window.location.href = `/dashboard/admin/profesionales/${professional.id}`;
-                        }}
-                        className="p-1 text-gray-400 hover:text-gray-600"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-        {/* Pagination */}
-        <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3">
-          <div className="flex items-center text-sm text-gray-700">
-            Mostrando {startIndex + 1}-
-            {Math.min(startIndex + itemsPerPage, filteredProfessionals.length)}{" "}
-            de {filteredProfessionals.length}
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-              className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+          {/* Pagination */}
+          <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3">
+            <div className="flex items-center text-sm text-gray-700">
+              Mostrando {startIndex + 1}-
+              {Math.min(
+                startIndex + itemsPerPage,
+                filteredProfessionals.length
+              )}{" "}
+              de {filteredProfessionals.length}
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-            </button>
-            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-              const pageNum = i + 1;
-              const isActive = pageNum === currentPage;
-              return (
-                <button
-                  key={pageNum}
-                  onClick={() => setCurrentPage(pageNum)}
-                  className={`px-3 py-1 text-sm rounded ${
-                    isActive
-                      ? "bg-primary text-white"
-                      : "text-gray-700 hover:bg-gray-100"
-                  }`}
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  {pageNum}
-                </button>
-              );
-            })}
-            {totalPages > 5 && <span className="px-2 text-gray-500">...</span>}
-            <button
-              onClick={() =>
-                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-              }
-              disabled={currentPage === totalPages}
-              className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+              </button>
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                const pageNum = i + 1;
+                const isActive = pageNum === currentPage;
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={`px-3 py-1 text-sm rounded ${
+                      isActive
+                        ? "bg-primary text-white"
+                        : "text-gray-700 hover:bg-gray-100"
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+              {totalPages > 5 && (
+                <span className="px-2 text-gray-500">...</span>
+              )}
+              <button
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                }
+                disabled={currentPage === totalPages}
+                className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </button>
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Empty State */}
+      {!loading && !error && filteredProfessionals.length === 0 && (
+        <div className="flex items-center justify-center py-12 bg-white rounded-lg border border-gray-200">
+          <div className="text-center">
+            <p className="text-gray-600">No se encontraron profesionales</p>
+            {query && (
+              <p className="text-sm text-gray-500 mt-2">
+                Intenta con otros términos de búsqueda
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Filter Modal */}
       <FilterModal

@@ -1,73 +1,170 @@
 import { notFound } from "next/navigation";
-import { categoriesData } from "@/data/categories";
+import { specialtiesService } from "@/services/api/specialties";
 import CategoryServicePage from "@/components/ui/CategoryServicePage";
 
 interface ServicePageProps {
-  params: {
+  params: Promise<{
     category: string;
     service: string;
-  };
+  }>;
 }
 
 export async function generateStaticParams() {
-  const params: { category: string; service: string }[] = [];
-
-  Object.entries(categoriesData).forEach(([categorySlug, categoryData]) => {
-    categoryData.services.forEach((service) => {
-      params.push({
-        category: categorySlug,
-        service: service.id,
-      });
-    });
-  });
-
-  return params;
+  // Para páginas dinámicas, retornar array vacío para generar en runtime
+  // O puedes generar algunos params estáticos si lo necesitas
+  return [];
 }
 
 export async function generateMetadata({ params }: ServicePageProps) {
-  const { category, service: serviceId } = await params;
-  const categoryData = categoriesData[category];
+  const { category, service: serviceSlug } = await params;
 
-  if (!categoryData) {
+  try {
+    console.log("[ServicePage][generateMetadata] params:", {
+      category,
+      serviceSlug,
+    });
+    // Obtener la especialidad por su slug
+    const specialtyResponse = await specialtiesService.getSpecialtyBySlugOrId(
+      category
+    );
+    console.log(
+      "[ServicePage][generateMetadata] specialtyResponse.success:",
+      specialtyResponse?.success
+    );
+
+    if (!specialtyResponse.success || !specialtyResponse.data) {
+      console.warn(
+        "[ServicePage][generateMetadata] specialty not found for category:",
+        category
+      );
+      return {
+        title: "Especialidad no encontrada",
+        description: "La especialidad solicitada no existe en NAXINE",
+      };
+    }
+
+    const specialty = specialtyResponse.data;
+    const specialtyId = String(specialty.id_especialidad || specialty.id || "");
+    console.log("[ServicePage][generateMetadata] specialtyId:", specialtyId);
+
+    // Obtener el servicio específico
+    const serviceResponse = await specialtiesService.getServiceBySlugOrId(
+      specialtyId,
+      serviceSlug
+    );
+    console.log(
+      "[ServicePage][generateMetadata] serviceResponse.success:",
+      serviceResponse?.success
+    );
+
+    if (!serviceResponse.success || !serviceResponse.data) {
+      // Si no se encuentra el servicio, usar datos de la especialidad
+      const specialtyName =
+        specialty.nombre || specialty.name || "Especialidad";
+      console.warn(
+        "[ServicePage][generateMetadata] service not found. Using specialty metadata fallback for:",
+        { specialtyId, serviceSlug }
+      );
+      return {
+        title: `${specialtyName} | Naxine`,
+        description: specialty.descripcion || `Servicios de ${specialtyName}`,
+      };
+    }
+
+    const service = serviceResponse.data;
+    const serviceName =
+      service.nombre_servicio || service.nombre || service.name || "Servicio";
+    const specialtyName = specialty.nombre || specialty.name || "Especialidad";
+    const serviceDescription =
+      service.descripcion || `Servicio de ${serviceName} en ${specialtyName}`;
+
     return {
-      title: "Categoría no encontrada",
+      title: `${serviceName} - ${specialtyName}`,
+      description: serviceDescription,
+      keywords: [
+        serviceName,
+        specialtyName,
+        "servicios profesionales",
+        "profesionales verificados",
+        "cita online",
+      ],
+      openGraph: {
+        title: `${serviceName} - ${specialtyName} | NAXINE`,
+        description: serviceDescription,
+        type: "website",
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: `${serviceName} - ${specialtyName} | NAXINE`,
+        description: serviceDescription,
+      },
+    };
+  } catch (error) {
+    console.error("Error generating metadata:", error);
+    return {
+      title: "Servicio",
+      description: "Página de servicio en NAXINE",
     };
   }
-
-  const serviceData = categoryData.services.find(
-    (service) => service.id === serviceId
-  );
-
-  if (!serviceData) {
-    return {
-      title: "Servicio no encontrado",
-    };
-  }
-
-  return {
-    title: `${serviceData.title} - ${categoryData.name} | Naxine`,
-    description: serviceData.description,
-    keywords: serviceData.keywords.join(", "),
-  };
 }
 
 export default async function ServicePage({ params }: ServicePageProps) {
-  const { category, service: serviceId } = await params;
-  const categoryData = categoriesData[category];
+  const { category, service: serviceSlug } = await params;
 
-  if (!categoryData) {
+  try {
+    console.log("[ServicePage] params:", { category, serviceSlug });
+    // Obtener la especialidad por su slug
+    const specialtyResponse = await specialtiesService.getSpecialtyBySlugOrId(
+      category
+    );
+    console.log(
+      "[ServicePage] specialtyResponse.success:",
+      specialtyResponse?.success
+    );
+
+    if (!specialtyResponse.success || !specialtyResponse.data) {
+      console.warn("[ServicePage] specialty not found for category:", category);
+      notFound();
+    }
+
+    const specialty = specialtyResponse.data;
+    const specialtyId = String(specialty.id_especialidad || specialty.id || "");
+    console.log("[ServicePage] specialtyId:", specialtyId);
+
+    // Obtener el servicio específico
+    const serviceResponse = await specialtiesService.getServiceBySlugOrId(
+      specialtyId,
+      serviceSlug
+    );
+    console.log(
+      "[ServicePage] serviceResponse.success:",
+      serviceResponse?.success
+    );
+
+    if (!serviceResponse.success || !serviceResponse.data) {
+      console.warn("[ServicePage] service not found for specialty/service:", {
+        specialtyId,
+        serviceSlug,
+      });
+      notFound();
+    }
+
+    // Pasar los datos dinámicos al componente
+    console.log("[ServicePage] Rendering CategoryServicePage with IDs:", {
+      categorySlug: category,
+      serviceSlug,
+      specialtyId,
+    });
+    return (
+      <CategoryServicePage
+        categorySlug={category}
+        serviceSlug={serviceSlug}
+        specialtyData={specialty}
+        serviceData={serviceResponse.data}
+      />
+    );
+  } catch (error) {
+    console.error("Error loading service page:", error);
     notFound();
   }
-
-  const serviceData = categoryData.services.find(
-    (service) => service.id === serviceId
-  );
-
-  if (!serviceData) {
-    notFound();
-  }
-
-  return (
-    <CategoryServicePage categorySlug={category} serviceSlug={serviceId} />
-  );
 }

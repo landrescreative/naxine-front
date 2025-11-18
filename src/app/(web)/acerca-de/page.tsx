@@ -1,4 +1,27 @@
+import type { Metadata } from "next";
 import Image from "next/image";
+
+export const metadata: Metadata = {
+  title: "Acerca de Nosotros",
+  description:
+    "Conoce NAXINE, una plataforma digital especializada en servicios profesionales de salud, nutrición, asesoría legal, coaching, logopedia y fisioterapia. Profesionales verificados y colegiados en un entorno ético y seguro.",
+  keywords: [
+    "sobre NAXINE",
+    "quienes somos",
+    "misión",
+    "visión",
+    "valores",
+    "equipo",
+    "impacto social",
+    "profesionales verificados",
+  ],
+  openGraph: {
+    title: "Acerca de Nosotros | NAXINE",
+    description:
+      "Conoce NAXINE, una plataforma digital especializada en servicios profesionales de salud, nutrición, asesoría legal y más.",
+    type: "website",
+  },
+};
 
 export default function AboutPage() {
   return (

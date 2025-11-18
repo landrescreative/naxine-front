@@ -18,12 +18,15 @@ interface PendingSession {
 
 interface PendingSessionsTableProps {
   sessions: PendingSession[];
+  basePath?: string;
+  onViewDetails?: (sessionId: string) => void;
 }
 
 export default function PendingSessionsTable({
   sessions,
   basePath = "/dashboard/cliente",
-}: PendingSessionsTableProps & { basePath?: string }) {
+  onViewDetails,
+}: PendingSessionsTableProps) {
   const router = useRouter();
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -136,9 +139,6 @@ export default function PendingSessionsTable({
                     <div className="text-sm text-secondary">
                       {session.modality}
                     </div>
-                    {session.status !== "cancelled" && (
-                      <div className="text-sm text-purple-600">Ver enlace</div>
-                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-secondary">
                     {session.product}
@@ -146,9 +146,13 @@ export default function PendingSessionsTable({
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex space-x-2">
                       <button
-                        onClick={() =>
-                          router.push(`${basePath}/citas/${session.id}`)
-                        }
+                        onClick={() => {
+                          if (onViewDetails) {
+                            onViewDetails(session.id);
+                          } else {
+                            router.push(`${basePath}/citas/${session.id}`);
+                          }
+                        }}
                         className="bg-primary hover:bg-primary/90 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors"
                       >
                         Ver detalles

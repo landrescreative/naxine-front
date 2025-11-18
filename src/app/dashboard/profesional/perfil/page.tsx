@@ -1,8 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { Check } from "lucide-react";
+import { Check, CreditCard } from "lucide-react";
+import { ticketsService } from "@/services/api/tickets";
+import { professionalsService } from "@/services/api/professionals";
+import { calendarsService } from "@/services/api/calendars";
+import { handleApiError } from "@/services";
 
 export default function PerfilPage() {
   const { user } = useAuth();
@@ -30,11 +34,49 @@ export default function PerfilPage() {
   });
 
   const [showToast, setShowToast] = useState(false);
-  const [showCancelToast, setShowCancelToast] = useState(false);
   const [showSupportToast, setShowSupportToast] = useState(false);
   const [animateSaveToast, setAnimateSaveToast] = useState(false);
-  const [animateCancelToast, setAnimateCancelToast] = useState(false);
   const [animateSupportToast, setAnimateSupportToast] = useState(false);
+  const [supportMessage, setSupportMessage] = useState("");
+  const [isSubmittingSupport, setIsSubmittingSupport] = useState(false);
+  const [supportError, setSupportError] = useState<string | null>(null);
+  const [stripeStatus, setStripeStatus] = useState<{
+    charges_enabled: boolean;
+    payouts_enabled: boolean;
+    loading: boolean;
+  }>({
+    charges_enabled: false,
+    payouts_enabled: false,
+    loading: true,
+  });
+  const [isCreatingOnboarding, setIsCreatingOnboarding] = useState(false);
+  const [stripeError, setStripeError] = useState<string | null>(null);
+
+  const [calendarStatus, setCalendarStatus] = useState<{
+    loading: boolean;
+    connected: boolean;
+    syncOk: boolean;
+    lastVerification: string | null;
+    error: string | null;
+  }>({
+    loading: true,
+    connected: false,
+    syncOk: false,
+    lastVerification: null,
+    error: null,
+  });
+  const [calendarConnectLoading, setCalendarConnectLoading] = useState(false);
+  const [calendarVerifyLoading, setCalendarVerifyLoading] = useState(false);
+  const [calendarFeedback, setCalendarFeedback] = useState<{
+    type: "success" | "error" | "info";
+    message: string;
+  } | null>(null);
+
+  const getErrorMessage = useCallback((error: unknown): string => {
+    if (typeof error === "string") return error;
+    if (error instanceof Error) return error.message;
+    return handleApiError(error as any);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -46,6 +88,183 @@ export default function PerfilPage() {
     }));
   }, [user]);
 
+  // Cargar estado de Stripe Connect
+  const loadStripeStatus = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      setStripeStatus((prev) => ({ ...prev, loading: true }));
+      const response = await professionalsService.getMyProfessionalProfile();
+
+      // El apiClient suele envolver la respuesta del backend.
+      // Estructuras posibles:
+      // - { data: { profesional: {...} } }
+      // - { profesional: {...} }
+      // - { ...profesional }
+      const backendData: any = response.data || {};
+      const profesional =
+        backendData.data?.profesional ||
+        backendData.profesional ||
+        backendData;
+
+      const normalizeBool = (v: any) =>
+        v === true || v === "true" || v === 1 || v === "1";
+
+      if (response.success && profesional && (profesional.charges_enabled != null || profesional.payouts_enabled != null)) {
+        const chargesEnabled = normalizeBool(profesional.charges_enabled);
+        const payoutsEnabled = normalizeBool(profesional.payouts_enabled);
+
+        setStripeStatus({
+          charges_enabled: chargesEnabled,
+          payouts_enabled: payoutsEnabled,
+          loading: false,
+        });
+      } else {
+        // Si no hay perfil profesional o hay error, asumir que no está verificado
+        setStripeStatus({
+          charges_enabled: false,
+          payouts_enabled: false,
+          loading: false,
+        });
+      }
+    } catch (err) {
+      // Error ya manejado por el servicio
+      setStripeStatus({
+        charges_enabled: false,
+        payouts_enabled: false,
+        loading: false,
+      });
+    }
+  }, [user]);
+
+  useEffect(() => {
+    loadStripeStatus();
+  }, [loadStripeStatus]);
+
+  const loadCalendarStatus = useCallback(async () => {
+    if (!user) return;
+
+    setCalendarStatus((prev) => ({
+      ...prev,
+      loading: true,
+      error: null,
+    }));
+
+    try {
+      const response = await calendarsService.getMyCalendars();
+
+      if (response.success && response.data) {
+        const rawCalendars =
+          (response.data as any).calendarios_externos ??
+          (response.data as any).data?.calendarios_externos ??
+          [];
+        const calendars = Array.isArray(rawCalendars) ? rawCalendars : [];
+        const googleCalendars = calendars.filter(
+          (cal) => cal.proveedor === "google"
+        );
+        const hasConnected = googleCalendars.some((cal) => cal.connected);
+        const activeCalendars = googleCalendars.filter(
+          (cal) =>
+            cal.connected && (cal.sincronizacion_activa ?? true)
+        );
+
+        let lastVerification: string | null = null;
+        let errorMessage: string | null = null;
+
+        activeCalendars.forEach((cal) => {
+          if (cal.ultima_verificacion) {
+            if (
+              !lastVerification ||
+              new Date(cal.ultima_verificacion) > new Date(lastVerification)
+            ) {
+              lastVerification = cal.ultima_verificacion;
+            }
+          }
+          if (cal.google_sync_ok === 0 || cal.google_sync_ok === "0") {
+            errorMessage =
+              "Tu conexión con Google necesita reconfirmarse. Generaremos enlaces temporales hasta que la restaures.";
+          }
+          if (cal.error_conexion) {
+            errorMessage = cal.error_conexion;
+          }
+        });
+
+        const hasSyncOk = activeCalendars.some((cal) => {
+          const value = cal.google_sync_ok;
+          return (
+            value === true ||
+            value === 1 ||
+            value === "1" ||
+            value === undefined ||
+            value === null
+          );
+        });
+
+        if (hasConnected && activeCalendars.length === 0) {
+          errorMessage =
+            "Tu calendario está conectado, pero la sincronización está desactivada.";
+        }
+
+        setCalendarStatus({
+          loading: false,
+          connected: hasConnected,
+          syncOk: hasConnected ? hasSyncOk && activeCalendars.length > 0 : false,
+          lastVerification,
+          error: errorMessage,
+        });
+      } else {
+        setCalendarStatus({
+          loading: false,
+          connected: false,
+          syncOk: false,
+          lastVerification: null,
+          error:
+            response.error ||
+            "No se pudo obtener el estado de Google Calendar. Intenta nuevamente.",
+        });
+      }
+    } catch (error) {
+      setCalendarStatus({
+        loading: false,
+        connected: false,
+        syncOk: false,
+        lastVerification: null,
+        error: getErrorMessage(error),
+      });
+    }
+  }, [user, getErrorMessage]);
+
+  useEffect(() => {
+    loadCalendarStatus();
+  }, [loadCalendarStatus]);
+
+  useEffect(() => {
+    if (calendarFeedback) {
+      const timeout = setTimeout(
+        () => setCalendarFeedback(null),
+        4000
+      );
+      return () => clearTimeout(timeout);
+    }
+  }, [calendarFeedback]);
+
+  // Manejar retorno de Stripe onboarding
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const stripeReturn = urlParams.get("stripe_return");
+    const stripeRefresh = urlParams.get("stripe_refresh");
+
+    if (stripeReturn || stripeRefresh) {
+      // Limpiar los parámetros de la URL
+      window.history.replaceState({}, "", window.location.pathname);
+
+      // Recargar el estado de Stripe después de un breve delay
+      setTimeout(() => {
+        loadStripeStatus();
+      }, 1000);
+    }
+  }, [loadStripeStatus]);
+
   // Trigger entrance animation for Save popup
   useEffect(() => {
     if (showToast) {
@@ -54,13 +273,6 @@ export default function PerfilPage() {
     }
   }, [showToast]);
 
-  // Trigger entrance animation for Cancel popup
-  useEffect(() => {
-    if (showCancelToast) {
-      setAnimateCancelToast(false);
-      requestAnimationFrame(() => setAnimateCancelToast(true));
-    }
-  }, [showCancelToast]);
 
   // Trigger entrance animation for Support popup
   useEffect(() => {
@@ -81,6 +293,213 @@ export default function PerfilPage() {
   const handleCancel = () => {
     setPassword({ current: "", next: "", confirm: "" });
   };
+
+  const handleSupportSubmit = async () => {
+    if (!supportMessage.trim()) {
+      setSupportError("Por favor, escribe un mensaje");
+      return;
+    }
+
+    setSupportError(null);
+    setIsSubmittingSupport(true);
+
+    try {
+      const response = await ticketsService.createTicket({
+        asunto: "Consulta desde perfil",
+        mensaje: supportMessage.trim(),
+        correo: user?.email || undefined,
+      });
+
+      if (response.success) {
+        setSupportMessage("");
+        setShowSupportToast(true);
+        setTimeout(() => setShowSupportToast(false), 3000);
+      } else {
+        // Manejar errores de validación del backend
+        if (response.errorDetails?.errors) {
+          const validationErrors = response.errorDetails.errors;
+          const errorMessages = Array.isArray(validationErrors)
+            ? validationErrors.map((err: any) => err.message || err).join(", ")
+            : JSON.stringify(validationErrors);
+          setSupportError(errorMessages);
+        } else {
+          setSupportError(
+            response.error ||
+              "Error al enviar el mensaje. Por favor, intenta nuevamente."
+          );
+        }
+      }
+    } catch (err: any) {
+      console.error("[PerfilPage] Error al enviar ticket:", err);
+      setSupportError(
+        err?.message ||
+          "Ocurrió un error al enviar el mensaje. Por favor, intenta nuevamente."
+      );
+    } finally {
+      setIsSubmittingSupport(false);
+    }
+  };
+
+  const handleStripeOnboarding = async () => {
+    if (!user) return;
+
+    setStripeError(null);
+    setIsCreatingOnboarding(true);
+
+    try {
+      const returnUrl = `${window.location.origin}/dashboard/profesional/perfil?stripe_return=true`;
+      const refreshUrl = `${window.location.origin}/dashboard/profesional/perfil?stripe_refresh=true`;
+
+      const response = await professionalsService.createStripeOnboardingLink({
+        return_url: returnUrl,
+        refresh_url: refreshUrl,
+      });
+
+      // El API devuelve { success: true, data: { onboarding_url: ... } }
+      const onboardingUrl = response.data?.onboarding_url;
+
+      if (response.success && onboardingUrl) {
+        // Redirigir al profesional al onboarding de Stripe
+        window.location.href = onboardingUrl;
+      } else {
+        console.error("[PerfilPage] Respuesta inesperada:", response);
+        setStripeError(
+          response.error ||
+            "Error al crear el link de verificación. Por favor, intenta nuevamente."
+        );
+      }
+    } catch (err: any) {
+      console.error("[PerfilPage] Error al crear link de onboarding:", err);
+      setStripeError(
+        err?.message ||
+          "Ocurrió un error al iniciar la verificación. Por favor, intenta nuevamente."
+      );
+    } finally {
+      setIsCreatingOnboarding(false);
+    }
+  };
+
+  const handleConnectGoogle = async () => {
+    if (calendarConnectLoading) return;
+
+    setCalendarFeedback(null);
+    setCalendarConnectLoading(true);
+
+    try {
+      const response = await calendarsService.getGoogleAuthorizationUrl();
+      const rawData = response.data as any;
+      const url =
+        rawData?.url ??
+        rawData?.data?.url ??
+        rawData?.data?.data?.url ??
+        null;
+
+      if (response.success && url) {
+        window.location.href = url;
+      } else {
+        setCalendarFeedback({
+          type: "error",
+          message:
+            response.error ||
+            "No se pudo obtener la URL de autorización de Google Calendar.",
+        });
+      }
+    } catch (error) {
+      setCalendarFeedback({
+        type: "error",
+        message: getErrorMessage(error),
+      });
+      await loadCalendarStatus();
+    } finally {
+      setCalendarConnectLoading(false);
+    }
+  };
+
+  const handleVerifyCalendars = async () => {
+    if (calendarVerifyLoading) return;
+
+    setCalendarFeedback(null);
+    setCalendarVerifyLoading(true);
+
+    try {
+      const response = await calendarsService.verifyMyCalendars();
+
+      if (response.success && response.data) {
+        const rawResultados =
+          (response.data as any).resultados ??
+          (response.data as any).data?.resultados ??
+          [];
+        const resultados = Array.isArray(rawResultados) ? rawResultados : [];
+        const fallidos = resultados.filter((r) => !r.ok);
+
+        if (fallidos.length === 0) {
+          setCalendarFeedback({
+            type: "success",
+            message: "Sincronización con Google Calendar verificada correctamente.",
+          });
+        } else {
+          setCalendarFeedback({
+            type: "error",
+            message:
+              "Algunos calendarios necesitan reconectarse en Google para reactivar la sincronización.",
+          });
+        }
+      } else {
+        setCalendarFeedback({
+          type: "error",
+          message:
+            response.error ||
+            "No se pudo verificar la sincronización con Google Calendar.",
+        });
+      }
+    } catch (error) {
+      setCalendarFeedback({
+        type: "error",
+        message: getErrorMessage(error),
+      });
+    } finally {
+      setCalendarVerifyLoading(false);
+      await loadCalendarStatus();
+    }
+  };
+
+  // Verificar si necesita onboarding de Stripe
+  const needsStripeOnboarding =
+    !stripeStatus.loading &&
+    (!stripeStatus.charges_enabled || !stripeStatus.payouts_enabled);
+
+  // Estado de Stripe (similar a Google Calendar)
+  const stripeStatusLabel = stripeStatus.loading
+    ? "Verificando..."
+    : stripeStatus.charges_enabled && stripeStatus.payouts_enabled
+    ? "Cuenta verificada"
+    : "Verificación requerida";
+
+  const stripeStatusClass = stripeStatus.loading
+    ? "bg-gray-100 text-gray-600"
+    : stripeStatus.charges_enabled && stripeStatus.payouts_enabled
+    ? "bg-green-100 text-green-700"
+    : "bg-yellow-100 text-yellow-700";
+
+  const calendarStatusLabel = calendarStatus.loading
+    ? "Verificando..."
+    : calendarStatus.connected
+    ? calendarStatus.syncOk
+      ? "Sincronización activa"
+      : "Atención requerida"
+    : "No conectado";
+
+  const calendarStatusClass = calendarStatus.loading
+    ? "bg-gray-100 text-gray-600"
+    : calendarStatus.connected
+    ? calendarStatus.syncOk
+      ? "bg-green-100 text-green-700"
+      : "bg-yellow-100 text-yellow-700"
+    : "bg-red-100 text-red-700";
+
+  const formattedLastVerification = calendarStatus.lastVerification
+    ? new Date(calendarStatus.lastVerification).toLocaleString()
+    : null;
 
   return (
     <div className="space-y-6">
@@ -114,29 +533,187 @@ export default function PerfilPage() {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900">
-            Ajustes de Perfil
-          </h2>
-          <p className="text-xs text-purple-600 mt-1">
-            NOTA: La información personal no es editable por el usuario,
-            contacta con soporte para cambiar tu información.
-          </p>
+      <div>
+        <h2 className="text-xl font-semibold text-gray-900">
+          Ajustes de Perfil
+        </h2>
+        <p className="text-xs text-purple-600 mt-1">
+          NOTA: La información personal no es editable por el usuario,
+          contacta con soporte para cambiar tu información.
+        </p>
+      </div>
+
+      {/* Stripe Connect Verification - Siempre visible con badge de estado */}
+      <div className="bg-white shadow rounded-lg border border-blue-100">
+        <div className="px-4 py-5 sm:p-6 space-y-4">
+          <div className="flex items-start justify-between">
+            <div>
+              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-1">
+                Verificación de Cuenta de Stripe
+              </h3>
+              <p className="text-sm text-gray-600 max-w-2xl">
+                Conecta y verifica tu cuenta de Stripe Connect para poder recibir pagos
+                de tus clientes de forma segura.
+              </p>
+            </div>
+            <span
+              className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${stripeStatusClass}`}
+            >
+              {stripeStatusLabel}
+            </span>
+          </div>
+
+          {stripeError && (
+            <div className="border rounded-lg px-4 py-3 text-sm bg-red-50 border-red-200 text-red-700">
+              {stripeError}
+            </div>
+          )}
+
+          <div className="text-sm text-gray-600 space-y-2">
+            {stripeStatus.loading ? (
+              <p>Verificando el estado de tu cuenta de Stripe...</p>
+            ) : stripeStatus.charges_enabled && stripeStatus.payouts_enabled ? (
+              <>
+                <p>
+                  Tu cuenta de Stripe está verificada y lista para recibir pagos.
+                  Puedes procesar transacciones y recibir transferencias de tus clientes.
+                </p>
+              </>
+            ) : (
+              <>
+                <p>
+                  Para poder recibir pagos, necesitas completar la verificación
+                  de tu cuenta de Stripe Connect. Este proceso incluye la
+                  verificación de datos fiscales y bancarios.
+                </p>
+              </>
+            )}
+          </div>
+
+          {needsStripeOnboarding && (
+            <div className="flex flex-wrap gap-3 pt-2">
+              <button
+                onClick={handleStripeOnboarding}
+                disabled={isCreatingOnboarding}
+                className="px-6 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              >
+                {isCreatingOnboarding ? (
+                  <>
+                    <svg
+                      className="animate-spin h-4 w-4 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    <span>Procesando...</span>
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="w-4 h-4" />
+                    <span>Verificar Cuenta de Stripe</span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </div>
-        <div className="space-x-2">
-          <button
-            onClick={handleCancel}
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={handleSave}
-            className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors"
-          >
-            Guardar
-          </button>
+      </div>
+
+      {/* Google Calendar Sync - Movido hacia arriba */}
+      <div className="bg-white shadow rounded-lg border border-blue-100">
+        <div className="px-4 py-5 sm:p-6 space-y-4">
+          <div className="flex items-start justify-between">
+            <div>
+              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-1">
+                Sincronización con Google Calendar
+              </h3>
+              <p className="text-sm text-gray-600 max-w-2xl">
+                Conecta tu cuenta de Google para que tus citas se sincronicen automáticamente
+                con tu calendario y generen enlaces reales de Google Meet.
+              </p>
+            </div>
+            <span
+              className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${calendarStatusClass}`}
+            >
+              {calendarStatusLabel}
+            </span>
+          </div>
+
+          {calendarFeedback && (
+            <div
+              className={`border rounded-lg px-4 py-3 text-sm ${
+                calendarFeedback.type === "success"
+                  ? "bg-green-50 border-green-200 text-green-700"
+                  : calendarFeedback.type === "error"
+                  ? "bg-red-50 border-red-200 text-red-700"
+                  : "bg-blue-50 border-blue-200 text-blue-700"
+              }`}
+            >
+              {calendarFeedback.message}
+            </div>
+          )}
+
+          <div className="text-sm text-gray-600 space-y-2">
+            {calendarStatus.loading ? (
+              <p>Verificando el estado de la sincronización...</p>
+            ) : calendarStatus.connected ? (
+              <>
+                <p>
+                  {calendarStatus.syncOk
+                    ? "Tu cuenta de Google está conectada y lista para generar enlaces de Meet."
+                    : "Tu cuenta de Google está conectada, pero necesitamos que la reconectes para generar enlaces reales. Usaremos enlaces temporales hasta que lo hagas."}
+                </p>
+                {calendarStatus.error && (
+                  <p className="text-sm text-yellow-700">{calendarStatus.error}</p>
+                )}
+                {formattedLastVerification && (
+                  <p className="text-xs text-gray-500">
+                    Última verificación: {formattedLastVerification}
+                  </p>
+                )}
+              </>
+            ) : (
+              <p>
+                Aún no has vinculado tu cuenta de Google. Conéctala para que las citas en línea
+                generen automáticamente eventos y enlaces seguros de Google Meet.
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-3 pt-2">
+            <button
+              onClick={handleConnectGoogle}
+              disabled={calendarConnectLoading}
+              className="px-6 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {calendarConnectLoading ? "Redirigiendo..." : "Conectar Google Calendar"}
+            </button>
+            <button
+              onClick={handleVerifyCalendars}
+              disabled={
+                calendarVerifyLoading ||
+                calendarStatus.loading ||
+                !calendarStatus.connected
+              }
+              className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {calendarVerifyLoading ? "Verificando..." : "Verificar sincronización"}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -246,18 +823,35 @@ export default function PerfilPage() {
             Deja tu mensaje:
           </label>
           <textarea
-            className="w-full h-32 rounded-xl bg-white/30 placeholder-white/80 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/60"
-            placeholder="Escribe tu mensaje..."
-          />
-          <button
-            onClick={() => {
-              setShowSupportToast(true);
-              setTimeout(() => setShowSupportToast(false), 3000);
+            value={supportMessage}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value.length <= 2000) {
+                setSupportMessage(value);
+                setSupportError(null);
+              }
             }}
-            className="mt-5 w-full bg-white text-black uppercase tracking-wide py-4 rounded-2xl hover:bg-gray-100 transition-colors"
+            className="w-full h-32 rounded-xl bg-white/30 placeholder-white/80 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/60 resize-none"
+            placeholder="Escribe tu mensaje..."
+            maxLength={2000}
+          />
+          {supportError && (
+            <div className="mt-2 p-2 bg-red-500/30 border border-red-300 rounded-lg">
+              <p className="text-white text-xs">{supportError}</p>
+            </div>
+          )}
+          {supportMessage.length > 0 && (
+            <p className="text-white/80 text-xs mt-1">
+              {supportMessage.length}/2000 caracteres
+            </p>
+          )}
+          <button
+            onClick={handleSupportSubmit}
+            disabled={isSubmittingSupport || !supportMessage.trim()}
+            className="mt-5 w-full bg-white text-black uppercase tracking-wide py-4 rounded-2xl hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ fontWeight: 900 }}
           >
-            CONTACTAR A SOPORTE
+            {isSubmittingSupport ? "Enviando..." : "CONTACTAR A SOPORTE"}
           </button>
         </div>
       </div>
@@ -325,6 +919,24 @@ export default function PerfilPage() {
               <li>No puede ser similar a alguna anterior</li>
             </ul>
           </div>
+
+          {/* Botones de acción - Solo mostrar si hay cambios en la contraseña */}
+          {(password.current || password.next || password.confirm) && (
+            <div className="mt-6 flex space-x-3">
+              <button
+                onClick={handleCancel}
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSave}
+                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors"
+              >
+                Guardar
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -375,46 +987,6 @@ export default function PerfilPage() {
         </div>
       </div>
 
-      {/* Cancellation */}
-      <div>
-        <h4 className="text-sm font-semibold text-gray-900 mb-2">
-          Cancelación de cuenta
-        </h4>
-        <p className="text-xs text-gray-600 mb-3">
-          Al pulsar el botón “Solicitar” confirmas el envío de una solicitud de
-          baja de tu cuenta profesional.
-        </p>
-        <button
-          onClick={() => {
-            setShowCancelToast(true);
-            setTimeout(() => setShowCancelToast(false), 3000);
-          }}
-          className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors text-sm"
-        >
-          Solicitar
-        </button>
-      </div>
-      {showCancelToast && (
-        <div
-          className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 ease-out ${
-            animateCancelToast
-              ? "opacity-100 translate-y-0"
-              : "opacity-0 -translate-y-3"
-          }`}
-        >
-          <div className="bg-primary text-white px-6 py-4 rounded-lg shadow-lg flex items-center space-x-4">
-            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
-              <Check className="w-6 h-6 text-primary" />
-            </div>
-            <div className="flex flex-col">
-              <span className="font-medium text-sm">Solicitud enviada</span>
-              <span className="font-medium text-sm">
-                El administrador será notificado para procesar la cancelación.
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
 
       {showSupportToast && (
         <div

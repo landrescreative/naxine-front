@@ -149,6 +149,13 @@ export default function Footer() {
             </div>
           </div>
         </div>
+
+        {/* Copyright Section */}
+        <div className="mt-8 sm:mt-12 pt-8 border-t border-black/20">
+          <p className="text-black text-sm text-center">
+            © {new Date().getFullYear()} Naxine. Todos los derechos reservados.
+          </p>
+        </div>
       </div>
     </footer>
   );

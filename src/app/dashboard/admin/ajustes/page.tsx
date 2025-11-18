@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Edit,
   Plus,
@@ -9,7 +9,40 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
+  Trash2,
 } from "lucide-react";
+
+type SpecialtyCategory = {
+  id: string;
+  specialty: string;
+  subcategories: string;
+  services: number;
+  professionals: number;
+  description?: string;
+};
+
+type SpecialtyProfessional = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  professionalNumber: string;
+  specialty: string;
+};
+
+type SpecialtyServiceItem = {
+  id: string;
+  name: string;
+  professionals: number;
+  professionalsList: SpecialtyProfessional[];
+  description?: string;
+};
+
+type PolicyKey =
+  | "Politica de Privacidad"
+  | "Politica de Cookies"
+  | "Politica de Cancelacion"
+  | "Términos y Condiciones";
 
 export default function AdminAjustesPage() {
   const [activeSection, setActiveSection] = useState("categorias");
@@ -17,10 +50,15 @@ export default function AdminAjustesPage() {
   const [selectedSpecialty, setSelectedSpecialty] = useState("");
   const [isAddServiceModalOpen, setIsAddServiceModalOpen] = useState(false);
   const [newServiceName, setNewServiceName] = useState("");
+  const [creatingService, setCreatingService] = useState(false);
+  const [createServiceError, setCreateServiceError] = useState<string | null>(
+    null
+  );
   const [isProfessionalsModalOpen, setIsProfessionalsModalOpen] =
     useState(false);
-  const [selectedService, setSelectedService] = useState("");
-  const [selectedProfessionals, setSelectedProfessionals] = useState<number[]>(
+  const [selectedService, setSelectedService] =
+    useState<SpecialtyServiceItem | null>(null);
+  const [selectedProfessionals, setSelectedProfessionals] = useState<string[]>(
     []
   );
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
@@ -29,8 +67,13 @@ export default function AdminAjustesPage() {
   const [newSpecialtyName, setNewSpecialtyName] = useState("");
   const [newSpecialtySubcategories, setNewSpecialtySubcategories] =
     useState("");
-  const [policyContent, setPolicyContent] = useState({
-    "Politica de Privacidad": `Última actualización: 30 de julio de 2025
+  const [loadingPolicies, setLoadingPolicies] = useState(false);
+  const [policiesError, setPoliciesError] = useState<string | null>(null);
+  const [savingPolicy, setSavingPolicy] = useState(false);
+  const [savePolicyError, setSavePolicyError] = useState<string | null>(null);
+  const [policyContent, setPolicyContent] = useState<Record<PolicyKey, string>>(
+    {
+      "Politica de Privacidad": `Última actualización: 30 de julio de 2025
 
 En NAXINE, nos comprometemos a proteger tu privacidad y tus datos personales. Esta política explica cómo recopilamos, usamos y protegemos tu información al utilizar nuestra plataforma.
 
@@ -68,7 +111,7 @@ Recopilamos diferentes tipos de datos según el uso que hagas de la plataforma:
 - Consentimiento: al aceptar cookies o recibir comunicaciones comerciales
 - Obligación legal: para cumplir normativas fiscales, contables y de protección de datos
 - Interés legítimo: para garantizar la seguridad de la plataforma y prevenir fraudes`,
-    "Politica de Cookies": `Última actualización: 30 de julio de 2025
+      "Politica de Cookies": `Última actualización: 30 de julio de 2025
 
 En NAXINE utilizamos cookies y tecnologías similares para mejorar tu experiencia en nuestra plataforma.
 
@@ -86,7 +129,7 @@ Tipos de cookies que utilizamos:
 ¿Cómo puedes gestionar las cookies?
 
 Puedes configurar tu navegador para aceptar o rechazar cookies. Ten en cuenta que deshabilitar ciertas cookies puede afectar la funcionalidad del sitio.`,
-    "Politica de Cancelacion": `Última actualización: 30 de julio de 2025
+      "Politica de Cancelacion": `Última actualización: 30 de julio de 2025
 
 Política de Cancelación y Reembolsos
 
@@ -112,7 +155,7 @@ Excepciones:
 
 - En caso de emergencia médica, se aplicarán políticas especiales
 - Los paquetes de sesiones tienen políticas específicas de cancelación`,
-    "Términos y Condiciones": `Última actualización: 30 de julio de 2025
+      "Términos y Condiciones": `Última actualización: 30 de julio de 2025
 
 Términos y Condiciones de Uso de NAXINE
 
@@ -153,186 +196,714 @@ Nos reservamos el derecho de modificar estos términos en cualquier momento. Los
 8. Ley aplicable
 
 Estos términos se rigen por la legislación española.`,
-  });
+    }
+  );
+  const [categoriesData, setCategoriesData] = useState<SpecialtyCategory[]>([]);
+  const [servicesData, setServicesData] = useState<
+    Record<string, SpecialtyServiceItem[]>
+  >({});
+  const [specialtyProfessionals, setSpecialtyProfessionals] = useState<
+    Record<string, SpecialtyProfessional[]>
+  >({});
+  const [currentProfessionals, setCurrentProfessionals] = useState<
+    SpecialtyProfessional[]
+  >([]);
+  const [loadingSpecialties, setLoadingSpecialties] = useState(true);
+  const [specialtiesError, setSpecialtiesError] = useState<string | null>(null);
+  const [creatingSpecialty, setCreatingSpecialty] = useState(false);
+  const [createSpecialtyError, setCreateSpecialtyError] = useState<
+    string | null
+  >(null);
+  const [servicesBySpecialty, setServicesBySpecialty] = useState<
+    Record<string, string[]>
+  >({});
+  const [loadingServices, setLoadingServices] = useState<
+    Record<string, boolean>
+  >({});
+  const [isDeleteSpecialtyModalOpen, setIsDeleteSpecialtyModalOpen] =
+    useState(false);
+  const [specialtyToDelete, setSpecialtyToDelete] =
+    useState<SpecialtyCategory | null>(null);
+  const [deletingSpecialty, setDeletingSpecialty] = useState(false);
+  const [deleteSpecialtyError, setDeleteSpecialtyError] = useState<
+    string | null
+  >(null);
 
-  const specialtyServices = {
-    Nutriología: [
-      { id: 1, name: "Dieta para adelgazar", professionals: 8 },
-      { id: 2, name: "Dieta deportiva", professionals: 9 },
-      { id: 3, name: "Educación Nutricional", professionals: 10 },
-      { id: 4, name: "Salud Intestinal", professionals: 4 },
-      { id: 5, name: "Perdida de peso", professionals: 6 },
-      { id: 6, name: "Vegetarianos y veganos", professionals: 6 },
-      { id: 7, name: "Nutricion Infantil", professionals: 6 },
-      { id: 8, name: "Embarazo", professionals: 6 },
-    ],
-    Psicología: [
-      { id: 1, name: "Terapia para ansiedad", professionals: 12 },
-      { id: 2, name: "Terapia para pareja", professionals: 8 },
-      { id: 3, name: "Terapia depresión", professionals: 15 },
-      { id: 4, name: "Terapia infantil", professionals: 7 },
-      { id: 5, name: "Terapia familiar", professionals: 9 },
-      { id: 6, name: "Terapia cognitivo-conductual", professionals: 11 },
-      { id: 7, name: "Terapia de duelo", professionals: 5 },
-      { id: 8, name: "Terapia de autoestima", professionals: 6 },
-      { id: 9, name: "Terapia de estrés", professionals: 10 },
-    ],
-    Fisioterapia: [
-      { id: 1, name: "Fisioterapia deportiva", professionals: 14 },
-      { id: 2, name: "Suelo pélvico", professionals: 8 },
-      { id: 3, name: "Fisioterapia neurológica", professionals: 6 },
-      { id: 4, name: "Fisioterapia ortopédica", professionals: 12 },
-      { id: 5, name: "Fisioterapia geriátrica", professionals: 9 },
-      { id: 6, name: "Fisioterapia respiratoria", professionals: 7 },
-      { id: 7, name: "Fisioterapia pediátrica", professionals: 5 },
-      { id: 8, name: "Fisioterapia traumatológica", professionals: 11 },
-      { id: 9, name: "Fisioterapia reumatológica", professionals: 4 },
-      { id: 10, name: "Fisioterapia cardiovascular", professionals: 3 },
-    ],
-    "Desarrollo Personal": [
-      { id: 1, name: "Liderazgo", professionals: 8 },
-      { id: 2, name: "Habilidades sociales", professionals: 6 },
-      { id: 3, name: "Hablar en público", professionals: 9 },
-      { id: 4, name: "Gestión del tiempo", professionals: 7 },
-    ],
-    Logopedas: [
-      { id: 1, name: "Trastornos del habla", professionals: 8 },
-      { id: 2, name: "Trastornos del lenguaje", professionals: 10 },
-      { id: 3, name: "Disfonía", professionals: 5 },
-      { id: 4, name: "Disfagia", professionals: 4 },
-      { id: 5, name: "Afasia", professionals: 6 },
-      { id: 6, name: "Dislexia", professionals: 7 },
-    ],
+  const apiBaseUrl = useMemo(() => {
+    const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+    return base.replace(/\/$/, "");
+  }, []);
+
+  const getAdminToken = useCallback((): string | null => {
+    if (typeof window === "undefined") return null;
+
+    try {
+      const storedUser = window.localStorage.getItem("user");
+      if (!storedUser) {
+        if (process.env.NODE_ENV === "development") {
+          console.warn("[AdminAjustesPage] No hay usuario almacenado");
+        }
+        return null;
+      }
+
+      const parsedUser = JSON.parse(storedUser);
+      const role = String(parsedUser?.role || "").toLowerCase();
+      if (role === "admin" || role === "administracion") {
+        return parsedUser?.token || null;
+      }
+
+      if (process.env.NODE_ENV === "development") {
+        console.warn(
+          "[AdminAjustesPage] El usuario no posee rol de administrador:",
+          role
+        );
+      }
+    } catch (tokenError) {
+      console.error(
+        "[AdminAjustesPage] Error al leer el token de administrador:",
+        tokenError
+      );
+    }
+
+    return null;
+  }, []);
+
+  const servicesForSelectedSpecialty = useMemo(() => {
+    if (!selectedSpecialty) return [] as SpecialtyServiceItem[];
+    return servicesData[selectedSpecialty] || [];
+  }, [servicesData, selectedSpecialty]);
+
+  const professionalsFallback = useMemo(() => {
+    if (!selectedSpecialty) return [] as SpecialtyProfessional[];
+    return specialtyProfessionals[selectedSpecialty] || [];
+  }, [selectedSpecialty, specialtyProfessionals]);
+
+  const extractSpecialtiesArray = (data: any): any[] => {
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.data)) return data.data;
+    if (Array.isArray(data?.data?.especialidades))
+      return data.data.especialidades;
+    if (Array.isArray(data?.especialidades)) return data.especialidades;
+    if (Array.isArray(data?.items)) return data.items;
+    if (Array.isArray(data?.result)) return data.result;
+    return [];
   };
 
-  const [servicesData, setServicesData] = useState(specialtyServices);
-  const [categoriesData, setCategoriesData] = useState([
-    {
-      id: 1,
-      specialty: "Nutriología",
-      subcategories:
-        "Dietas para adelgazar, dietas para ansiedad, dieta deportiva...",
-      services: 8,
-      professionals: 8,
-    },
-    {
-      id: 2,
-      specialty: "Psicología",
-      subcategories:
-        "Terapia para ansiedad, terapia para pareja, terapia depresión...",
-      services: 9,
-      professionals: 9,
-    },
-    {
-      id: 3,
-      specialty: "Fisioterapia",
-      subcategories:
-        "Deportiva, suelo pélvico, neurológica, ortopédica, geriátrica...",
-      services: 10,
-      professionals: 10,
-    },
-    {
-      id: 4,
-      specialty: "Desarrollo Personal",
-      subcategories: "Liderazgo, habilidades sociales, hablar en publico...",
-      services: 4,
-      professionals: 4,
-    },
-    {
-      id: 5,
-      specialty: "Logopedas",
-      subcategories: "Trastornos del habla, trastornos del lenguaje...",
-      services: 6,
-      professionals: 6,
-    },
-  ]);
+  const mapBackendProfessional = (
+    specialtyName: string,
+    backendProfessional: any,
+    index: number
+  ): SpecialtyProfessional => {
+    const professionalId =
+      backendProfessional?.id_profesional ??
+      backendProfessional?.id_usuario ??
+      backendProfessional?.id ??
+      backendProfessional?.uuid ??
+      `${specialtyName}-professional-${index}`;
 
-  const nutritionProfessionals = [
-    {
-      id: 1,
-      name: "John Bushmill",
-      email: "Johnb@mail.com",
-      phone: "078 5054 8877",
-      professionalNumber: "00000001",
-      specialty: "Nutriología",
+    const name =
+      backendProfessional?.nombre_completo ??
+      backendProfessional?.nombre ??
+      backendProfessional?.name ??
+      "Profesional sin nombre";
+
+    const email =
+      backendProfessional?.email ??
+      backendProfessional?.email_usuario ??
+      backendProfessional?.correo ??
+      backendProfessional?.mail ??
+      "";
+
+    const phone =
+      backendProfessional?.telefono ??
+      backendProfessional?.phone ??
+      backendProfessional?.telefono_contacto ??
+      "";
+
+    const professionalNumber =
+      backendProfessional?.numero_colegiado ??
+      backendProfessional?.professionalNumber ??
+      backendProfessional?.numero_profesional ??
+      backendProfessional?.id_colegiado ??
+      "";
+
+    const specialty =
+      backendProfessional?.especialidad ??
+      backendProfessional?.specialty ??
+      specialtyName;
+
+    return {
+      id: String(professionalId),
+      name,
+      email,
+      phone,
+      professionalNumber: String(professionalNumber || ""),
+      specialty,
+    };
+  };
+
+  const mapBackendSpecialty = (backendSpecialty: any, index: number) => {
+    const specialtyId =
+      backendSpecialty?.id_especialidad ??
+      backendSpecialty?.id ??
+      backendSpecialty?.uuid ??
+      `specialty-${index}`;
+
+    const specialtyName =
+      backendSpecialty?.nombre ??
+      backendSpecialty?.name ??
+      "Especialidad sin nombre";
+
+    const description =
+      backendSpecialty?.descripcion ?? backendSpecialty?.description ?? "";
+
+    const subcategoriesSource =
+      backendSpecialty?.subcategorias ??
+      backendSpecialty?.sub_especialidades ??
+      backendSpecialty?.subspecialties ??
+      backendSpecialty?.sub_especialidades ??
+      backendSpecialty?.detalle ??
+      null;
+
+    let subcategoriesText = "";
+
+    if (Array.isArray(subcategoriesSource)) {
+      subcategoriesText = subcategoriesSource
+        .filter(Boolean)
+        .map((sub: any) =>
+          typeof sub === "string"
+            ? sub
+            : sub?.nombre ?? sub?.name ?? JSON.stringify(sub)
+        )
+        .join(", ");
+    } else if (typeof subcategoriesSource === "string") {
+      subcategoriesText = subcategoriesSource;
+    } else if (description) {
+      subcategoriesText = description;
+    } else {
+      subcategoriesText = "Sin subcategorías especificadas";
+    }
+
+    const servicesSource = Array.isArray(backendSpecialty?.servicios)
+      ? backendSpecialty.servicios
+      : Array.isArray(backendSpecialty?.services)
+      ? backendSpecialty.services
+      : [];
+
+    const generalProfessionalsSource = Array.isArray(
+      backendSpecialty?.profesionales
+    )
+      ? backendSpecialty.profesionales
+      : Array.isArray(backendSpecialty?.professionals)
+      ? backendSpecialty.professionals
+      : [];
+
+    const mappedGeneralProfessionals = generalProfessionalsSource.map(
+      (professional: any, professionalIndex: number) =>
+        mapBackendProfessional(specialtyName, professional, professionalIndex)
+    );
+
+    const mappedServices: SpecialtyServiceItem[] = servicesSource.map(
+      (service: any, serviceIndex: number) => {
+        const serviceId =
+          service?.id_servicio ??
+          service?.id ??
+          service?.uuid ??
+          `${specialtyId}-service-${serviceIndex}`;
+
+        const serviceName =
+          service?.nombre ?? service?.name ?? `Servicio ${serviceIndex + 1}`;
+
+        const serviceProfessionalsSource = Array.isArray(service?.profesionales)
+          ? service.profesionales
+          : Array.isArray(service?.professionals)
+          ? service.professionals
+          : [];
+
+        const mappedServiceProfessionals = serviceProfessionalsSource.map(
+          (professional: any, professionalIndex: number) =>
+            mapBackendProfessional(
+              specialtyName,
+              professional,
+              professionalIndex
+            )
+        );
+
+        const professionalsCount =
+          service?.total_profesionales ??
+          service?.professionals_count ??
+          service?.numero_profesionales ??
+          mappedServiceProfessionals.length;
+
+        return {
+          id: String(serviceId),
+          name: serviceName,
+          professionals: professionalsCount ?? 0,
+          professionalsList: mappedServiceProfessionals,
+          description: service?.descripcion ?? service?.description ?? "",
+        };
+      }
+    );
+
+    const servicesCount =
+      backendSpecialty?.total_servicios ??
+      backendSpecialty?.services_count ??
+      mappedServices.length;
+
+    const professionalsCount =
+      backendSpecialty?.total_profesionales ??
+      backendSpecialty?.professionals_count ??
+      (mappedServices.length > 0
+        ? mappedServices.reduce((total, service) => {
+            const professionalsValue =
+              typeof service.professionals === "number"
+                ? service.professionals
+                : service.professionalsList.length;
+            return total + professionalsValue;
+          }, 0)
+        : mappedGeneralProfessionals.length);
+
+    const category: SpecialtyCategory = {
+      id: String(specialtyId),
+      specialty: specialtyName,
+      subcategories: subcategoriesText,
+      services: typeof servicesCount === "number" ? servicesCount : 0,
+      professionals:
+        typeof professionalsCount === "number" ? professionalsCount : 0,
+      description,
+    };
+
+    return {
+      category,
+      services: mappedServices,
+      generalProfessionals: mappedGeneralProfessionals,
+    };
+  };
+
+  const fetchSpecialties = useCallback(async () => {
+    setLoadingSpecialties(true);
+    setSpecialtiesError(null);
+
+    try {
+      const adminToken = getAdminToken();
+
+      if (process.env.NODE_ENV === "development") {
+        console.log(
+          "[AdminAjustesPage] Token admin encontrado:",
+          adminToken ? `${adminToken.substring(0, 12)}...` : "null"
+        );
+      }
+
+      if (!adminToken) {
+        setSpecialtiesError(
+          "No se encontró un token de administrador. Por favor, inicia sesión nuevamente."
+        );
+        return;
+      }
+
+      const specialtiesEndpoint = `${apiBaseUrl}/especialidades`;
+
+      if (process.env.NODE_ENV === "development") {
+        console.log(
+          "[AdminAjustesPage] Solicitando especialidades reales al backend:",
+          specialtiesEndpoint
+        );
+      }
+
+      const response = await fetch(specialtiesEndpoint, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${adminToken}`,
+        },
+      });
+
+      if (process.env.NODE_ENV === "development") {
+        console.log(
+          "[AdminAjustesPage] Respuesta de especialidades:",
+          response.status,
+          response.statusText
+        );
+      }
+
+      if (!response.ok) {
+        let errorMessage = `Error ${response.status} al cargar las especialidades.`;
+
+        try {
+          const cloned = response.clone();
+          const errorData = await cloned.json();
+          errorMessage = errorData?.message || errorData?.error || errorMessage;
+
+          if (process.env.NODE_ENV === "development") {
+            console.error(
+              "[AdminAjustesPage] Error JSON especialidades:",
+              errorData
+            );
+          }
+        } catch (parseJsonError) {
+          try {
+            const errorText = await response.text();
+            if (errorText) {
+              errorMessage = errorText;
+            }
+            if (process.env.NODE_ENV === "development") {
+              console.error(
+                "[AdminAjustesPage] Error texto especialidades:",
+                errorText
+              );
+            }
+          } catch (parseTextError) {
+            if (process.env.NODE_ENV === "development") {
+              console.error(
+                "[AdminAjustesPage] Error leyendo respuesta de especialidades:",
+                parseTextError
+              );
+            }
+          }
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+
+      if (process.env.NODE_ENV === "development") {
+        console.log("[AdminAjustesPage] Datos de especialidades:", data);
+      }
+
+      const specialtiesArray = extractSpecialtiesArray(data);
+
+      if (process.env.NODE_ENV === "development") {
+        console.log(
+          "[AdminAjustesPage] Especialidades mapeadas:",
+          specialtiesArray.length
+        );
+      }
+
+      const categories: SpecialtyCategory[] = [];
+      const servicesRecord: Record<string, SpecialtyServiceItem[]> = {};
+      const professionalsRecord: Record<string, SpecialtyProfessional[]> = {};
+
+      specialtiesArray.forEach((item: any, index: number) => {
+        const mapped = mapBackendSpecialty(item, index);
+        categories.push(mapped.category);
+        servicesRecord[mapped.category.specialty] = mapped.services;
+        professionalsRecord[mapped.category.specialty] =
+          mapped.generalProfessionals;
+      });
+
+      setCategoriesData(categories);
+      setServicesData(servicesRecord);
+      setSpecialtyProfessionals(professionalsRecord);
+
+      // Obtener servicios para cada especialidad
+      await fetchServicesForSpecialties(categories, adminToken);
+    } catch (error: any) {
+      console.error(
+        "[AdminAjustesPage] Error al obtener especialidades:",
+        error
+      );
+      if (process.env.NODE_ENV === "development") {
+        console.error(
+          "[AdminAjustesPage] Detalles del error de especialidades:",
+          error?.stack || error
+        );
+      }
+      setSpecialtiesError(
+        error?.message ||
+          "Ocurrió un error al cargar las especialidades. Por favor, intenta de nuevo."
+      );
+    } finally {
+      setLoadingSpecialties(false);
+    }
+  }, [apiBaseUrl, getAdminToken]);
+
+  // Cargar páginas de información (políticas)
+  const fetchPolicies = useCallback(async () => {
+    setLoadingPolicies(true);
+    setPoliciesError(null);
+    try {
+      const endpoint = `${apiBaseUrl}/paginas-informacion`;
+      const response = await fetch(endpoint, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) {
+        const txt = await response.text().catch(() => "");
+        throw new Error(
+          txt || `Error ${response.status} al obtener páginas de información`
+        );
+      }
+      const data = await response.json();
+      const item = data?.data || {
+        politicas_de_privacidad: "",
+        politicas_de_cookies: "",
+        politicas_de_cancelacion: "",
+        Terminos_y_condiciones: "",
+      };
+      setPolicyContent({
+        "Politica de Privacidad": String(item.politicas_de_privacidad || ""),
+        "Politica de Cookies": String(item.politicas_de_cookies || ""),
+        "Politica de Cancelacion": String(item.politicas_de_cancelacion || ""),
+        "Términos y Condiciones": String(item.Terminos_y_condiciones || ""),
+      });
+    } catch (e: any) {
+      console.error("[AdminAjustesPage] Error cargando políticas:", e);
+      setPoliciesError(
+        e?.message || "Ocurrió un error al cargar las páginas de información."
+      );
+    } finally {
+      setLoadingPolicies(false);
+    }
+  }, [apiBaseUrl]);
+
+  // Función para obtener servicios de cada especialidad
+  const fetchServicesForSpecialties = useCallback(
+    async (specialties: SpecialtyCategory[], token: string | null) => {
+      if (!token) return;
+
+      const servicesMap: Record<string, string[]> = {};
+      const loadingMap: Record<string, boolean> = {};
+
+      // Inicializar estados de carga
+      specialties.forEach((specialty) => {
+        loadingMap[specialty.id] = true;
+      });
+      setLoadingServices(loadingMap);
+
+      // Obtener servicios para cada especialidad en paralelo
+      const servicePromises = specialties.map(async (specialty) => {
+        try {
+          const servicesEndpoint = `${apiBaseUrl}/servicios/especialidad/${specialty.id}`;
+
+          if (process.env.NODE_ENV === "development") {
+            console.log(
+              `[AdminAjustesPage] Obteniendo servicios para especialidad ${specialty.specialty} (ID: ${specialty.id})`
+            );
+          }
+
+          const response = await fetch(servicesEndpoint, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+
+            if (process.env.NODE_ENV === "development") {
+              console.log(
+                `[AdminAjustesPage] Respuesta completa de servicios para especialidad ${specialty.id}:`,
+                JSON.stringify(data, null, 2)
+              );
+            }
+
+            // Extraer array de servicios de la respuesta - probar diferentes estructuras
+            let servicesArray: any[] = [];
+
+            // Caso 1: Array directo
+            if (Array.isArray(data)) {
+              servicesArray = data;
+            }
+            // Caso 2: { data: [...] }
+            else if (Array.isArray(data?.data)) {
+              servicesArray = data.data;
+            }
+            // Caso 3: { data: { servicios: [...] } }
+            else if (Array.isArray(data?.data?.servicios)) {
+              servicesArray = data.data.servicios;
+            }
+            // Caso 4: { servicios: [...] }
+            else if (Array.isArray(data?.servicios)) {
+              servicesArray = data.servicios;
+            }
+            // Caso 5: { success: true, data: [...] }
+            else if (data?.success && Array.isArray(data?.data)) {
+              servicesArray = data.data;
+            }
+            // Caso 6: { success: true, data: { servicios: [...] } }
+            else if (data?.success && Array.isArray(data?.data?.servicios)) {
+              servicesArray = data.data.servicios;
+            }
+            // Caso 7: { success: true, data: { data: [...] } }
+            else if (data?.success && Array.isArray(data?.data?.data)) {
+              servicesArray = data.data.data;
+            }
+
+            if (process.env.NODE_ENV === "development") {
+              console.log(
+                `[AdminAjustesPage] Array de servicios extraído para especialidad ${specialty.id}:`,
+                servicesArray
+              );
+            }
+
+            // Extraer nombres de servicios - probar diferentes campos
+            const serviceNames = servicesArray
+              .map((service: any) => {
+                // Intentar diferentes campos posibles
+                return (
+                  service?.nombre ||
+                  service?.name ||
+                  service?.nombre_servicio ||
+                  service?.service_name ||
+                  service?.titulo ||
+                  service?.title ||
+                  ""
+                );
+              })
+              .filter((name: string) => name.trim() !== "");
+
+            servicesMap[specialty.id] = serviceNames;
+
+            if (process.env.NODE_ENV === "development") {
+              console.log(
+                `[AdminAjustesPage] Nombres de servicios extraídos para ${specialty.specialty}:`,
+                serviceNames
+              );
+              console.log(
+                `[AdminAjustesPage] Total de servicios encontrados: ${serviceNames.length}`
+              );
+            }
+          } else {
+            const errorText = await response.text().catch(() => "");
+            console.warn(
+              `[AdminAjustesPage] Error al obtener servicios para especialidad ${specialty.id}:`,
+              response.status,
+              response.statusText,
+              errorText
+            );
+            servicesMap[specialty.id] = [];
+          }
+        } catch (error) {
+          console.error(
+            `[AdminAjustesPage] Error al obtener servicios para especialidad ${specialty.id}:`,
+            error
+          );
+          servicesMap[specialty.id] = [];
+        } finally {
+          loadingMap[specialty.id] = false;
+        }
+      });
+
+      await Promise.all(servicePromises);
+
+      setServicesBySpecialty(servicesMap);
+      setLoadingServices({});
     },
-    {
-      id: 2,
-      name: "Laura Prichet",
-      email: "laura_prichet@mail.com",
-      phone: "215 302 3376",
-      professionalNumber: "00000002",
-      specialty: "Nutriología",
-    },
-    {
-      id: 3,
-      name: "Mohammad Karim",
-      email: "m_karim@mail.com",
-      phone: "050 414 8778",
-      professionalNumber: "00000003",
-      specialty: "Nutriología",
-    },
-    {
-      id: 4,
-      name: "Josh Bill",
-      email: "josh_bill@mail.com",
-      phone: "216 75 612 706",
-      professionalNumber: "00000004",
-      specialty: "Nutriología",
-    },
-    {
-      id: 5,
-      name: "Josh Adam",
-      email: "josh_adam@mail.com",
-      phone: "02 75 150 655",
-      professionalNumber: "00000005",
-      specialty: "Nutriología",
-    },
-    {
-      id: 6,
-      name: "Sin Tae",
-      email: "sin_tae@mail.com",
-      phone: "078 6013 3854",
-      professionalNumber: "00000006",
-      specialty: "Nutriología",
-    },
-    {
-      id: 7,
-      name: "Rajesh Masvidal",
-      email: "rajesh_m@mail.com",
-      phone: "828 216 2190",
-      professionalNumber: "00000007",
-      specialty: "Nutriología",
-    },
-    {
-      id: 8,
-      name: "Fajar Surya",
-      email: "fsurya@mail.com",
-      phone: "078 7173 9261",
-      professionalNumber: "00000008",
-      specialty: "Nutriología",
-    },
-    {
-      id: 9,
-      name: "Lisa Greg",
-      email: "lisag@mail.com",
-      phone: "077 6157 4248",
-      professionalNumber: "00000009",
-      specialty: "Nutriología",
-    },
-    {
-      id: 10,
-      name: "Linda Blair",
-      email: "lindablair@mail.com",
-      phone: "050 414 8778",
-      professionalNumber: "00000010",
-      specialty: "Nutriología",
-    },
-  ];
+    [apiBaseUrl]
+  );
+
+  useEffect(() => {
+    fetchSpecialties();
+    fetchPolicies();
+  }, [fetchSpecialties, fetchPolicies]);
 
   const handleModifySpecialty = (specialty: string) => {
     setSelectedSpecialty(specialty);
     setIsSpecialtyModalOpen(true);
+  };
+
+  const handleDeleteSpecialty = (category: SpecialtyCategory) => {
+    setSpecialtyToDelete(category);
+    setDeleteSpecialtyError(null);
+    setIsDeleteSpecialtyModalOpen(true);
+  };
+
+  const handleCloseDeleteSpecialtyModal = () => {
+    setIsDeleteSpecialtyModalOpen(false);
+    setSpecialtyToDelete(null);
+    setDeleteSpecialtyError(null);
+    setDeletingSpecialty(false);
+  };
+
+  const handleConfirmDeleteSpecialty = async () => {
+    if (!specialtyToDelete) return;
+
+    setDeletingSpecialty(true);
+    setDeleteSpecialtyError(null);
+
+    try {
+      const adminToken = getAdminToken();
+
+      if (process.env.NODE_ENV === "development") {
+        console.log(
+          "[AdminAjustesPage] Eliminando especialidad:",
+          specialtyToDelete.specialty,
+          "ID:",
+          specialtyToDelete.id
+        );
+      }
+
+      if (!adminToken) {
+        setDeleteSpecialtyError(
+          "No se encontró un token de administrador. Por favor, inicia sesión nuevamente."
+        );
+        setDeletingSpecialty(false);
+        return;
+      }
+
+      const deleteEndpoint = `${apiBaseUrl}/especialidades/${specialtyToDelete.id}`;
+
+      if (process.env.NODE_ENV === "development") {
+        console.log("[AdminAjustesPage] Enviando DELETE a:", deleteEndpoint);
+      }
+
+      const response = await fetch(deleteEndpoint, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${adminToken}`,
+        },
+      });
+
+      let responseData: any = null;
+      try {
+        responseData = await response.clone().json();
+      } catch (parseError) {
+        if (process.env.NODE_ENV === "development") {
+          console.error(
+            "[AdminAjustesPage] No se pudo parsear la respuesta de eliminación:",
+            parseError
+          );
+        }
+      }
+
+      if (process.env.NODE_ENV === "development") {
+        console.log(
+          "[AdminAjustesPage] Respuesta eliminación especialidad:",
+          response.status,
+          response.statusText,
+          responseData
+        );
+      }
+
+      if (!response.ok || responseData?.success === false) {
+        const errorMessage =
+          responseData?.message ||
+          responseData?.error ||
+          `Error ${response.status} al eliminar la especialidad.`;
+        throw new Error(errorMessage);
+      }
+
+      // Refrescar la lista de especialidades
+      await fetchSpecialties();
+
+      handleCloseDeleteSpecialtyModal();
+    } catch (error: any) {
+      console.error(
+        "[AdminAjustesPage] Error al eliminar especialidad:",
+        error
+      );
+      setDeleteSpecialtyError(
+        error?.message ||
+          "Ocurrió un error al eliminar la especialidad. Por favor, intenta nuevamente."
+      );
+    } finally {
+      setDeletingSpecialty(false);
+    }
   };
 
   const handleCloseModal = () => {
@@ -347,40 +918,136 @@ Estos términos se rigen por la legislación española.`,
   const handleCloseAddServiceModal = () => {
     setIsAddServiceModalOpen(false);
     setNewServiceName("");
+    setCreateServiceError(null);
+    setCreatingService(false);
   };
 
-  const handleConfirmAddService = () => {
-    if (newServiceName.trim() && selectedSpecialty) {
-      const newService = {
-        id: Date.now(), // Simple ID generation
-        name: newServiceName.trim(),
-        professionals: Math.floor(Math.random() * 10) + 1, // Random number between 1-10
+  const handleConfirmAddService = async () => {
+    const trimmedName = newServiceName.trim();
+    if (!trimmedName || !selectedSpecialty) return;
+
+    // Obtener el ID de la especialidad seleccionada
+    const selectedCategory = categoriesData.find(
+      (cat) => cat.specialty === selectedSpecialty
+    );
+
+    if (!selectedCategory) {
+      setCreateServiceError(
+        "No se pudo encontrar la especialidad seleccionada."
+      );
+      return;
+    }
+
+    setCreatingService(true);
+    setCreateServiceError(null);
+
+    try {
+      const adminToken = getAdminToken();
+
+      if (process.env.NODE_ENV === "development") {
+        console.log(
+          "[AdminAjustesPage] Preparando creación de servicio:",
+          trimmedName,
+          "para especialidad ID:",
+          selectedCategory.id
+        );
+      }
+
+      if (!adminToken) {
+        setCreateServiceError(
+          "No se encontró un token de administrador. Por favor, inicia sesión nuevamente."
+        );
+        setCreatingService(false);
+        return;
+      }
+
+      const payload = {
+        nombre_servicio: trimmedName,
+        id_especialidad: selectedCategory.id,
       };
 
-      setServicesData((prev) => ({
-        ...prev,
-        [selectedSpecialty]: [
-          ...prev[selectedSpecialty as keyof typeof prev],
-          newService,
-        ],
-      }));
+      if (process.env.NODE_ENV === "development") {
+        console.log(
+          "[AdminAjustesPage] Enviando payload de servicio:",
+          payload
+        );
+      }
+
+      const response = await fetch(`${apiBaseUrl}/servicios`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      let responseData: any = null;
+      try {
+        responseData = await response.clone().json();
+      } catch (parseError) {
+        if (process.env.NODE_ENV === "development") {
+          console.error(
+            "[AdminAjustesPage] No se pudo parsear la respuesta de creación de servicio:",
+            parseError
+          );
+        }
+      }
+
+      if (process.env.NODE_ENV === "development") {
+        console.log(
+          "[AdminAjustesPage] Respuesta creación servicio:",
+          response.status,
+          response.statusText,
+          responseData
+        );
+      }
+
+      if (!response.ok || responseData?.success === false) {
+        const errorMessage =
+          responseData?.message ||
+          responseData?.error ||
+          `Error ${response.status} al crear el servicio.`;
+        throw new Error(errorMessage);
+      }
+
+      // Refrescar las especialidades (esto también refrescará los servicios)
+      await fetchSpecialties();
 
       handleCloseAddServiceModal();
+    } catch (error: any) {
+      console.error("[AdminAjustesPage] Error al crear servicio:", error);
+      setCreateServiceError(
+        error?.message ||
+          "Ocurrió un error al crear el servicio. Por favor, intenta nuevamente."
+      );
+    } finally {
+      setCreatingService(false);
     }
   };
 
-  const handleModifyService = (serviceName: string) => {
-    setSelectedService(serviceName);
+  const handleModifyService = (
+    specialtyName: string,
+    service: SpecialtyServiceItem
+  ) => {
+    setSelectedService(service);
+    const professionalsList =
+      service.professionalsList.length > 0
+        ? service.professionalsList
+        : specialtyProfessionals[specialtyName] || [];
+    setCurrentProfessionals(professionalsList);
+    setSelectedProfessionals(professionalsList.map((prof) => prof.id));
     setIsProfessionalsModalOpen(true);
   };
 
   const handleCloseProfessionalsModal = () => {
     setIsProfessionalsModalOpen(false);
-    setSelectedService("");
+    setSelectedService(null);
     setSelectedProfessionals([]);
+    setCurrentProfessionals([]);
   };
 
-  const handleSelectProfessional = (professionalId: number) => {
+  const handleSelectProfessional = (professionalId: string) => {
     setSelectedProfessionals((prev) =>
       prev.includes(professionalId)
         ? prev.filter((id) => id !== professionalId)
@@ -395,7 +1062,7 @@ Estos términos se rigen por la legislación española.`,
   const handleConfirmChanges = () => {
     console.log(
       "Selected professionals for service:",
-      selectedService,
+      selectedService?.name || selectedService?.id,
       selectedProfessionals
     );
     setIsConfirmModalOpen(false);
@@ -411,17 +1078,62 @@ Estos términos se rigen por la legislación española.`,
     setActiveSection("paginas");
   };
 
-  const handleSavePolicy = () => {
-    console.log(
-      "Saving policy:",
-      selectedPolicy,
-      policyContent[selectedPolicy as keyof typeof policyContent]
-    );
-    // Here you would typically save to a database or API
-    alert(`Política "${selectedPolicy}" guardada exitosamente`);
+  const handleSavePolicy = async () => {
+    if (!selectedPolicy) return;
+    setSavingPolicy(true);
+    setSavePolicyError(null);
+    try {
+      const adminToken = getAdminToken();
+      if (!adminToken) {
+        throw new Error(
+          "No se encontró un token de administrador. Inicia sesión nuevamente."
+        );
+      }
+      // Mapear clave seleccionada al campo del backend
+      const selectedValue =
+        policyContent[selectedPolicy as keyof typeof policyContent] || "";
+      const payload: any = {};
+      if (selectedPolicy === "Politica de Privacidad") {
+        payload.politicas_de_privacidad = selectedValue;
+      } else if (selectedPolicy === "Politica de Cookies") {
+        payload.politicas_de_cookies = selectedValue;
+      } else if (selectedPolicy === "Politica de Cancelacion") {
+        payload.politicas_de_cancelacion = selectedValue;
+      } else if (selectedPolicy === "Términos y Condiciones") {
+        payload.Terminos_y_condiciones = selectedValue;
+      }
+      const response = await fetch(`${apiBaseUrl}/paginas-informacion`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || result?.success === false) {
+        throw new Error(
+          result?.message ||
+            result?.error ||
+            `Error ${response.status} al guardar la política.`
+        );
+      }
+      // Refrescar desde el backend para mantener consistencia
+      await fetchPolicies();
+      alert(`Política "${selectedPolicy}" guardada exitosamente`);
+    } catch (e: any) {
+      console.error("[AdminAjustesPage] Error guardando política:", e);
+      setSavePolicyError(
+        e?.message || "Ocurrió un error al guardar la política."
+      );
+    } finally {
+      setSavingPolicy(false);
+    }
   };
 
   const handleAddSpecialty = () => {
+    setCreateSpecialtyError(null);
+    setCreatingSpecialty(false);
     setIsAddSpecialtyModalOpen(true);
   };
 
@@ -429,35 +1141,104 @@ Estos términos se rigen por la legislación española.`,
     setIsAddSpecialtyModalOpen(false);
     setNewSpecialtyName("");
     setNewSpecialtySubcategories("");
+    setCreateSpecialtyError(null);
+    setCreatingSpecialty(false);
   };
 
-  const handleConfirmAddSpecialty = () => {
-    if (newSpecialtyName.trim()) {
-      const newSpecialty = {
-        id: Date.now(), // Simple ID generation
-        specialty: newSpecialtyName.trim(),
-        subcategories:
-          newSpecialtySubcategories.trim() || "Sin subcategorías especificadas",
-        services: 0,
-        professionals: 0,
+  const handleConfirmAddSpecialty = async () => {
+    const trimmedName = newSpecialtyName.trim();
+    if (!trimmedName) return;
+
+    const trimmedDescription = newSpecialtySubcategories.trim();
+
+    setCreatingSpecialty(true);
+    setCreateSpecialtyError(null);
+
+    try {
+      const adminToken = getAdminToken();
+
+      if (process.env.NODE_ENV === "development") {
+        console.log(
+          "[AdminAjustesPage] Preparando creación de especialidad:",
+          trimmedName
+        );
+      }
+
+      if (!adminToken) {
+        setCreateSpecialtyError(
+          "No se encontró un token de administrador. Por favor, inicia sesión nuevamente."
+        );
+        return;
+      }
+
+      const payload = {
+        nombre: trimmedName,
+        descripcion: trimmedDescription || "",
       };
 
-      setCategoriesData((prev) => [...prev, newSpecialty]);
+      if (process.env.NODE_ENV === "development") {
+        console.log(
+          "[AdminAjustesPage] Enviando payload de especialidad:",
+          payload
+        );
+      }
 
-      // Also add to servicesData with empty array
-      setServicesData((prev) => ({
-        ...prev,
-        [newSpecialtyName.trim()]: [],
-      }));
+      const response = await fetch(`${apiBaseUrl}/especialidades`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      let responseData: any = null;
+      try {
+        responseData = await response.clone().json();
+      } catch (parseError) {
+        if (process.env.NODE_ENV === "development") {
+          console.error(
+            "[AdminAjustesPage] No se pudo parsear la respuesta de creación:",
+            parseError
+          );
+        }
+      }
+
+      if (process.env.NODE_ENV === "development") {
+        console.log(
+          "[AdminAjustesPage] Respuesta creación especialidad:",
+          response.status,
+          response.statusText,
+          responseData
+        );
+      }
+
+      if (!response.ok || responseData?.success === false) {
+        const errorMessage =
+          responseData?.message ||
+          responseData?.error ||
+          `Error ${response.status} al crear la especialidad.`;
+        throw new Error(errorMessage);
+      }
+
+      await fetchSpecialties();
 
       handleCloseAddSpecialtyModal();
+    } catch (error: any) {
+      console.error("[AdminAjustesPage] Error al crear especialidad:", error);
+      setCreateSpecialtyError(
+        error?.message ||
+          "Ocurrió un error al crear la especialidad. Por favor, intenta nuevamente."
+      );
+    } finally {
+      setCreatingSpecialty(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-6">
+      <div className="bg-white border-b border-gray-200 py-6 -mx-6 px-6 mb-6">
         <h1 className="text-3xl font-bold text-gray-900">
           Ajustes de la plataforma
         </h1>
@@ -532,7 +1313,7 @@ Estos términos se rigen por la legislación española.`,
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 p-6">
+        <div className="flex-1">
           {activeSection === "categorias" && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
               {/* Add Specialty Button */}
@@ -546,60 +1327,136 @@ Estos términos se rigen por la legislación española.`,
                 </button>
               </div>
 
-              {/* Table Header */}
-              <div className="border-b border-gray-200">
-                <div className="grid grid-cols-5 gap-4 px-6 py-4 bg-gray-50">
-                  <div className="text-sm font-medium text-gray-900 text-left">
-                    Especialidad
+              {/* Loading State */}
+              {loadingSpecialties && (
+                <div className="p-12 flex flex-col items-center justify-center">
+                  <div className="relative">
+                    <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
                   </div>
-                  <div className="text-sm font-medium text-gray-900 text-left">
-                    Subcategorías
-                  </div>
-                  <div className="text-sm font-medium text-gray-900 text-center">
-                    Servicios
-                  </div>
-                  <div className="text-sm font-medium text-gray-900 text-center">
-                    Profesionales
-                  </div>
-                  <div className="text-sm font-medium text-gray-900 text-center">
-                    Acciones
+                  <p className="mt-4 text-sm font-medium text-gray-700">
+                    Cargando especialidades...
+                  </p>
+                  <p className="mt-2 text-xs text-gray-500">
+                    Por favor espera mientras obtenemos los datos del servidor
+                  </p>
+                </div>
+              )}
+
+              {/* Error State */}
+              {!loadingSpecialties && specialtiesError && (
+                <div className="p-6">
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+                    <div className="flex items-start">
+                      <svg
+                        className="w-5 h-5 text-red-500 mr-3 flex-shrink-0 mt-0.5"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      <div className="flex-1">
+                        <h3 className="text-sm font-medium text-red-800 mb-1">
+                          Error al cargar especialidades
+                        </h3>
+                        <p className="text-sm text-red-700">
+                          {specialtiesError}
+                        </p>
+                        <button
+                          onClick={() => fetchSpecialties()}
+                          className="mt-3 text-sm font-medium text-red-800 hover:text-red-900 underline"
+                        >
+                          Intentar nuevamente
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
-              {/* Table Body */}
-              <div className="divide-y divide-gray-200">
-                {categoriesData.map((category) => (
-                  <div
-                    key={category.id}
-                    className="grid grid-cols-5 gap-4 px-6 py-4 hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="text-sm text-gray-900 font-medium">
-                      {category.specialty}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {category.subcategories}
-                    </div>
-                    <div className="text-sm text-gray-900 text-center">
-                      {category.services}
-                    </div>
-                    <div className="text-sm text-gray-900 text-center">
-                      {category.professionals}
-                    </div>
-                    <div className="text-center">
-                      <button
-                        onClick={() =>
-                          handleModifySpecialty(category.specialty)
-                        }
-                        className="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors flex items-center gap-2 mx-auto"
-                      >
-                        <Edit className="w-4 h-4" />
-                        Modificar
-                      </button>
+              {/* Table Content - Only show when not loading and no error */}
+              {!loadingSpecialties && !specialtiesError && (
+                <>
+                  {/* Table Header */}
+                  <div className="border-b border-gray-200">
+                    <div className="grid grid-cols-4 gap-4 px-6 py-4 bg-gray-50">
+                      <div className="text-sm font-medium text-gray-900 text-left">
+                        Especialidad
+                      </div>
+                      <div className="text-sm font-medium text-gray-900 text-left">
+                        Servicios
+                      </div>
+                      <div className="text-sm font-medium text-gray-900 text-center">
+                        Profesionales
+                      </div>
+                      <div className="text-sm font-medium text-gray-900 text-center">
+                        Acciones
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
+
+                  {/* Table Body */}
+                  <div className="divide-y divide-gray-200">
+                    {categoriesData.length > 0 ? (
+                      categoriesData.map((category) => {
+                        const services = servicesBySpecialty[category.id] || [];
+                        const isLoadingServices = loadingServices[category.id];
+                        const servicesText =
+                          isLoadingServices && services.length === 0
+                            ? "Cargando servicios..."
+                            : services.length > 0
+                            ? services.join(", ")
+                            : category.subcategories || "Sin servicios";
+
+                        return (
+                          <div
+                            key={category.id}
+                            className="grid grid-cols-4 gap-4 px-6 py-4 hover:bg-gray-50 transition-colors"
+                          >
+                            <div className="text-sm text-gray-900 font-medium">
+                              {category.specialty}
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              {servicesText}
+                            </div>
+                            <div className="text-sm text-gray-900 text-center">
+                              {category.professionals}
+                            </div>
+                            <div className="text-center flex items-center justify-center gap-2">
+                              <button
+                                onClick={() =>
+                                  handleModifySpecialty(category.specialty)
+                                }
+                                className="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors flex items-center gap-2"
+                              >
+                                <Edit className="w-4 h-4" />
+                                Modificar
+                              </button>
+                              <button
+                                onClick={() => handleDeleteSpecialty(category)}
+                                className="bg-red-600 text-white p-2 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center"
+                                title="Eliminar especialidad"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="px-6 py-12 text-center">
+                        <p className="text-sm text-gray-500">
+                          No hay especialidades registradas. Haz clic en
+                          "Agregar Especialidad" para crear una nueva.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           )}
 
@@ -884,11 +1741,27 @@ Estos términos se rigen por la legislación española.`,
                   </h2>
                   <button
                     onClick={handleSavePolicy}
-                    className="bg-primary text-white px-6 py-2 rounded-lg font-medium hover:bg-primary/90 transition-colors"
+                    disabled={savingPolicy}
+                    className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                      savingPolicy
+                        ? "text-gray-400 bg-gray-200 cursor-not-allowed"
+                        : "text-white bg-primary hover:bg-primary/90"
+                    }`}
                   >
-                    Confirmar Cambios
+                    {savingPolicy ? "Guardando..." : "Confirmar Cambios"}
                   </button>
                 </div>
+
+                {policiesError && (
+                  <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                    {policiesError}
+                  </div>
+                )}
+                {savePolicyError && (
+                  <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                    {savePolicyError}
+                  </div>
+                )}
 
                 {/* Text Editor */}
                 <textarea
@@ -903,7 +1776,13 @@ Estos términos se rigen por la legislación española.`,
                   }
                   className="w-full h-96 p-4 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                   placeholder="Escribe el contenido de la política aquí..."
+                  disabled={loadingPolicies}
                 />
+                {loadingPolicies && (
+                  <p className="mt-2 text-xs text-gray-500">
+                    Cargando contenido desde el servidor...
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -960,30 +1839,53 @@ Estos términos se rigen por la legislación española.`,
 
                   {/* Table Body with Scroll */}
                   <div className="max-h-96 overflow-y-auto divide-y divide-gray-200">
-                    {servicesData[
-                      selectedSpecialty as keyof typeof servicesData
-                    ]?.map((service) => (
-                      <div
-                        key={service.id}
-                        className="grid grid-cols-3 gap-4 px-6 py-4 hover:bg-gray-50 transition-colors"
-                      >
-                        <div className="text-sm text-gray-900 font-medium">
-                          {service.name}
-                        </div>
-                        <div className="text-sm text-gray-900 text-center">
-                          {service.professionals}
-                        </div>
-                        <div className="text-center">
-                          <button
-                            onClick={() => handleModifyService(service.name)}
-                            className="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors flex items-center gap-2 mx-auto"
+                    {(() => {
+                      // Obtener el ID de la especialidad seleccionada
+                      const selectedCategory = categoriesData.find(
+                        (cat) => cat.specialty === selectedSpecialty
+                      );
+                      const specialtyServices = selectedCategory
+                        ? servicesBySpecialty[selectedCategory.id] || []
+                        : [];
+
+                      if (specialtyServices.length > 0) {
+                        return specialtyServices.map((serviceName, index) => (
+                          <div
+                            key={`${selectedCategory?.id}-service-${index}`}
+                            className="grid grid-cols-3 gap-4 px-6 py-4 hover:bg-gray-50 transition-colors"
                           >
-                            <Edit className="w-4 h-4" />
-                            Modificar
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                            <div className="text-sm text-gray-900 font-medium">
+                              {serviceName}
+                            </div>
+                            <div className="text-sm text-gray-900 text-center">
+                              -
+                            </div>
+                            <div className="text-center">
+                              <button
+                                className="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors flex items-center gap-2 mx-auto"
+                                disabled
+                                title="Funcionalidad próximamente"
+                              >
+                                <Edit className="w-4 h-4" />
+                                Modificar
+                              </button>
+                            </div>
+                          </div>
+                        ));
+                      } else if (loadingServices[selectedCategory?.id || ""]) {
+                        return (
+                          <div className="px-6 py-6 text-center text-sm text-gray-500">
+                            Cargando servicios...
+                          </div>
+                        );
+                      } else {
+                        return (
+                          <div className="px-6 py-6 text-center text-sm text-gray-500">
+                            No hay servicios registrados para esta especialidad.
+                          </div>
+                        );
+                      }
+                    })()}
                   </div>
                 </div>
               </div>
@@ -1025,37 +1927,48 @@ Estos términos se rigen por la legislación española.`,
 
             {/* Content */}
             <div className="p-6">
+              {createServiceError && (
+                <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {createServiceError}
+                </div>
+              )}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nombre del servicio
+                  Nombre del servicio <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={newServiceName}
                   onChange={(e) => setNewServiceName(e.target.value)}
-                  placeholder="Dietas para..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="Ej: Dietas para..."
+                  disabled={creatingService}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                 />
+                <p className="mt-1 text-xs text-gray-500">
+                  El servicio se asociará a la especialidad:{" "}
+                  <span className="font-medium">{selectedSpecialty}</span>
+                </p>
               </div>
 
               {/* Action Buttons */}
               <div className="flex items-center justify-end gap-3">
                 <button
                   onClick={handleCloseAddServiceModal}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  disabled={creatingService}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleConfirmAddService}
-                  disabled={!newServiceName.trim()}
+                  disabled={creatingService || !newServiceName.trim()}
                   className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                    newServiceName.trim()
-                      ? "text-white bg-primary hover:bg-primary/90"
-                      : "text-gray-400 bg-gray-200 cursor-not-allowed"
+                    creatingService || !newServiceName.trim()
+                      ? "text-gray-400 bg-gray-200 cursor-not-allowed"
+                      : "text-white bg-primary hover:bg-primary/90"
                   }`}
                 >
-                  Confirmar
+                  {creatingService ? "Agregando..." : "Agregar"}
                 </button>
               </div>
             </div>
@@ -1118,58 +2031,67 @@ Estos términos se rigen por la legislación española.`,
 
                   {/* Table Body with Scroll */}
                   <div className="max-h-96 overflow-y-auto divide-y divide-gray-200">
-                    {nutritionProfessionals.map((professional) => (
-                      <div
-                        key={professional.id}
-                        className="grid grid-cols-5 gap-4 px-6 py-4 hover:bg-gray-50 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="checkbox"
-                            checked={selectedProfessionals.includes(
-                              professional.id
-                            )}
-                            onChange={() =>
-                              handleSelectProfessional(professional.id)
-                            }
-                            className="rounded"
-                          />
-                          <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-orange-500 rounded-full flex items-center justify-center flex-shrink-0">
-                            <span className="text-white text-xs font-medium">
-                              {professional.name
-                                .split(" ")
-                                .map((n) => n[0])
-                                .join("")}
-                            </span>
-                          </div>
-                          <div>
-                            <div className="text-sm text-gray-900 font-medium">
-                              {professional.name}
+                    {currentProfessionals.length > 0 ? (
+                      currentProfessionals.map((professional) => (
+                        <div
+                          key={professional.id}
+                          className="grid grid-cols-5 gap-4 px-6 py-4 hover:bg-gray-50 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="checkbox"
+                              checked={selectedProfessionals.includes(
+                                professional.id
+                              )}
+                              onChange={() =>
+                                handleSelectProfessional(professional.id)
+                              }
+                              className="rounded"
+                            />
+                            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-orange-500 rounded-full flex items-center justify-center flex-shrink-0">
+                              <span className="text-white text-xs font-medium">
+                                {professional.name
+                                  .split(" ")
+                                  .map((n) => n[0])
+                                  .join("")}
+                              </span>
                             </div>
-                            <div className="text-xs text-gray-500">
-                              {professional.email}
+                            <div>
+                              <div className="text-sm text-gray-900 font-medium">
+                                {professional.name}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {professional.email}
+                              </div>
                             </div>
                           </div>
+                          <div className="text-sm text-gray-900">
+                            {professional.phone}
+                          </div>
+                          <div className="text-sm text-gray-900">
+                            {professional.professionalNumber}
+                          </div>
+                          <div className="text-sm text-gray-900">
+                            {professional.specialty}
+                          </div>
+                          <div className="text-center flex items-center justify-center gap-2">
+                            <button className="text-gray-400 hover:text-gray-600 transition-colors">
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button className="text-gray-400 hover:text-gray-600 transition-colors">
+                              <Edit className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
-                        <div className="text-sm text-gray-900">
-                          {professional.phone}
-                        </div>
-                        <div className="text-sm text-gray-900">
-                          {professional.professionalNumber}
-                        </div>
-                        <div className="text-sm text-gray-900">
-                          {professional.specialty}
-                        </div>
-                        <div className="text-center flex items-center justify-center gap-2">
-                          <button className="text-gray-400 hover:text-gray-600 transition-colors">
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button className="text-gray-400 hover:text-gray-600 transition-colors">
-                            <Edit className="w-4 h-4" />
-                          </button>
-                        </div>
+                      ))
+                    ) : (
+                      <div className="px-6 py-12 text-center">
+                        <p className="text-sm text-gray-500">
+                          No hay profesionales disponibles para esta
+                          especialidad.
+                        </p>
                       </div>
-                    ))}
+                    )}
                   </div>
 
                   {/* Pagination */}
@@ -1246,7 +2168,11 @@ Estos términos se rigen por la legislación española.`,
             <div className="p-6">
               <p className="text-gray-600 mb-6">
                 ¿Estás seguro que deseas asignar {selectedProfessionals.length}{" "}
-                profesionales al servicio "{selectedService}"?
+                profesionales al servicio "
+                {selectedService?.name ||
+                  selectedService?.id ||
+                  "este servicio"}
+                "?
               </p>
 
               {/* Action Buttons */}
@@ -1288,6 +2214,11 @@ Estos términos se rigen por la legislación española.`,
 
             {/* Content */}
             <div className="p-6">
+              {createSpecialtyError && (
+                <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {createSpecialtyError}
+                </div>
+              )}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Nombre de la especialidad
@@ -1324,14 +2255,82 @@ Estos términos se rigen por la legislación española.`,
                 </button>
                 <button
                   onClick={handleConfirmAddSpecialty}
-                  disabled={!newSpecialtyName.trim()}
+                  disabled={creatingSpecialty || !newSpecialtyName.trim()}
                   className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                    newSpecialtyName.trim()
-                      ? "text-white bg-primary hover:bg-primary/90"
-                      : "text-gray-400 bg-gray-200 cursor-not-allowed"
+                    creatingSpecialty || !newSpecialtyName.trim()
+                      ? "text-gray-400 bg-gray-200 cursor-not-allowed"
+                      : "text-white bg-primary hover:bg-primary/90"
                   }`}
                 >
-                  Agregar
+                  {creatingSpecialty ? "Agregando..." : "Agregar"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Specialty Modal */}
+      {isDeleteSpecialtyModalOpen && specialtyToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-md mx-4">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900">
+                Eliminar Especialidad
+              </h2>
+              <button
+                onClick={handleCloseDeleteSpecialtyModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+                disabled={deletingSpecialty}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              {deleteSpecialtyError && (
+                <div className="mb-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {deleteSpecialtyError}
+                </div>
+              )}
+              <div className="mb-6">
+                <p className="text-gray-700 mb-4">
+                  ¿Estás seguro que deseas eliminar la especialidad{" "}
+                  <span className="font-semibold text-gray-900">
+                    "{specialtyToDelete.specialty}"
+                  </span>
+                  ?
+                </p>
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <p className="text-sm text-yellow-800">
+                    <strong>Advertencia:</strong> Esta acción no se puede
+                    deshacer. La especialidad y todos sus datos relacionados
+                    serán eliminados permanentemente.
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  onClick={handleCloseDeleteSpecialtyModal}
+                  disabled={deletingSpecialty}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleConfirmDeleteSpecialty}
+                  disabled={deletingSpecialty}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    deletingSpecialty
+                      ? "text-gray-400 bg-gray-200 cursor-not-allowed"
+                      : "text-white bg-red-600 hover:bg-red-700"
+                  }`}
+                >
+                  {deletingSpecialty ? "Eliminando..." : "Eliminar"}
                 </button>
               </div>
             </div>

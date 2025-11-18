@@ -4,11 +4,11 @@ import Image from "next/image";
 import Link from "next/link";
 
 interface DetailsPageProps {
-  params: {
+  params: Promise<{
     category: string;
     service: string;
     professional: string;
-  };
+  }>;
 }
 
 export async function generateStaticParams() {

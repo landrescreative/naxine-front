@@ -38,7 +38,7 @@ export default function AccesibilitySection() {
               preload="metadata"
               playsInline
             >
-              <source src="/Naxine_V1_Music.mp4" type="video/mp4" />
+              <source src="/naxine-accesibilidad.mp4" type="video/mp4" />
               Tu navegador no soporta la reproducción de video.
             </video>
           </div>

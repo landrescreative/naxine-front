@@ -1,16 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { authService } from "@/services/api/auth";
+import { apiClient } from "@/services/api/client";
 import { Check } from "lucide-react";
 
 interface ProfileData {
-  firstName: string;
-  lastName: string;
+  name: string;
   email: string;
-  username: string;
-  phone: string;
-  city: string;
+  address: string;
   postalCode: string;
 }
 
@@ -23,12 +22,16 @@ export default function ProfileSettings() {
   const { user } = useAuth();
 
   const [profileData, setProfileData] = useState<ProfileData>({
-    firstName: "",
-    lastName: "",
+    name: "",
     email: "",
-    username: "",
-    phone: "",
-    city: "",
+    address: "",
+    postalCode: "",
+  });
+
+  const [originalProfileData, setOriginalProfileData] = useState<ProfileData>({
+    name: "",
+    email: "",
+    address: "",
     postalCode: "",
   });
 
@@ -48,21 +51,133 @@ export default function ProfileSettings() {
   });
 
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  // Función para cargar el perfil desde el backend
+  const loadProfile = useCallback(async (showLoading: boolean = true) => {
+    try {
+      if (showLoading) {
+        setLoading(true);
+      }
+      setError(null);
+      
+      // No necesitamos verificar user aquí porque el token está en localStorage
+      // y el backend validará el token
+
+      if (process.env.NODE_ENV === "development") {
+        console.log("[ProfileSettings] Solicitando perfil del backend...");
+      }
+
+      const response = await authService.getProfile();
+
+      if (process.env.NODE_ENV === "development") {
+        console.log("[ProfileSettings] Respuesta del backend:", response);
+      }
+
+      if (response.success && response.data) {
+        // apiClient.get devuelve: { success: true, data: <respuesta_completa_del_backend> }
+        // Backend devuelve: { success: true, data: { usuario: { nombre: "Alex test", email: "...", ... } } }
+        // Entonces response.data es: { success: true, data: { usuario: {...} } }
+        const backendResponse = response.data as any;
+        
+        // Extraer el objeto usuario - puede estar en diferentes niveles
+        let usuario = null;
+        if (backendResponse?.data?.usuario) {
+          // Caso: response.data = { success: true, data: { usuario: {...} } }
+          usuario = backendResponse.data.usuario;
+        } else if (backendResponse?.usuario) {
+          // Caso: response.data = { usuario: {...} }
+          usuario = backendResponse.usuario;
+        } else if (backendResponse?.nombre || backendResponse?.email) {
+          // Caso: response.data = { nombre: "...", email: "...", ... } (objeto usuario directo)
+          usuario = backendResponse;
+        }
+        
+        if (process.env.NODE_ENV === "development") {
+          console.log("[ProfileSettings] response.data completo:", backendResponse);
+          console.log("[ProfileSettings] Usuario extraído del backend:", usuario);
+        }
+        
+        if (!usuario) {
+          console.error("[ProfileSettings] No se pudo extraer el objeto usuario de la respuesta");
+          console.error("[ProfileSettings] Estructura recibida:", JSON.stringify(backendResponse, null, 2));
+          throw new Error("Formato de respuesta del backend no reconocido");
+        }
+        
+        // Usar el backend como fuente de verdad
+        // El backend puede devolver nombre_completo o nombre
+        const userName = usuario.nombre_completo || usuario.nombre || usuario.name || "";
+        const userEmail = usuario.email || "";
+        
+        if (process.env.NODE_ENV === "development") {
+          console.log("[ProfileSettings] Nombre completo del backend:", userName);
+          console.log("[ProfileSettings] Email del backend:", userEmail);
+        }
+
+        const profileDataToSet: ProfileData = {
+          name: userName,
+          email: userEmail,
+          address: usuario.direccion || usuario.address || usuario.ciudad || usuario.city || "",
+          postalCode: usuario.codigo_postal || usuario.postalCode || usuario.codigoPostal || "",
+        };
+
+        setProfileData(profileDataToSet);
+        setOriginalProfileData(profileDataToSet);
+
+        if (process.env.NODE_ENV === "development") {
+          console.log("[ProfileSettings] Perfil cargado exitosamente desde backend:", profileDataToSet);
+        }
+      } else {
+        // Solo usar datos del usuario cacheado como último recurso si el backend falla
+        if (process.env.NODE_ENV === "development") {
+          console.warn("[ProfileSettings] No se obtuvieron datos del backend, usando datos del usuario autenticado como fallback");
+        }
+        
+        if (user) {
+          const fallbackData: ProfileData = {
+            name: user.name || "",
+            email: user.email || "",
+            address: "",
+            postalCode: "",
+          };
+          setProfileData(fallbackData);
+          setOriginalProfileData(fallbackData);
+        }
+      }
+    } catch (err: any) {
+      console.error("[ProfileSettings] Error al cargar perfil:", err);
+      setError("No se pudieron cargar los datos completos del perfil. Se muestran los datos básicos.");
+      
+      // Fallback a datos del usuario cacheado solo si el backend falla completamente
+      if (user) {
+        const fallbackData: ProfileData = {
+          name: user.name || "",
+          email: user.email || "",
+          address: "",
+          postalCode: "",
+        };
+        setProfileData(fallbackData);
+        setOriginalProfileData(fallbackData);
+      }
+    } finally {
+      if (showLoading) {
+        setLoading(false);
+      }
+    }
+  }, [user]);
 
   // Cargar datos del usuario al montar el componente
   useEffect(() => {
+    // Esperar a que el usuario esté disponible antes de cargar
     if (user) {
-      setProfileData({
-        firstName: user.name?.split(" ")[0] || "",
-        lastName: user.name?.split(" ").slice(1).join(" ") || "",
-        email: user.email || "",
-        username: `@${user.email?.split("@")[0] || ""}`,
-        phone: "+52 55 31 953 893", // Datos por defecto, se pueden obtener de la API
-        city: "Madrid, España",
-        postalCode: "03920",
-      });
+      loadProfile();
+    } else {
+      setLoading(false);
     }
-  }, [user]);
+  }, [user, loadProfile]);
 
   const handleInputChange = (field: keyof ProfileData, value: string) => {
     setProfileData((prev) => ({
@@ -164,41 +279,192 @@ export default function ProfileSettings() {
     );
   };
 
-  const handleSave = () => {
-    // Simular guardado de datos
-    console.log("Guardando datos:", {
-      profileData,
-      notificationSettings,
-      passwordData,
-    });
+  const handleSave = async () => {
+    setSaving(true);
+    setError(null);
+    setPasswordError(null);
 
-    // Mostrar notificación de éxito
-    setShowSuccessNotification(true);
+    try {
+      // Actualizar perfil si hay cambios
+      const hasProfileChanges = JSON.stringify(profileData) !== JSON.stringify(originalProfileData);
+      
+      if (hasProfileChanges) {
+        // Validar que el email no esté vacío
+        if (!profileData.email || !profileData.email.trim()) {
+          setError("El correo electrónico es requerido");
+          setSaving(false);
+          return;
+        }
 
-    // Ocultar notificación después de 3 segundos
-    setTimeout(() => {
-      setShowSuccessNotification(false);
-    }, 3000);
+        // Validar formato de email básico
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(profileData.email.trim())) {
+          setError("Debe ser un email válido");
+          setSaving(false);
+          return;
+        }
+
+        // Validar que el nombre no esté vacío
+        if (!profileData.name || !profileData.name.trim()) {
+          setError("El nombre es requerido");
+          setSaving(false);
+          return;
+        }
+
+        // Formato según las instrucciones del backend
+        // El endpoint /clientes/me/perfil espera 'nombre' (no nombre_completo)
+        const updateData: any = {
+          nombre: profileData.name.trim(),
+          email: profileData.email.trim(),
+        };
+
+        // Agregar campos adicionales si existen
+        if (profileData.address) {
+          updateData.direccion = profileData.address;
+        }
+        if (profileData.postalCode) {
+          updateData.codigo_postal = profileData.postalCode;
+        }
+
+        if (process.env.NODE_ENV === "development") {
+          console.log("[ProfileSettings] Actualizando perfil con datos:", updateData);
+        }
+
+        // Usar la ruta específica de clientes
+        const profileResponse = await apiClient.put<any>("/clientes/me/perfil", updateData);
+
+        if (!profileResponse.success) {
+          throw new Error(profileResponse.error || "Error al actualizar el perfil");
+        }
+
+        if (process.env.NODE_ENV === "development") {
+          console.log("[ProfileSettings] Respuesta del backend después de actualizar:", profileResponse);
+        }
+
+        // Actualizar el usuario en localStorage y contexto con los datos del backend
+        if (profileResponse.data?.usuario) {
+          const updatedUsuario = profileResponse.data.usuario;
+          
+          // Obtener el usuario actual del localStorage
+          const currentUserData = localStorage.getItem("user");
+          if (currentUserData) {
+            try {
+              const currentUser = JSON.parse(currentUserData);
+              
+              // Actualizar con los datos del backend - usar nombre_completo o nombre
+              const updatedName = updatedUsuario.nombre_completo || updatedUsuario.nombre || currentUser.name;
+              
+              const updatedUser = {
+                ...currentUser,
+                name: updatedName,
+                email: updatedUsuario.email || currentUser.email,
+              };
+              
+              // Guardar en localStorage
+              localStorage.setItem("user", JSON.stringify(updatedUser));
+              
+              // Disparar evento para que useAuth actualice el contexto
+              window.dispatchEvent(new CustomEvent("userLogin"));
+              
+              if (process.env.NODE_ENV === "development") {
+                console.log("[ProfileSettings] Usuario actualizado en localStorage:", updatedUser);
+              }
+            } catch (error) {
+              console.error("[ProfileSettings] Error actualizando usuario en localStorage:", error);
+            }
+          }
+        }
+
+        // Recargar el perfil desde el backend para reflejar los cambios actualizados
+        await loadProfile(false);
+      }
+
+      // Cambiar contraseña si se proporcionó
+      if (passwordData.newPassword && passwordData.currentPassword) {
+        if (passwordData.newPassword !== passwordData.confirmPassword) {
+          setPasswordError("Las contraseñas no coinciden");
+          setSaving(false);
+          return;
+        }
+
+        if (passwordData.newPassword.length < 8) {
+          setPasswordError("La contraseña debe tener al menos 8 caracteres");
+          setSaving(false);
+          return;
+        }
+
+        if (process.env.NODE_ENV === "development") {
+          console.log("[ProfileSettings] Cambiando contraseña...");
+        }
+
+        // Usar la ruta específica de clientes
+        const passwordResponse = await apiClient.put<{ message: string }>(
+          "/clientes/me/cambiar-password",
+          {
+            password_actual: passwordData.currentPassword,
+            password_nueva: passwordData.newPassword,
+          }
+        );
+
+        if (!passwordResponse.success) {
+          setPasswordError(passwordResponse.error || "Error al cambiar la contraseña");
+          setSaving(false);
+          return;
+        }
+
+        // Limpiar campos de contraseña después de éxito
+        setPasswordData({
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        });
+
+        if (process.env.NODE_ENV === "development") {
+          console.log("[ProfileSettings] Contraseña cambiada exitosamente");
+        }
+      }
+
+      // Mostrar notificación de éxito solo si hubo cambios
+      if (hasProfileChanges || (passwordData.newPassword && passwordData.currentPassword)) {
+        setShowSuccessNotification(true);
+
+        // Ocultar notificación después de 3 segundos
+        setTimeout(() => {
+          setShowSuccessNotification(false);
+        }, 3000);
+      }
+    } catch (err: any) {
+      console.error("[ProfileSettings] Error al guardar perfil:", err);
+      setError(err.message || "Ocurrió un error al guardar los cambios. Intenta nuevamente.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCancel = () => {
     // Resetear formulario a valores originales
-    setProfileData({
-      firstName: "Juan",
-      lastName: "Pérez",
-      email: "jp@gmail.com",
-      username: "@jpnutriologo",
-      phone: "+52 55 31 953 893",
-      city: "Madrid, España",
-      postalCode: "03920",
-    });
-
+    setProfileData({ ...originalProfileData });
     setPasswordData({
       currentPassword: "",
       newPassword: "",
       confirmPassword: "",
     });
+    setError(null);
+    setPasswordError(null);
+    setEditingField(null);
+    setTempValue("");
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando perfil...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -213,18 +479,30 @@ export default function ProfileSettings() {
         <div className="flex space-x-3">
           <button
             onClick={handleCancel}
-            className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+            disabled={saving}
+            className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancelar
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg transition-colors"
+            disabled={saving}
+            className="px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            Guardar
+            {saving && (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+            )}
+            {saving ? "Guardando..." : "Guardar"}
           </button>
         </div>
       </div>
+
+      {/* Error Messages */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      )}
 
       {/* Personal Information Section */}
       <div className="bg-gray-50 rounded-lg p-6">
@@ -233,12 +511,9 @@ export default function ProfileSettings() {
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {renderEditableField("firstName", "Nombre")}
-          {renderEditableField("lastName", "Apellido")}
+          {renderEditableField("name", "Nombre Completo")}
           {renderEditableField("email", "Correo Electrónico", "email")}
-          {renderEditableField("username", "Nombre de usuario")}
-          {renderEditableField("phone", "Teléfono", "tel")}
-          {renderEditableField("city", "Ciudad")}
+          {renderEditableField("address", "Dirección")}
           {renderEditableField("postalCode", "Código Postal")}
         </div>
       </div>
@@ -246,6 +521,12 @@ export default function ProfileSettings() {
       {/* Password Section */}
       <div>
         <h2 className="text-lg font-semibold text-gray-900 mb-6">Contraseña</h2>
+
+        {passwordError && (
+          <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            {passwordError}
+          </div>
+        )}
 
         <div className="space-y-4">
           <div>

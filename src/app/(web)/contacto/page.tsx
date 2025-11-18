@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import logo from "@/assets/PNG-01.png";
+import { ticketsService } from "@/services/api/tickets";
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -16,6 +17,7 @@ export default function ContactPage() {
   const [submitStatus, setSubmitStatus] = useState<
     "idle" | "success" | "error"
   >("idle");
+  const [errorMessage, setErrorMessage] = useState<string>("");
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -25,23 +27,69 @@ export default function ContactPage() {
       ...prev,
       [name]: value,
     }));
+    // Limpiar error cuando el usuario empieza a escribir
+    if (submitStatus === "error") {
+      setSubmitStatus("idle");
+      setErrorMessage("");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setSubmitStatus("idle");
+    setErrorMessage("");
 
-    // Simulate form submission
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setSubmitStatus("success");
-      setFormData({
-        name: "",
-        email: "",
-        subject: "",
-        message: "",
+      // Validar campos requeridos
+      if (!formData.name.trim()) {
+        setErrorMessage("El nombre es requerido");
+        setSubmitStatus("error");
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!formData.email.trim()) {
+        setErrorMessage("El correo electrónico es requerido");
+        setSubmitStatus("error");
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!formData.message.trim() || formData.message.trim().length < 10) {
+        setErrorMessage("El mensaje debe tener al menos 10 caracteres");
+        setSubmitStatus("error");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Enviar ticket público
+      const response = await ticketsService.createPublicTicket({
+        nombre: formData.name.trim(),
+        asunto: formData.subject.trim() || undefined,
+        mensaje: formData.message.trim(),
+        correo_electronico: formData.email.trim(),
       });
-    } catch (error) {
+
+      if (response.success) {
+        setSubmitStatus("success");
+        setFormData({
+          name: "",
+          email: "",
+          subject: "",
+          message: "",
+        });
+      } else {
+        setErrorMessage(
+          response.error || "Error al enviar el mensaje. Por favor, inténtalo de nuevo."
+        );
+        setSubmitStatus("error");
+      }
+    } catch (error: any) {
+      console.error("Error al enviar formulario de contacto:", error);
+      setErrorMessage(
+        error?.message || "Error al enviar el mensaje. Por favor, inténtalo de nuevo."
+      );
       setSubmitStatus("error");
     } finally {
       setIsSubmitting(false);
@@ -87,8 +135,7 @@ export default function ContactPage() {
           {submitStatus === "error" && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-red-800 text-sm text-center">
-                Hubo un error al enviar el mensaje. Por favor, inténtalo de
-                nuevo.
+                {errorMessage || "Hubo un error al enviar el mensaje. Por favor, inténtalo de nuevo."}
               </p>
             </div>
           )}

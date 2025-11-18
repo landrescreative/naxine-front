@@ -1,42 +1,91 @@
 import { notFound } from "next/navigation";
-import { categoriesData } from "@/data/categories";
+import { specialtiesService } from "@/services/api/specialties";
 import CategoryServicePage from "@/components/ui/CategoryServicePage";
 
 interface CategoryPageProps {
-  params: {
+  params: Promise<{
     category: string;
-  };
+  }>;
 }
 
 export async function generateStaticParams() {
-  return Object.keys(categoriesData).map((category) => ({
-    category,
-  }));
+  // Para páginas dinámicas, retornar array vacío para generar en runtime
+  // O puedes generar algunos params estáticos si lo necesitas
+  return [];
 }
 
 export async function generateMetadata({ params }: CategoryPageProps) {
   const { category } = await params;
-  const categoryData = categoriesData[category];
 
-  if (!categoryData) {
+  try {
+    // Obtener la especialidad por su slug
+    const specialtyResponse = await specialtiesService.getSpecialtyBySlugOrId(
+      category
+    );
+
+    if (!specialtyResponse.success || !specialtyResponse.data) {
+      return {
+        title: "Categoría no encontrada",
+        description: "La categoría solicitada no existe en NAXINE",
+      };
+    }
+
+    const specialty = specialtyResponse.data;
+    const specialtyName = specialty.nombre || specialty.name || "Categoría";
+
+    return {
+      title: `${specialtyName} | NAXINE`,
+      description:
+        specialty.descripcion ||
+        specialty.description ||
+        `Explora servicios profesionales de ${specialtyName} en NAXINE. Encuentra profesionales verificados y colegiados.`,
+      keywords: [
+        specialtyName,
+        "servicios profesionales",
+        "profesionales verificados",
+        specialty.descripcion || specialty.description || "",
+      ],
+      openGraph: {
+        title: `${specialtyName} | NAXINE`,
+        description:
+          specialty.descripcion ||
+          specialty.description ||
+          `Explora servicios profesionales de ${specialtyName} en NAXINE.`,
+        type: "website",
+      },
+    };
+  } catch (error) {
     return {
       title: "Categoría no encontrada",
+      description: "La categoría solicitada no existe en NAXINE",
     };
   }
-
-  return {
-    title: `${categoryData.name} - Naxine`,
-    description: categoryData.subtitle,
-  };
 }
 
 export default async function CategoryPage({ params }: CategoryPageProps) {
   const { category } = await params;
-  const categoryData = categoriesData[category];
 
-  if (!categoryData) {
+  try {
+    // Obtener la especialidad por su slug
+    const specialtyResponse = await specialtiesService.getSpecialtyBySlugOrId(
+      category
+    );
+
+    if (!specialtyResponse.success || !specialtyResponse.data) {
+      notFound();
+    }
+
+    const specialty = specialtyResponse.data;
+
+    // Pasar los datos dinámicos al componente
+    return (
+      <CategoryServicePage
+        categorySlug={category}
+        specialtyData={specialty}
+      />
+    );
+  } catch (error) {
+    console.error("Error loading category page:", error);
     notFound();
   }
-
-  return <CategoryServicePage categorySlug={category} />;
 }

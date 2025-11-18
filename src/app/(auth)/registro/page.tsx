@@ -3,12 +3,104 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
+import { validateEmail, validatePassword } from "@/services/utils/api-helpers";
 
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [cancellationAccepted, setCancellationAccepted] = useState(false);
+  
+  // Estado del formulario
+  const [formData, setFormData] = useState({
+    nombre: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
+  
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const router = useRouter();
+  const { register, error: authError, loading } = useAuth();
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [id]: value,
+    }));
+    // Limpiar error del campo cuando el usuario empieza a escribir
+    if (errors[id]) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[id];
+        return newErrors;
+      });
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrors({});
+
+    // Validaciones
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.nombre.trim()) {
+      newErrors.nombre = "El nombre es requerido";
+    }
+
+    if (!formData.email.trim()) {
+      newErrors.email = "El email es requerido";
+    } else if (!validateEmail(formData.email)) {
+      newErrors.email = "El email no es válido";
+    }
+
+    if (!formData.password) {
+      newErrors.password = "La contraseña es requerida";
+    } else {
+      const passwordValidation = validatePassword(formData.password);
+      if (!passwordValidation.isValid) {
+        newErrors.password = passwordValidation.errors.join(", ");
+      }
+    }
+
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = "Por favor confirma tu contraseña";
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = "Las contraseñas no coinciden";
+    }
+
+    if (!privacyAccepted || !cancellationAccepted) {
+      newErrors.acceptance = "Debes aceptar las políticas para continuar";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    try {
+      const result = await register({
+        email: formData.email.trim().toLowerCase(),
+        password: formData.password,
+        name: formData.nombre.trim(),
+        role: "client",
+      });
+
+      if (result.success && result.email) {
+        // Redirigir a la página de verificación de código con el email
+        router.push(`/verificar-codigo?email=${encodeURIComponent(result.email)}`);
+      } else {
+        setErrors({ submit: authError || "Error al registrar. Por favor, intenta de nuevo." });
+      }
+    } catch (err) {
+      setErrors({ submit: "Ocurrió un error al registrar. Por favor, intenta de nuevo." });
+      console.error("Error en registro:", err);
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
@@ -26,7 +118,20 @@ export default function RegisterPage() {
           </div>
 
           {/* Registration Form */}
-          <form className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Error Message */}
+            {(errors.submit || authError) && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                {errors.submit || authError}
+              </div>
+            )}
+
+            {/* Acceptance Error */}
+            {errors.acceptance && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                {errors.acceptance}
+              </div>
+            )}
             {/* Name Field */}
             <div>
               <label
@@ -38,27 +143,17 @@ export default function RegisterPage() {
               <input
                 type="text"
                 id="nombre"
-                defaultValue="john.doe@gmail.com"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                value={formData.nombre}
+                onChange={handleInputChange}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
+                  errors.nombre ? "border-red-300" : "border-gray-300"
+                }`}
                 placeholder="Ingresa tu nombre"
+                required
               />
-            </div>
-
-            {/* Last Name Field */}
-            <div>
-              <label
-                htmlFor="apellido"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Apellido
-              </label>
-              <input
-                type="text"
-                id="apellido"
-                defaultValue="john.doe@gmail.com"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-                placeholder="Ingresa tu apellido"
-              />
+              {errors.nombre && (
+                <p className="mt-1 text-sm text-red-600">{errors.nombre}</p>
+              )}
             </div>
 
             {/* Email Field */}
@@ -72,27 +167,17 @@ export default function RegisterPage() {
               <input
                 type="email"
                 id="email"
-                defaultValue="john.doe@gmail.com"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                value={formData.email}
+                onChange={handleInputChange}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
+                  errors.email ? "border-red-300" : "border-gray-300"
+                }`}
                 placeholder="Ingresa tu email"
+                required
               />
-            </div>
-
-            {/* Phone Field */}
-            <div>
-              <label
-                htmlFor="telefono"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Teléfono
-              </label>
-              <input
-                type="tel"
-                id="telefono"
-                defaultValue="john.doe@gmail.com"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-                placeholder="Ingresa tu teléfono"
-              />
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+              )}
             </div>
 
             {/* Password Field */}
@@ -107,9 +192,13 @@ export default function RegisterPage() {
                 <input
                   type={showPassword ? "text" : "password"}
                   id="password"
-                  defaultValue="••••••••••••••••"
-                  className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  className={`w-full px-4 py-3 pr-12 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
+                    errors.password ? "border-red-300" : "border-gray-300"
+                  }`}
                   placeholder="Ingresa tu contraseña"
+                  required
                 />
                 <button
                   type="button"
@@ -153,6 +242,9 @@ export default function RegisterPage() {
                   )}
                 </button>
               </div>
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+              )}
             </div>
 
             {/* Confirm Password Field */}
@@ -167,9 +259,13 @@ export default function RegisterPage() {
                 <input
                   type={showConfirmPassword ? "text" : "password"}
                   id="confirmPassword"
-                  defaultValue="••••••••••••••••"
-                  className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                  className={`w-full px-4 py-3 pr-12 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
+                    errors.confirmPassword ? "border-red-300" : "border-gray-300"
+                  }`}
                   placeholder="Confirma tu contraseña"
+                  required
                 />
                 <button
                   type="button"
@@ -213,6 +309,9 @@ export default function RegisterPage() {
                   )}
                 </button>
               </div>
+              {errors.confirmPassword && (
+                <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
+              )}
             </div>
 
             {/* Checkboxes */}
@@ -272,9 +371,10 @@ export default function RegisterPage() {
             {/* Register Button */}
             <button
               type="submit"
-              className="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 mt-6"
+              disabled={loading}
+              className="w-full bg-primary hover:bg-primary/90 disabled:bg-primary/50 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 mt-6"
             >
-              Crea tu cuenta
+              {loading ? "Creando cuenta..." : "Crea tu cuenta"}
             </button>
 
             {/* Login Link */}
@@ -355,9 +455,9 @@ export default function RegisterPage() {
       <div className="flex flex-1 relative">
         <div className="relative w-full h-full flex items-center lg:items-start justify-center p-2">
           <div className="sticky top-4 w-full">
-            <div className="w-11/12 h-[400px] lg:h-[600px] relative rounded-3xl overflow-hidden shadow-2xl">
+            <div className="w-11/12 h-[400px] lg:h-[600px] relative rounded-3xl overflow-hidden">
               <Image
-                src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
+                src="/smk_Snapchat-Picture.webp"
                 alt="Profesional"
                 fill
                 className="object-cover"

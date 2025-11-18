@@ -8,6 +8,8 @@ interface DeactivateUserModalProps {
   onClose: () => void;
   onConfirm: () => void;
   userName: string;
+  loading?: boolean;
+  error?: string | null;
 }
 
 export default function DeactivateUserModal({
@@ -15,6 +17,8 @@ export default function DeactivateUserModal({
   onClose,
   onConfirm,
   userName,
+  loading = false,
+  error = null,
 }: DeactivateUserModalProps) {
   return (
     <AnimatePresence>
@@ -30,7 +34,8 @@ export default function DeactivateUserModal({
             {/* Close Button */}
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors z-10"
+              disabled={loading}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors z-10 disabled:opacity-50"
             >
               <X className="h-5 w-5" />
             </button>
@@ -47,24 +52,33 @@ export default function DeactivateUserModal({
                     ¿Estás seguro que deseas desactivar este usuario?
                   </h3>
                   <p className="text-sm text-gray-600">
-                    Esta acción no se puede deshacer.
+                    El usuario <span className="font-medium">{userName}</span> no podrá acceder a la plataforma hasta que sea reactivado.
                   </p>
                 </div>
               </div>
+
+              {/* Error Message */}
+              {error && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+                  {error}
+                </div>
+              )}
 
               {/* Action Buttons */}
               <div className="flex items-center justify-end space-x-3">
                 <button
                   onClick={onClose}
-                  className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  disabled={loading}
+                  className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={onConfirm}
-                  className="px-6 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors"
+                  disabled={loading}
+                  className="px-6 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Borrar
+                  {loading ? "Desactivando..." : "Desactivar"}
                 </button>
               </div>
             </div>

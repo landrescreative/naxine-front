@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Menu,
@@ -24,6 +25,7 @@ import {
 import Logo from "@/assets/PNG-01.png";
 import Image from "next/image";
 import { useAuth } from "@/hooks/useAuth";
+import { usePublicSpecialties } from "@/hooks/usePublicSpecialties";
 
 type ServiceItem = { label: string; href: string };
 type ServiceCategory = {
@@ -232,13 +234,133 @@ export default function Navbar() {
   );
   const [isVisible, setIsVisible] = useState(false);
   const { user, loading, logout } = useAuth();
+  const pathname = usePathname();
+  const desktopMenuRef = useRef<HTMLDivElement>(null);
+  const desktopMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const {
+    specialties: backendSpecialties,
+    loading: loadingSpecialties,
+    loadServicesForSpecialty,
+    getServicesForSpecialty,
+    isLoadingServices,
+  } = usePublicSpecialties();
+  const [hoveredSpecialtyId, setHoveredSpecialtyId] = useState<string | null>(
+    null
+  );
+  const [servicesBySpecialty, setServicesBySpecialty] = useState<
+    Record<string, Array<{ label: string; href: string }>>
+  >({});
+  const [activeDesktopCategory, setActiveDesktopCategory] = useState<
+    string | null
+  >(null);
+  const desktopCategoryHoverTimeout = useRef<NodeJS.Timeout | null>(null);
+
   const dashboardHref =
-    user?.role === "profesional"
+    user?.role === "professional"
       ? "/dashboard/profesional"
       : "/dashboard/cliente";
 
-  // Considerar que el rol de administracion no cuenta como "usuario logeado" para la navbar
-  const isPublicLoggedIn = !!user && user.role !== "administracion";
+  // Considerar que el rol de admin no cuenta como "usuario logeado" para la navbar
+  const isPublicLoggedIn = !!user && user.role !== "admin";
+
+  // Usar especialidades del backend si están disponibles, sino usar las hardcodeadas
+  // Solo mostrar hardcodeadas si NO está cargando Y no hay categorías del backend
+  // Necesitamos mapear las especialidades hardcodeadas para incluir specialtyId
+  const SERVICE_CATEGORIES_TO_USE: (ServiceCategory & {
+    specialtyId?: string;
+  })[] =
+    loadingSpecialties
+      ? [] // Mientras carga, no mostrar ninguna categoría (se mostrará skeleton)
+      : backendSpecialties.length > 0
+      ? backendSpecialties.map((cat) => ({
+          ...cat,
+          specialtyId: cat.specialtyId,
+        }))
+      : SERVICE_CATEGORIES.map((cat) => ({
+          ...cat,
+          specialtyId: cat.key, // Usar key como ID para las hardcodeadas
+        }));
+
+  // Función para manejar el hover sobre una especialidad
+  const handleSpecialtyHover = async (
+    specialtyIdOrKey: string,
+    realSpecialtyId?: string
+  ) => {
+    setHoveredSpecialtyId(specialtyIdOrKey);
+
+    // Determinar el ID real a usar para cargar servicios
+    // Si se proporciona realSpecialtyId, usarlo (viene del backend)
+    // Si no, buscar la especialidad para obtener su specialtyId
+    let idToUseForLoading: string;
+    if (realSpecialtyId) {
+      idToUseForLoading = realSpecialtyId;
+    } else {
+      // Buscar la especialidad para obtener su ID numérico
+      const specialty = SERVICE_CATEGORIES_TO_USE.find(
+        (s) => s.specialtyId === specialtyIdOrKey || s.key === specialtyIdOrKey
+      );
+      idToUseForLoading = specialty?.specialtyId || specialtyIdOrKey;
+    }
+
+    // Usar specialtyIdOrKey como clave para el cache (puede ser key o specialtyId)
+    const cacheKey = specialtyIdOrKey;
+
+    // Si ya tenemos los servicios en cache, no hacer nada
+    if (
+      servicesBySpecialty[cacheKey] &&
+      servicesBySpecialty[cacheKey].length > 0
+    ) {
+      return;
+    }
+
+    // Cargar servicios usando el ID real del backend
+    const servicios = await loadServicesForSpecialty(idToUseForLoading);
+
+    // Mapear servicios al formato del navbar
+    const mappedServices = servicios.map((servicio, index) => {
+      // El backend usa nombre_servicio, no nombre
+      const serviceName =
+        servicio.nombre_servicio ??
+        servicio.nombre ??
+        servicio.name ??
+        `Servicio ${index + 1}`;
+
+      // Generar slug del nombre del servicio
+      const serviceSlug = servicio.slug ?? generateSlug(serviceName);
+
+      const specialtyFound = SERVICE_CATEGORIES_TO_USE.find(
+        (s) => s.specialtyId === specialtyIdOrKey || s.key === specialtyIdOrKey
+      );
+      const baseHref = specialtyFound?.href || `/${specialtyIdOrKey}`;
+
+      // Usar el ID del servicio solo para la key de React, no en la URL
+      const serviceId = String(
+        servicio.id_servicio ?? servicio.id ?? servicio.uuid ?? index
+      );
+
+      return {
+        label: serviceName,
+        href: `${baseHref}/${serviceSlug}`,
+        id: serviceId, // Incluir ID para usar como key único en React
+      };
+    });
+
+    // Guardar usando el cacheKey (puede ser key o specialtyId) para que coincida con el hover
+    setServicesBySpecialty((prev) => ({
+      ...prev,
+      [cacheKey]: mappedServices,
+    }));
+  };
+
+  // Función auxiliar para generar slugs (duplicada del hook, pero necesaria aquí también)
+  const generateSlug = (text: string): string => {
+    return text
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  };
 
   useEffect(() => {
     // Trigger animation after component mounts
@@ -248,6 +370,40 @@ export default function Navbar() {
 
     return () => clearTimeout(timer);
   }, []);
+
+  // Cerrar menú de desktop cuando cambia la ruta
+  useEffect(() => {
+    setIsDesktopMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    return () => {
+      clearDesktopCategoryHoverTimeout();
+    };
+  }, []);
+
+  // Cerrar menú de desktop cuando se hace clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        isDesktopMenuOpen &&
+        desktopMenuRef.current &&
+        desktopMenuButtonRef.current &&
+        !desktopMenuRef.current.contains(event.target as Node) &&
+        !desktopMenuButtonRef.current.contains(event.target as Node)
+      ) {
+        setIsDesktopMenuOpen(false);
+      }
+    };
+
+    if (isDesktopMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isDesktopMenuOpen]);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -262,6 +418,29 @@ export default function Navbar() {
   const toggleDesktopMenu = () => {
     setIsDesktopMenuOpen(!isDesktopMenuOpen);
     setIsUserMenuOpen(false); // Cerrar menú de usuario si está abierto
+  };
+
+  const clearDesktopCategoryHoverTimeout = () => {
+    if (desktopCategoryHoverTimeout.current) {
+      clearTimeout(desktopCategoryHoverTimeout.current);
+      desktopCategoryHoverTimeout.current = null;
+    }
+  };
+
+  const handleDesktopCategoryEnter = (
+    displayKey: string,
+    specialtyId?: string
+  ) => {
+    clearDesktopCategoryHoverTimeout();
+    setActiveDesktopCategory(displayKey);
+    handleSpecialtyHover(displayKey, specialtyId || undefined);
+  };
+
+  const handleDesktopCategoryLeave = () => {
+    clearDesktopCategoryHoverTimeout();
+    desktopCategoryHoverTimeout.current = setTimeout(() => {
+      setActiveDesktopCategory(null);
+    }, 150);
   };
 
   const closeMobileMenu = () => {
@@ -417,6 +596,7 @@ export default function Navbar() {
               {/* Menú hamburguesa - Izquierda */}
               <div className="flex items-center space-x-4">
                 <button
+                  ref={desktopMenuButtonRef}
                   onClick={toggleDesktopMenu}
                   className={`${
                     isDesktopMenuOpen
@@ -498,6 +678,7 @@ export default function Navbar() {
             <AnimatePresence>
               {isDesktopMenuOpen && (
                 <motion.div
+                  ref={desktopMenuRef}
                   className="hidden lg:block absolute left-4 top-16 w-72 bg-white/80 backdrop-blur rounded-xl shadow-lg border border-gray-200/60 ring-1 ring-black/5 z-50 overflow-hidden"
                   initial={{ opacity: 0, y: -10, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -507,7 +688,10 @@ export default function Navbar() {
                   <div className="py-2">
                     <Link
                       href="/como-funciona"
-                      onClick={closeDesktopMenu}
+                      onClick={() => {
+                        closeDesktopMenu();
+                        setIsDesktopMenuOpen(false);
+                      }}
                       className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:text-purple-600 hover:bg-gray-50 transition-colors"
                     >
                       <HelpCircle className="h-5 w-5" />
@@ -515,7 +699,10 @@ export default function Navbar() {
                     </Link>
                     <Link
                       href="/servicios"
-                      onClick={closeDesktopMenu}
+                      onClick={() => {
+                        closeDesktopMenu();
+                        setIsDesktopMenuOpen(false);
+                      }}
                       className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:text-purple-600 hover:bg-gray-50 transition-colors"
                     >
                       <Building2 className="h-5 w-5" />
@@ -523,7 +710,10 @@ export default function Navbar() {
                     </Link>
                     <Link
                       href="/preguntas-frecuentes"
-                      onClick={closeDesktopMenu}
+                      onClick={() => {
+                        closeDesktopMenu();
+                        setIsDesktopMenuOpen(false);
+                      }}
                       className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:text-purple-600 hover:bg-gray-50 transition-colors"
                     >
                       <HelpCircle className="h-5 w-5" />
@@ -533,7 +723,10 @@ export default function Navbar() {
                     </Link>
                     <Link
                       href="/acerca-de"
-                      onClick={closeDesktopMenu}
+                      onClick={() => {
+                        closeDesktopMenu();
+                        setIsDesktopMenuOpen(false);
+                      }}
                       className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:text-purple-600 hover:bg-gray-50 transition-colors"
                     >
                       <HelpCircle className="h-5 w-5" />
@@ -541,7 +734,10 @@ export default function Navbar() {
                     </Link>
                     <Link
                       href="/contacto"
-                      onClick={closeDesktopMenu}
+                      onClick={() => {
+                        closeDesktopMenu();
+                        setIsDesktopMenuOpen(false);
+                      }}
                       className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:text-purple-600 hover:bg-gray-50 transition-colors"
                     >
                       <Mail className="h-5 w-5" />
@@ -564,561 +760,103 @@ export default function Navbar() {
                   Servicios
                 </h3>
                 <div className="space-y-1">
-                  {/* Dietas */}
-                  <div className="rounded-lg">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setOpenMobileCategory(
-                          openMobileCategory === "dietas" ? null : "dietas"
-                        )
-                      }
-                      className="w-full flex items-center justify-between px-3 py-2 text-gray-800 hover:text-purple-600 hover:bg-gray-50 rounded-lg transition-colors"
-                      aria-expanded={openMobileCategory === "dietas"}
-                    >
-                      <span className="flex items-center space-x-3">
-                        <CheckCircle className="h-5 w-5" />
-                        <span className="text-sm font-medium">
-                          Dietas elaboradas por nutricionistas
-                        </span>
-                      </span>
-                      <ChevronDown
-                        className={`h-4 w-4 transition-transform ${
-                          openMobileCategory === "dietas"
-                            ? "rotate-180"
-                            : "rotate-0"
-                        }`}
-                      />
-                    </button>
-                    {openMobileCategory === "dietas" && (
-                      <div className="pl-9 pr-3 pb-2 space-y-1">
-                        <Link
-                          href="/dietas/perdida-de-peso"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Pérdida de peso
-                        </Link>
-                        <Link
-                          href="/dietas/deportiva"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Deportiva
-                        </Link>
-                        <Link
-                          href="/dietas/vegetarianos-y-veganos"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Vegetarianos y veganos
-                        </Link>
-                        <Link
-                          href="/dietas/tcas-trastornos-conducta-alimentaria"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          TCAs (trastornos de la conducta alimentaria)
-                        </Link>
-                        <Link
-                          href="/dietas/embarazo-y-lactancia"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Embarazo y lactancia
-                        </Link>
-                        <Link
-                          href="/dietas/nutricion-infantil"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Nutrición infantil
-                        </Link>
-                        <Link
-                          href="/dietas/aumento-de-peso"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Aumento de peso
-                        </Link>
-                        <Link
-                          href="/dietas/menopausia"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Menopausia
-                        </Link>
-                        <Link
-                          href="/dietas/salud-intestinal"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Salud intestinal
-                        </Link>
-                        <Link
-                          href="/dietas/sibo-y-fodmap"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          SIBO y dieta FODMAP
-                        </Link>
-                        <Link
-                          href="/dietas/obesidad"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Obesidad
-                        </Link>
-                        <Link
-                          href="/dietas/tiroides"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Tiroides
-                        </Link>
-                        <Link
-                          href="/dietas/alergias-e-intolerancias"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Alergias–intolerancias
-                        </Link>
-                        <Link
-                          href="/dietas/nutricion-clinica"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Nutrición clínica
-                        </Link>
-                        <Link
-                          href="/dietas/nutricionista-oncologico"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Nutricionista oncológico
-                        </Link>
+                  {loadingSpecialties ? (
+                    // Skeleton para móvil mientras cargan las categorías
+                    Array.from({ length: 5 }).map((_, idx) => (
+                      <div
+                        key={`mobile-skeleton-${idx}`}
+                        className="px-3 py-2 rounded-lg"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className="h-5 w-5 bg-gray-200 rounded animate-pulse"></div>
+                          <div className="h-4 bg-gray-200 rounded animate-pulse flex-1"></div>
+                        </div>
                       </div>
-                    )}
-                  </div>
+                    ))
+                  ) : (
+                    SERVICE_CATEGORIES_TO_USE.map((category) => {
+                    const Icon = category.Icon;
+                    const displayKey = category.specialtyId || category.key;
+                    const displayItems =
+                      servicesBySpecialty[displayKey] &&
+                      servicesBySpecialty[displayKey].length > 0
+                        ? servicesBySpecialty[displayKey]
+                        : category.items;
 
-                  {/* Terapias */}
-                  <div className="rounded-lg">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setOpenMobileCategory(
-                          openMobileCategory === "terapias" ? null : "terapias"
-                        )
-                      }
-                      className="w-full flex items-center justify-between px-3 py-2 text-gray-800 hover:text-purple-600 hover:bg-gray-50 rounded-lg transition-colors"
-                      aria-expanded={openMobileCategory === "terapias"}
-                    >
-                      <span className="flex items-center space-x-3">
-                        <Heart className="h-5 w-5" />
-                        <span className="text-sm font-medium">
-                          Terapias con psicólogos
-                        </span>
-                      </span>
-                      <ChevronDown
-                        className={`h-4 w-4 transition-transform ${
-                          openMobileCategory === "terapias"
-                            ? "rotate-180"
-                            : "rotate-0"
-                        }`}
-                      />
-                    </button>
-                    {openMobileCategory === "terapias" && (
-                      <div className="pl-9 pr-3 pb-2 space-y-1">
-                        <Link
-                          href="/terapias/depresion"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Depresión
-                        </Link>
-                        <Link
-                          href="/terapias/ansiedad"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Ansiedad
-                        </Link>
-                        <Link
-                          href="/terapias/fobias"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Fobias
-                        </Link>
-                        <Link
-                          href="/terapias/pareja"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Terapia de pareja
-                        </Link>
-                        <Link
-                          href="/terapias/trastornos-conducta-alimentaria"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Trastornos de conducta alimentaria
-                        </Link>
-                        <Link
-                          href="/terapias/duelo"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Duelo: pérdida de un ser querido
-                        </Link>
-                        <Link
-                          href="/terapias/baja-autoestima"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Baja autoestima
-                        </Link>
-                        <Link
-                          href="/terapias/obsesiones"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Obsesiones
-                        </Link>
-                        <Link
-                          href="/terapias/trauma-y-tept"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Trauma y TEPT (trastorno de estrés post-traumático)
-                        </Link>
-                        <Link
-                          href="/terapias/problemas-sexuales"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Problemas sexuales
-                        </Link>
-                        <Link
-                          href="/terapias/psico-oncologia"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Psico–oncología
-                        </Link>
-                      </div>
-                    )}
-                  </div>
+                    return (
+                      <div key={category.key} className="rounded-lg">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const newState =
+                              openMobileCategory === category.key
+                                ? null
+                                : category.key;
+                            setOpenMobileCategory(newState);
 
-                  {/* Logopedas */}
-                  <div className="rounded-lg">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setOpenMobileCategory(
-                          openMobileCategory === "logopedas"
-                            ? null
-                            : "logopedas"
-                        )
-                      }
-                      className="w-full flex items-center justify-between px-3 py-2 text-gray-800 hover:text-purple-600 hover:bg-gray-50 rounded-lg transition-colors"
-                      aria-expanded={openMobileCategory === "logopedas"}
-                    >
-                      <span className="flex items-center space-x-3">
-                        <Mic className="h-5 w-5" />
-                        <span className="text-sm font-medium">
-                          Logopedas online para adultos
-                        </span>
-                      </span>
-                      <ChevronDown
-                        className={`h-4 w-4 transition-transform ${
-                          openMobileCategory === "logopedas"
-                            ? "rotate-180"
-                            : "rotate-0"
-                        }`}
-                      />
-                    </button>
-                    {openMobileCategory === "logopedas" && (
-                      <div className="pl-9 pr-3 pb-2 space-y-1">
-                        <Link
-                          href="/logopedas/trastornos-del-habla"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
+                            // Cargar servicios cuando se expande la categoría
+                            if (newState === category.key) {
+                              const idToLoad =
+                                category.specialtyId || category.key;
+                              await handleSpecialtyHover(
+                                idToLoad,
+                                category.specialtyId || undefined
+                              );
+                            }
+                          }}
+                          className="w-full flex items-center justify-between px-3 py-2 text-gray-800 hover:text-purple-600 hover:bg-gray-50 rounded-lg transition-colors"
+                          aria-expanded={openMobileCategory === category.key}
                         >
-                          Trastornos del habla
-                        </Link>
-                        <Link
-                          href="/logopedas/trastornos-del-lenguaje"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Trastornos del lenguaje
-                        </Link>
-                        <Link
-                          href="/logopedas/trastornos-auditivos"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Trastornos auditivos
-                        </Link>
-                        <Link
-                          href="/logopedas/dificultades-neurologicas"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Dificultades de origen neurológico
-                        </Link>
-                        <Link
-                          href="/logopedas/dificultades-de-aprendizaje"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Dificultades de aprendizaje
-                        </Link>
-                        <Link
-                          href="/logopedas/problemas-de-deglucion"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Problemas de deglución
-                        </Link>
+                          <span className="flex items-center space-x-3">
+                            <Icon className="h-5 w-5" />
+                            <span className="text-sm font-medium">
+                              {category.title}
+                            </span>
+                          </span>
+                          <ChevronDown
+                            className={`h-4 w-4 transition-transform ${
+                              openMobileCategory === category.key
+                                ? "rotate-180"
+                                : "rotate-0"
+                            }`}
+                          />
+                        </button>
+                        {openMobileCategory === category.key && (
+                          <div className="pl-9 pr-3 pb-2 space-y-1">
+                            {isLoadingServices(
+                              category.specialtyId || category.key
+                            ) ? (
+                              <div className="px-2 py-1 text-sm text-gray-500">
+                                Cargando servicios...
+                              </div>
+                            ) : displayItems.length > 0 ? (
+                              displayItems.map((item, idx) => {
+                                const itemKey =
+                                  (item as any).id ||
+                                  item.href ||
+                                  `mobile-item-${idx}`;
+                                return (
+                                  <Link
+                                    key={itemKey}
+                                    href={item.href}
+                                    onClick={closeMobileMenu}
+                                    className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
+                                  >
+                                    {item.label}
+                                  </Link>
+                                );
+                              })
+                            ) : (
+                              <div className="px-2 py-1 text-sm text-gray-500">
+                                No hay servicios disponibles
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-
-                  {/* Desarrollo personal */}
-                  <div className="rounded-lg">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setOpenMobileCategory(
-                          openMobileCategory === "desarrollo"
-                            ? null
-                            : "desarrollo"
-                        )
-                      }
-                      className="w-full flex items-center justify-between px-3 py-2 text-gray-800 hover:text-purple-600 hover:bg-gray-50 rounded-lg transition-colors"
-                      aria-expanded={openMobileCategory === "desarrollo"}
-                    >
-                      <span className="flex items-center space-x-3">
-                        <Zap className="h-5 w-5" />
-                        <span className="text-sm font-medium">
-                          Desarrollo personal
-                        </span>
-                      </span>
-                      <ChevronDown
-                        className={`h-4 w-4 transition-transform ${
-                          openMobileCategory === "desarrollo"
-                            ? "rotate-180"
-                            : "rotate-0"
-                        }`}
-                      />
-                    </button>
-                    {openMobileCategory === "desarrollo" && (
-                      <div className="pl-9 pr-3 pb-2 space-y-1">
-                        <Link
-                          href="/desarrollo-personal/liderazgo"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Liderazgo
-                        </Link>
-                        <Link
-                          href="/desarrollo-personal/habilidades-sociales"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Habilidades sociales
-                        </Link>
-                        <Link
-                          href="/desarrollo-personal/hablar-en-publico"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Hablar en público
-                        </Link>
-                        <Link
-                          href="/desarrollo-personal/comunicacion-no-verbal"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Comunicación no verbal
-                        </Link>
-                        <Link
-                          href="/desarrollo-personal/relaciones-de-pareja"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Relaciones de pareja
-                        </Link>
-                        <Link
-                          href="/desarrollo-personal/relaciones-interpersonales"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Relaciones interpersonales
-                        </Link>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Consultas legales */}
-                  <div className="rounded-lg">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setOpenMobileCategory(
-                          openMobileCategory === "legales" ? null : "legales"
-                        )
-                      }
-                      className="w-full flex items-center justify-between px-3 py-2 text-gray-800 hover:text-purple-600 hover:bg-gray-50 rounded-lg transition-colors"
-                      aria-expanded={openMobileCategory === "legales"}
-                    >
-                      <span className="flex items-center space-x-3">
-                        <FileText className="h-5 w-5" />
-                        <span className="text-sm font-medium">
-                          Consultas legales
-                        </span>
-                      </span>
-                      <ChevronDown
-                        className={`h-4 w-4 transition-transform ${
-                          openMobileCategory === "legales"
-                            ? "rotate-180"
-                            : "rotate-0"
-                        }`}
-                      />
-                    </button>
-                    {openMobileCategory === "legales" && (
-                      <div className="pl-9 pr-3 pb-2 space-y-1">
-                        <Link
-                          href="/consultas-legales/divorcio"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Divorcio
-                        </Link>
-                        <Link
-                          href="/consultas-legales/compraventa-inmuebles"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Compraventa de inmuebles
-                        </Link>
-                        <Link
-                          href="/consultas-legales/herencias"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Herencias
-                        </Link>
-                        <Link
-                          href="/consultas-legales/nie-comunitarios"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Tramitación de NIE para comunitarios
-                        </Link>
-                        <Link
-                          href="/consultas-legales/custodia"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Custodia
-                        </Link>
-                        <Link
-                          href="/consultas-legales/reclamacion-pensiones"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Reclamación de pensiones
-                        </Link>
-                        <Link
-                          href="/consultas-legales/matrimonio-y-filiaciones"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Matrimonio y filiaciones
-                        </Link>
-                        <Link
-                          href="/consultas-legales/contrato-de-alquiler"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Contrato de alquiler
-                        </Link>
-                        <Link
-                          href="/consultas-legales/desahucios"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Desahucios
-                        </Link>
-                        <Link
-                          href="/consultas-legales/estafas-inmobiliarias"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Estafas inmobiliarias
-                        </Link>
-                        <Link
-                          href="/consultas-legales/comunidades-de-propietarios"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Comunidades de propietarios
-                        </Link>
-                        <Link
-                          href="/consultas-legales/testamento-notarial"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Testamento notarial
-                        </Link>
-                        <Link
-                          href="/consultas-legales/donaciones"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Donaciones
-                        </Link>
-                        <Link
-                          href="/consultas-legales/fiscalidad-de-herencias"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Fiscalidad de herencias
-                        </Link>
-                        <Link
-                          href="/consultas-legales/reclamacion-de-herencias"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Reclamación de herencias
-                        </Link>
-                        <Link
-                          href="/consultas-legales/renuncia-de-herencias"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Renuncia de herencias
-                        </Link>
-                        <Link
-                          href="/consultas-legales/nacionalidad-espanola"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Nacionalidad española
-                        </Link>
-                        <Link
-                          href="/consultas-legales/residencia-extranjeros-no-comunitarios"
-                          onClick={closeMobileMenu}
-                          className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                        >
-                          Residencia para extranjeros no comunitarios
-                        </Link>
-                      </div>
-                    )}
-                  </div>
+                    );
+                  })
+                  )}
                 </div>
               </div>
 
@@ -1180,34 +918,85 @@ export default function Navbar() {
       {/* Categorías de servicios - Solo visible en desktop */}
       <div className="hidden lg:block bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-5 gap-4 py-4">
-            {SERVICE_CATEGORIES.map(({ key, title, href, items }) => (
-              <div key={key} className="relative group text-center pt-2">
-                <Link
-                  href={href}
-                  className="text-gray-800 hover:text-purple-600 text-sm font-medium transition-colors px-2 inline-block"
-                >
-                  {title}
-                </Link>
+          <div className="grid grid-cols-6 gap-3 py-4">
+            {loadingSpecialties ? (
+              // Skeleton mientras cargan las categorías
+              Array.from({ length: 6 }).map((_, idx) => (
                 <div
-                  className={`opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-150 absolute top-full left-1/2 -translate-x-1/2 ${
-                    key === "legales" ? "w-80" : "w-72"
-                  } bg-white/90 backdrop-blur rounded-xl shadow-lg border border-gray-200/60 ring-1 ring-black/5 z-50 text-left`}
+                  key={`skeleton-${idx}`}
+                  className="relative text-center pt-2"
                 >
-                  <div className="py-2">
-                    {items.map(({ label, href }) => (
-                      <Link
-                        key={href}
-                        href={href}
-                        className="block px-4 py-2 text-gray-800 hover:bg-gray-50 hover:text-purple-600 text-sm"
-                      >
-                        {label}
-                      </Link>
-                    ))}
-                  </div>
+                  <div className="h-5 bg-gray-200 rounded animate-pulse mx-auto w-24"></div>
                 </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              SERVICE_CATEGORIES_TO_USE.map(
+              ({ key, title, href, items, specialtyId }) => {
+                // Para mostrar items: usar specialtyId si existe (backend), sino key (hardcodeadas)
+                const displayKey = specialtyId || key;
+                const displayItems =
+                  servicesBySpecialty[displayKey] &&
+                  servicesBySpecialty[displayKey].length > 0
+                    ? servicesBySpecialty[displayKey]
+                    : items;
+
+                const isActive = activeDesktopCategory === displayKey;
+                return (
+                  <div
+                    key={key}
+                    className="relative text-center pt-2"
+                    onMouseEnter={() =>
+                      handleDesktopCategoryEnter(displayKey, specialtyId)
+                    }
+                    onMouseLeave={handleDesktopCategoryLeave}
+                  >
+                    <span className="text-gray-800 hover:text-purple-600 text-sm font-medium transition-colors px-2 inline-block cursor-default whitespace-nowrap">
+                      {title}
+                    </span>
+                    <div
+                      className={`transition-opacity duration-150 absolute top-full left-1/2 -translate-x-1/2 ${
+                        key === "legales" ? "w-80" : "w-72"
+                      } bg-white/90 backdrop-blur rounded-xl shadow-lg border border-gray-200/60 ring-1 ring-black/5 z-50 text-left mt-2 ${
+                        isActive
+                          ? "opacity-100 pointer-events-auto"
+                          : "opacity-0 pointer-events-none"
+                      }`}
+                    >
+                      <div className="py-2">
+                        {isLoadingServices(specialtyId || key) ? (
+                          <div className="px-4 py-2 text-sm text-gray-500">
+                            Cargando servicios...
+                          </div>
+                        ) : displayItems.length > 0 ? (
+                          displayItems.map((item, idx) => {
+                            const itemHref = item.href;
+                            const itemKey =
+                              (item as any).id || itemHref || `item-${idx}`;
+                            return (
+                              <Link
+                                key={itemKey}
+                                href={itemHref}
+                                onClick={() => {
+                                  setIsDesktopMenuOpen(false);
+                                }}
+                                className="block px-4 py-2 text-gray-800 hover:bg-gray-50 hover:text-purple-600 text-sm"
+                              >
+                                {item.label}
+                              </Link>
+                            );
+                          })
+                        ) : (
+                          <div className="px-4 py-2 text-sm text-gray-500">
+                            No hay servicios disponibles
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+            )
+            )}
           </div>
         </div>
       </div>
