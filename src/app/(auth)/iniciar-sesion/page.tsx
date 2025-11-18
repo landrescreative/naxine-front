@@ -227,7 +227,7 @@ function LoginForm() {
             <div className="text-center">
               <span className="text-gray-700">¿No tienes una cuenta? </span>
               <Link
-                href="/register"
+                href="/registro"
                 className="text-primary hover:text-primary/80 font-medium"
               >
                 Regístrate

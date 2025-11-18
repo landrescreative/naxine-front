@@ -24,18 +24,61 @@ const mapBackendResponseToAuthUser = (backendData: any): AuthUser => {
     "administracion": "admin",
   };
 
-  logger.debug("Backend data recibido", { token: !!backendData.token, usuario: !!backendData.usuario }, "mapBackendResponseToAuthUser");
+  // Buscar el token en múltiples ubicaciones posibles
+  // El backend puede devolver el token en diferentes estructuras:
+  // 1. backendData.token (directo)
+  // 2. backendData.data.token (anidado en data)
+  // 3. backendData.data?.data?.token (doble anidado)
+  const token = 
+    backendData.token || 
+    backendData.data?.token || 
+    backendData.data?.data?.token || 
+    "";
+
+  // Buscar el usuario en múltiples ubicaciones posibles
+  const usuario = 
+    backendData.usuario || 
+    backendData.user || 
+    backendData.data?.usuario || 
+    backendData.data?.user || 
+    backendData.data?.data?.usuario || 
+    backendData.data?.data?.user || 
+    null;
+
+  logger.debug("Backend data recibido", { 
+    hasToken: !!token,
+    tokenLocation: token ? (
+      backendData.token ? "direct" : 
+      backendData.data?.token ? "data.token" : 
+      "data.data.token"
+    ) : "none",
+    hasUsuario: !!usuario,
+    usuarioLocation: usuario ? (
+      backendData.usuario ? "direct" : 
+      backendData.user ? "user" : 
+      backendData.data?.usuario ? "data.usuario" : 
+      "data.data.usuario"
+    ) : "none",
+    backendDataKeys: Object.keys(backendData || {}),
+    dataKeys: backendData?.data ? Object.keys(backendData.data) : []
+  }, "mapBackendResponseToAuthUser");
 
   const mapped = {
-    id: String(backendData.usuario?.id_usuario || backendData.user?.id || ""),
-    email: backendData.usuario?.email || backendData.user?.email || "",
-    name: backendData.usuario?.nombre || backendData.user?.name || "",
-    role: roleMap[backendData.usuario?.rol || backendData.user?.role || ""] || "client",
-    token: backendData.token || "",
-    refreshToken: backendData.refreshToken,
+    id: String(usuario?.id_usuario || usuario?.id || ""),
+    email: usuario?.email || "",
+    name: usuario?.nombre || usuario?.name || "",
+    role: roleMap[usuario?.rol || usuario?.role || ""] || "client",
+    token: token,
+    refreshToken: backendData.refreshToken || backendData.data?.refreshToken || backendData.data?.data?.refreshToken,
   };
 
-  logger.debug("Resultado mapeado", { id: mapped.id, email: mapped.email, role: mapped.role }, "mapBackendResponseToAuthUser");
+  logger.debug("Resultado mapeado", { 
+    id: mapped.id, 
+    email: mapped.email, 
+    role: mapped.role,
+    hasToken: !!mapped.token,
+    tokenLength: mapped.token?.length || 0
+  }, "mapBackendResponseToAuthUser");
 
   return mapped;
 };
@@ -217,9 +260,15 @@ export const useAuth = () => {
         // El backend devuelve { success: true, message: '...', data: { usuario: {...}, token: "..." } }
         const actualData = response.data;
         
-        logger.debug("Login exitoso", { 
-          hasToken: !!actualData.token, 
-          hasUsuario: !!(actualData as any).usuario 
+        // Log detallado de la estructura de respuesta
+        logger.debug("Login exitoso - Estructura de respuesta", { 
+          responseKeys: Object.keys(response),
+          dataKeys: actualData ? Object.keys(actualData) : [],
+          hasToken: !!(actualData as any).token,
+          hasDataToken: !!(actualData as any).data?.token,
+          hasUsuario: !!(actualData as any).usuario,
+          hasDataUsuario: !!(actualData as any).data?.usuario,
+          actualDataStructure: JSON.stringify(actualData, null, 2).substring(0, 500) // Primeros 500 caracteres
         }, "useAuth");
         
         // Verificar si es un profesional no verificado o pendiente de aprobación
