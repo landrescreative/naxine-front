@@ -24,11 +24,12 @@ export default function ServicesSection({
   const gridRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [startX, setStartX] = useState(0);
-  const [scrollStart, setScrollStart] = useState(0);
+  const startXRef = useRef(0);
+  const scrollStartRef = useRef(0);
   const velocityRef = useRef(0);
   const lastXRef = useRef(0);
   const rafRef = useRef<number | null>(null);
+  const activePointerRef = useRef<number | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [colWidth, setColWidth] = useState(0);
   const [gapX, setGapX] = useState(24); // default ~ gap-6
@@ -62,11 +63,13 @@ export default function ServicesSection({
     return () => window.removeEventListener("resize", measure);
   }, [items.length]);
 
-  const handleMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!scrollRef.current) return;
+    activePointerRef.current = event.pointerId;
+    event.currentTarget.setPointerCapture(event.pointerId);
     setIsDragging(true);
-    setStartX(event.clientX);
-    setScrollStart(scrollRef.current.scrollLeft);
+    startXRef.current = event.clientX;
+    scrollStartRef.current = scrollRef.current.scrollLeft;
     lastXRef.current = event.clientX;
     velocityRef.current = 0;
     if (rafRef.current) {
@@ -75,10 +78,17 @@ export default function ServicesSection({
     }
   };
 
-  const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (!isDragging || !scrollRef.current) return;
-    const deltaX = event.clientX - startX;
-    scrollRef.current.scrollLeft = scrollStart - deltaX;
+  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (
+      !isDragging ||
+      !scrollRef.current ||
+      activePointerRef.current !== event.pointerId
+    ) {
+      return;
+    }
+    event.preventDefault();
+    const deltaX = event.clientX - startXRef.current;
+    scrollRef.current.scrollLeft = scrollStartRef.current - deltaX;
 
     // calcular velocidad para inercia
     const dx = event.clientX - lastXRef.current;
@@ -92,6 +102,7 @@ export default function ServicesSection({
       return;
     }
     setIsDragging(false);
+    activePointerRef.current = null;
 
     // inercia al soltar
     const friction = 0.93; // 0-1, más bajo = se detiene antes
@@ -111,6 +122,45 @@ export default function ServicesSection({
       rafRef.current = requestAnimationFrame(step);
     }
   };
+
+  const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (activePointerRef.current !== event.pointerId) return;
+    event.currentTarget.releasePointerCapture(event.pointerId);
+    endDrag();
+  };
+
+  const handlePointerLeave = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (activePointerRef.current !== event.pointerId) return;
+    event.currentTarget.releasePointerCapture(event.pointerId);
+    endDrag();
+  };
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const handleWheel = (event: WheelEvent) => {
+      if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+      event.preventDefault();
+      el.scrollTo({
+        left: el.scrollLeft + event.deltaY,
+        behavior: "auto",
+      });
+    };
+
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    return () => {
+      el.removeEventListener("wheel", handleWheel);
+    };
+  }, [items.length]);
 
   const handleScroll = () => {
     if (!scrollRef.current || colWidth === 0) return;
@@ -144,10 +194,11 @@ export default function ServicesSection({
           className={`overflow-x-auto overscroll-x-contain hide-scrollbar snap-x snap-mandatory scroll-smooth ${
             isDragging ? "cursor-grabbing select-none" : "cursor-grab"
           }`}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={endDrag}
-          onMouseLeave={endDrag}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerLeave={handlePointerLeave}
+          onPointerCancel={handlePointerLeave}
           onScroll={handleScroll}
         >
           <div

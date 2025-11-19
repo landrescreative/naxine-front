@@ -77,14 +77,33 @@ export default async function Home() {
     return IMAGE_POOL[index % IMAGE_POOL.length];
   };
 
+  const generateSlug = (text: string) =>
+    (text || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "servicio";
+
   // Mapear a las tarjetas esperadas por ServicesSection
   const items =
-    servicios.map((s, idx) => ({
-      title: s.nombre_servicio,
-      image: getImageForService(s.nombre_servicio || "", idx),
-      // Enlace genérico por ahora; se puede ajustar a una ruta específica en el futuro
-      href: "/servicios",
-    })) || [];
+    servicios.map((s, idx) => {
+      const specialtySource =
+        (s as any).slug_especialidad ||
+        s.nombre_especialidad ||
+        (s as any).especialidad ||
+        "";
+      const specialtySlug = specialtySource ? generateSlug(specialtySource) : "";
+      const serviceSource = (s as any).slug || s.nombre_servicio || (s as any).nombre;
+      const serviceSlug = generateSlug(serviceSource || `servicio-${idx + 1}`);
+      const hrefBase = specialtySlug ? `/${specialtySlug}` : "/servicios";
+
+      return {
+        title: s.nombre_servicio,
+        image: getImageForService(s.nombre_servicio || "", idx),
+        href: `${hrefBase}/${serviceSlug}`,
+      };
+    }) || [];
 
   return (
     <div className="overflow-x-hidden">
