@@ -124,3 +124,28 @@ label {
 .page-anim {
   animation: pageFade 200ms ease;
 }
+
+/* Scrollbar styling */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary) var(--muted);
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--muted);
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--primary);
+  border-radius: 9999px;
+  border: 2px solid var(--muted);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: #3814c8;
+}

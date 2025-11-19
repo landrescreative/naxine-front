@@ -462,9 +462,6 @@ export default function Navbar() {
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.7, ease: "easeOut" }}
     >
-      {/* Barra superior gris */}
-      <div className="w-full h-1 bg-gray-800"></div>
-
       {/* Navegación principal */}
       <nav className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
