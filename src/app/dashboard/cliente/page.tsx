@@ -9,6 +9,11 @@ import UpcomingSessions from "@/components/dashboard/UpcomingSessions";
 import SessionCalendar from "@/components/dashboard/SessionCalendar";
 import LatestPayments from "@/components/dashboard/LatestPayments";
 import { lazyLoad } from "@/lib/lazy-loading";
+import {
+  UpcomingSessionsSkeleton,
+  SessionCalendarSkeleton,
+  LatestPaymentsSkeleton,
+} from "@/components/dashboard/Skeletons";
 
 // Lazy load del modal pesado - solo se carga cuando se necesita
 const AppointmentDetailModal = lazyLoad(() => import("@/components/dashboard/AppointmentDetailModal"));
@@ -525,17 +530,6 @@ export default function ClienteDashboard() {
     setSelectedAppointment(null);
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando datos...</p>
-        </div>
-      </div>
-    );
-  }
-
   if (error) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-6">
@@ -581,26 +575,36 @@ export default function ClienteDashboard() {
   }
 
   return (
-    <div className="space-y-2">
-      {/* Upcoming Sessions Section */}
-      {upcomingSessionsData.length > 0 && (
-        <UpcomingSessions 
-          sessions={upcomingSessionsData} 
-          onViewDetails={handleViewDetails}
-        />
-      )}
+    <div className="space-y-6 sm:space-y-8">
+      {loading ? (
+        <>
+          <UpcomingSessionsSkeleton />
+          <SessionCalendarSkeleton />
+          <LatestPaymentsSkeleton />
+        </>
+      ) : (
+        <>
+          {/* Upcoming Sessions Section */}
+          {upcomingSessionsData.length > 0 && (
+            <UpcomingSessions 
+              sessions={upcomingSessionsData} 
+              onViewDetails={handleViewDetails}
+            />
+          )}
 
-      {/* Session Calendar Section */}
-      {calendarAppointmentsData.length > 0 && (
-        <SessionCalendar 
-          appointments={calendarAppointmentsData}
-          onAppointmentClick={handleViewDetails}
-        />
-      )}
+          {/* Session Calendar Section */}
+          {calendarAppointmentsData.length > 0 && (
+            <SessionCalendar 
+              appointments={calendarAppointmentsData}
+              onAppointmentClick={handleViewDetails}
+            />
+          )}
 
-      {/* Latest Payments Section */}
-      {latestPayments.length > 0 && (
-        <LatestPayments payments={latestPayments} />
+          {/* Latest Payments Section */}
+          {latestPayments.length > 0 && (
+            <LatestPayments payments={latestPayments} />
+          )}
+        </>
       )}
 
       {/* Modal de detalles de la cita - Lazy loaded */}

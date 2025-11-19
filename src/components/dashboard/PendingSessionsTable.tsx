@@ -69,25 +69,25 @@ export default function PendingSessionsTable({
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-white">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
                   Profesional
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
                   Estado
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider hidden md:table-cell">
                   Fecha y Hora
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider hidden lg:table-cell">
                   Categoría
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider hidden lg:table-cell">
                   Modalidad
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider hidden xl:table-cell">
                   Producto
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
                   Acciones
                 </th>
               </tr>
@@ -95,7 +95,7 @@ export default function PendingSessionsTable({
             <tbody className="bg-white divide-y divide-gray-200">
               {sessions.map((session) => (
                 <tr key={session.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-8 w-8">
                         {session.professional.avatar ? (
@@ -106,45 +106,48 @@ export default function PendingSessionsTable({
                           />
                         ) : (
                           <div className="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center">
-                            <span className="text-sm font-medium text-purple-600">
+                            <span className="text-xs sm:text-sm font-medium text-purple-600">
                               {session.professional.name.charAt(0)}
                             </span>
                           </div>
                         )}
                       </div>
-                      <div className="ml-3">
-                        <div className="text-sm font-medium text-secondary">
+                      <div className="ml-2 sm:ml-3">
+                        <div className="text-xs sm:text-sm font-medium text-secondary">
                           {session.professional.name}
+                        </div>
+                        <div className="text-xs text-secondary md:hidden">
+                          {session.date} {session.time}
                         </div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                     <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
+                      className={`inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-medium ${getStatusColor(
                         session.status
                       )}`}
                     >
                       {getStatusText(session.status)}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-secondary">{session.date}</div>
-                    <div className="text-sm text-secondary">{session.time}</div>
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap hidden md:table-cell">
+                    <div className="text-xs sm:text-sm text-secondary">{session.date}</div>
+                    <div className="text-xs sm:text-sm text-secondary">{session.time}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-secondary">
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-secondary hidden lg:table-cell">
                     {session.category}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-secondary">
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap hidden lg:table-cell">
+                    <div className="text-xs sm:text-sm text-secondary">
                       {session.modality}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-secondary">
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-secondary hidden xl:table-cell">
                     {session.product}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex space-x-2">
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
+                    <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
                       <button
                         onClick={() => {
                           if (onViewDetails) {
@@ -153,7 +156,7 @@ export default function PendingSessionsTable({
                             router.push(`${basePath}/citas/${session.id}`);
                           }
                         }}
-                        className="bg-primary hover:bg-primary/90 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors"
+                        className="bg-primary hover:bg-primary/90 text-white text-xs sm:text-sm font-medium py-1.5 sm:py-2 px-3 sm:px-4 rounded-lg transition-colors"
                       >
                         Ver detalles
                       </button>
@@ -163,7 +166,7 @@ export default function PendingSessionsTable({
                             `${basePath}/pagos/reagendar?sessionId=${session.id}&professionalName=${session.professional.name}&currentDate=${session.date}&currentTime=${session.time}`
                           )
                         }
-                        className="bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors"
+                        className="bg-purple-600 hover:bg-purple-700 text-white text-xs sm:text-sm font-medium py-1.5 sm:py-2 px-3 sm:px-4 rounded-lg transition-colors"
                       >
                         Reagendar
                       </button>

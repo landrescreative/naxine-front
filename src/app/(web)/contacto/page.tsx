@@ -96,6 +96,8 @@ export default function ContactPage() {
     }
   };
 
+  const statusMessageId = "contact-form-status";
+
   return (
     <div className="min-h-screen bg-white flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
@@ -125,7 +127,12 @@ export default function ContactPage() {
         {/* Contact Form */}
         <div className="w-full max-w-md">
           {submitStatus === "success" && (
-            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div
+              className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg"
+              role="status"
+              aria-live="polite"
+              id={statusMessageId}
+            >
               <p className="text-green-800 text-sm text-center">
                 ¡Mensaje enviado correctamente! Te responderemos pronto.
               </p>
@@ -133,14 +140,30 @@ export default function ContactPage() {
           )}
 
           {submitStatus === "error" && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div
+              className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg"
+              role="alert"
+              aria-live="assertive"
+              id={statusMessageId}
+            >
               <p className="text-red-800 text-sm text-center">
                 {errorMessage || "Hubo un error al enviar el mensaje. Por favor, inténtalo de nuevo."}
               </p>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          {submitStatus === "idle" && (
+            <div id={statusMessageId} aria-live="polite" className="sr-only">
+              Estado del formulario sin cambios.
+            </div>
+          )}
+
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-6"
+            aria-describedby={submitStatus !== "idle" ? statusMessageId : undefined}
+            aria-busy={isSubmitting}
+          >
             <div>
               <label
                 htmlFor="name"

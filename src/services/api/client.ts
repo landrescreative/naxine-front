@@ -302,11 +302,16 @@ class ApiClient {
 
       const data = await response.json();
       
-      // Log para debugging
+      // Log para debugging con más detalle
       logger.debug("Respuesta exitosa", {
         url,
         dataType: typeof data,
         isArray: Array.isArray(data),
+        dataKeys: data && typeof data === 'object' ? Object.keys(data) : [],
+        hasData: !!(data?.data),
+        dataDataKeys: data?.data && typeof data.data === 'object' ? Object.keys(data.data) : [],
+        // Solo loguear una muestra pequeña para no saturar los logs
+        dataSample: data && typeof data === 'object' ? JSON.stringify(data).substring(0, 200) : data
       }, "ApiClient");
       
       return {
@@ -340,22 +345,25 @@ class ApiClient {
         if (userData) {
           try {
             const user = JSON.parse(userData);
-            const token = user.token || null;
+            const token = user?.token || null;
             
             if (token) {
               logger.debug("Token obtenido", { 
                 hasToken: true,
-                userId: user.id,
-                email: user.email,
+                userId: user?.id,
+                email: user?.email,
                 tokenLength: token.length
               }, "ApiClient");
             } else {
-              logger.warn("Token no encontrado en user data", { 
-                hasUserData: true,
-                userId: user.id,
-                email: user.email,
-                userKeys: Object.keys(user)
-              }, "ApiClient");
+              // Solo loguear warning si realmente hay datos de usuario pero sin token
+              if (user && typeof user === 'object') {
+                logger.warn("Token no encontrado en user data", { 
+                  hasUserData: true,
+                  userId: user?.id,
+                  email: user?.email,
+                  userKeys: user ? Object.keys(user) : []
+                }, "ApiClient");
+              }
             }
             
             return token;

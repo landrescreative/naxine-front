@@ -131,6 +131,9 @@ export default function ForgotPasswordPage() {
     setError("");
   };
 
+  const statusMessageId = "forgot-password-status";
+  const instructionId = `forgot-password-${step}-instructions`;
+
   // Vista de éxito después de verificar
   if (isVerified) {
     return (
@@ -155,7 +158,7 @@ export default function ForgotPasswordPage() {
             <h1 className="text-3xl font-bold text-gray-800 mb-4">
               ¡Contraseña restablecida!
             </h1>
-            <p className="text-gray-600 mb-8">
+            <p className="text-gray-600 mb-8" role="status" aria-live="polite">
               Tu contraseña ha sido restablecida exitosamente. Redirigiendo al inicio de sesión...
             </p>
           </div>
@@ -215,7 +218,7 @@ export default function ForgotPasswordPage() {
                 ? "Verificar código"
                 : "Nueva contraseña"}
             </h1>
-            <p className="text-gray-600">
+            <p className="text-gray-600" id={instructionId}>
               {step === "email"
                 ? "No te preocupes, pasa todo el tiempo. Coloca tu correo electrónico para recibir un código de verificación."
                 : step === "code"
@@ -226,14 +229,29 @@ export default function ForgotPasswordPage() {
 
           {/* Error Message */}
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+            <div
+              className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6"
+              role="alert"
+              aria-live="assertive"
+              id={statusMessageId}
+            >
               {error}
             </div>
+          )}
+          {!error && (
+            <p id={statusMessageId} className="sr-only" aria-live="polite">
+              Completa los campos para continuar con el restablecimiento de contraseña.
+            </p>
           )}
 
           {/* Email Step */}
           {step === "email" && (
-            <form onSubmit={handleEmailSubmit} className="space-y-6">
+            <form
+              onSubmit={handleEmailSubmit}
+              className="space-y-6"
+              aria-describedby={`${instructionId} ${statusMessageId}`}
+              aria-busy={loading}
+            >
               {/* Email Field */}
               <div>
                 <label
@@ -252,6 +270,8 @@ export default function ForgotPasswordPage() {
                   }`}
                   placeholder="Ingresa tu email"
                   required
+                  aria-invalid={Boolean(error)}
+                  aria-describedby={`${instructionId} ${statusMessageId}`}
                 />
               </div>
 
@@ -268,7 +288,12 @@ export default function ForgotPasswordPage() {
 
           {/* Code Step */}
           {step === "code" && (
-            <form onSubmit={handleCodeSubmit} className="space-y-6">
+            <form
+              onSubmit={handleCodeSubmit}
+              className="space-y-6"
+              aria-describedby={`${instructionId} ${statusMessageId}`}
+              aria-busy={loading}
+            >
               {/* Code Input Field */}
               <div>
                 <label
@@ -288,11 +313,15 @@ export default function ForgotPasswordPage() {
                     }`}
                     placeholder="Ingresa el código de verificación"
                     required
+                    aria-invalid={Boolean(error)}
+                    aria-describedby={`${instructionId} ${statusMessageId}`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowCode(!showCode)}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    aria-label={showCode ? "Ocultar código" : "Mostrar código"}
+                    aria-pressed={showCode}
                   >
                     {showCode ? (
                       <svg
@@ -355,7 +384,12 @@ export default function ForgotPasswordPage() {
 
           {/* Password Step */}
           {step === "password" && (
-            <form onSubmit={handlePasswordSubmit} className="space-y-6">
+            <form
+              onSubmit={handlePasswordSubmit}
+              className="space-y-6"
+              aria-describedby={`${instructionId} ${statusMessageId}`}
+              aria-busy={loading}
+            >
               {/* New Password Field */}
               <div>
                 <label
@@ -376,11 +410,15 @@ export default function ForgotPasswordPage() {
                     placeholder="Ingresa tu nueva contraseña (mín. 6 caracteres)"
                     required
                     minLength={6}
+                    aria-invalid={Boolean(error)}
+                    aria-describedby={`${instructionId} ${statusMessageId}`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    aria-pressed={showPassword}
                   >
                     {showPassword ? (
                       <svg
@@ -441,11 +479,19 @@ export default function ForgotPasswordPage() {
                     placeholder="Confirma tu nueva contraseña"
                     required
                     minLength={6}
+                    aria-invalid={Boolean(error)}
+                    aria-describedby={`${instructionId} ${statusMessageId}`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    aria-label={
+                      showConfirmPassword
+                        ? "Ocultar confirmación de contraseña"
+                        : "Mostrar confirmación de contraseña"
+                    }
+                    aria-pressed={showConfirmPassword}
                   >
                     {showConfirmPassword ? (
                       <svg

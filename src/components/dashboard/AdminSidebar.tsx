@@ -11,7 +11,6 @@ import {
   ShoppingCart,
   Shield,
   Settings,
-  MoreVertical,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -43,10 +42,12 @@ export default function AdminSidebar({
   };
 
   return (
-    <div
+    <nav
       className={`${
         isCollapsed ? "w-16" : "w-64"
       } h-screen bg-white border-r border-gray-200 flex flex-col transition-all duration-300`}
+      aria-label="Menú principal del administrador"
+      id="admin-sidebar"
     >
       {/* Logo Section */}
       <div
@@ -93,6 +94,8 @@ export default function AdminSidebar({
         className={`flex-1 ${
           isCollapsed ? "px-2 py-4" : "px-4 py-6"
         } space-y-2`}
+        role="navigation"
+        aria-label="Secciones del dashboard"
       >
         {/* Usuarios Section */}
         <div>
@@ -106,6 +109,8 @@ export default function AdminSidebar({
                 : "text-gray-700 hover:bg-gray-50"
             }`}
             title={isCollapsed ? "Usuarios" : undefined}
+            aria-expanded={!isCollapsed ? isUsersExpanded : undefined}
+            aria-controls={!isCollapsed ? "admin-users-submenu" : undefined}
           >
             <div
               className={`flex items-center ${isCollapsed ? "" : "space-x-3"}`}
@@ -124,7 +129,12 @@ export default function AdminSidebar({
 
           {/* Submenu */}
           {isUsersExpanded && !isCollapsed && (
-            <div className="ml-8 mt-2 space-y-1">
+            <div
+              className="ml-8 mt-2 space-y-1"
+              id="admin-users-submenu"
+              role="group"
+              aria-label="Gestión de usuarios"
+            >
               <button
                 onClick={() => onItemClick("clientes")}
                 className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
@@ -132,6 +142,7 @@ export default function AdminSidebar({
                     ? "text-primary font-medium"
                     : "text-gray-600 hover:text-gray-800"
                 }`}
+                aria-current={activeItem === "clientes" ? "page" : undefined}
               >
                 Clientes
               </button>
@@ -142,6 +153,7 @@ export default function AdminSidebar({
                     ? "text-primary font-medium"
                     : "text-gray-600 hover:text-gray-800"
                 }`}
+                aria-current={activeItem === "profesionales" ? "page" : undefined}
               >
                 Profesionales
               </button>
@@ -160,6 +172,7 @@ export default function AdminSidebar({
               : "text-gray-700 hover:bg-gray-50"
           }`}
           title={isCollapsed ? "Lista de Sesiones" : undefined}
+          aria-current={activeItem === "sesiones" ? "page" : undefined}
         >
           <FileText className={`${isCollapsed ? "w-6 h-6" : "w-5 h-5"}`} />
           {!isCollapsed && (
@@ -178,6 +191,7 @@ export default function AdminSidebar({
               : "text-gray-700 hover:bg-gray-50"
           }`}
           title={isCollapsed ? "Valoraciones" : undefined}
+          aria-current={activeItem === "valoraciones" ? "page" : undefined}
         >
           <Star className={`${isCollapsed ? "w-6 h-6" : "w-5 h-5"}`} />
           {!isCollapsed && <span className="font-medium">Valoraciones</span>}
@@ -194,6 +208,7 @@ export default function AdminSidebar({
               : "text-gray-700 hover:bg-gray-50"
           }`}
           title={isCollapsed ? "Pagos" : undefined}
+          aria-current={activeItem === "pagos" ? "page" : undefined}
         >
           <ShoppingCart className={`${isCollapsed ? "w-6 h-6" : "w-5 h-5"}`} />
           {!isCollapsed && <span className="font-medium">Pagos</span>}
@@ -210,6 +225,7 @@ export default function AdminSidebar({
               : "text-gray-700 hover:bg-gray-50"
           }`}
           title={isCollapsed ? "Soporte" : undefined}
+          aria-current={activeItem === "soporte" ? "page" : undefined}
         >
           <Shield className={`${isCollapsed ? "w-6 h-6" : "w-5 h-5"}`} />
           {!isCollapsed && <span className="font-medium">Soporte</span>}
@@ -226,60 +242,12 @@ export default function AdminSidebar({
               : "text-gray-700 hover:bg-gray-50"
           }`}
           title={isCollapsed ? "Ajustes" : undefined}
+          aria-current={activeItem === "ajustes" ? "page" : undefined}
         >
           <Settings className={`${isCollapsed ? "w-6 h-6" : "w-5 h-5"}`} />
           {!isCollapsed && <span className="font-medium">Ajustes</span>}
         </button>
       </div>
-
-      {/* User Profile Section */}
-      <div
-        className={`${isCollapsed ? "p-2" : "p-4"} border-t border-gray-100`}
-      >
-        <div
-          className={`bg-primary rounded-lg ${
-            isCollapsed ? "p-3" : "p-4"
-          } flex items-center ${isCollapsed ? "justify-center" : "space-x-3"}`}
-        >
-          {/* Avatar */}
-          <div
-            className={`${
-              isCollapsed ? "w-12 h-12" : "w-10 h-10"
-            } bg-white rounded-full flex items-center justify-center`}
-          >
-            <div
-              className={`${
-                isCollapsed ? "w-10 h-10" : "w-8 h-8"
-              } bg-gradient-to-br from-pink-400 to-purple-500 rounded-full flex items-center justify-center`}
-            >
-              <span
-                className={`text-white ${
-                  isCollapsed ? "text-base" : "text-sm"
-                } font-medium`}
-              >
-                AC
-              </span>
-            </div>
-          </div>
-
-          {/* User Info */}
-          {!isCollapsed && (
-            <div className="flex-1 text-primary-foreground">
-              <div className="font-medium text-sm">Anita Cruz</div>
-              <div className="text-xs text-primary-foreground/80">
-                anita@commerce.com
-              </div>
-            </div>
-          )}
-
-          {/* More Options */}
-          {!isCollapsed && (
-            <button className="text-primary-foreground hover:opacity-90 transition-colors">
-              <MoreVertical className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
+    </nav>
   );
 }

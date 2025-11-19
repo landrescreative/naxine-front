@@ -29,7 +29,7 @@ export default function PurpleSection({
   return (
     <section className="relative w-full overflow-hidden bg-black  px-4 sm:px-6 md:px-10 lg:px-16 py-10">
       {/* Video Background */}
-      <div className="absolute inset-0">
+      <div className="absolute inset-0" aria-hidden="true">
         <video
           className="w-full h-full object-cover"
           autoPlay
@@ -37,6 +37,8 @@ export default function PurpleSection({
           loop
           playsInline
           poster={fallbackPoster}
+          tabIndex={-1}
+          role="presentation"
         >
           <source src={videoSrc} type="video/mp4" />
         </video>

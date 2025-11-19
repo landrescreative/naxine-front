@@ -7,11 +7,13 @@ import { logger } from "@/lib/logger";
 interface ProfessionalSidebarProps {
   activeItem?: string;
   onItemClick?: (item: string) => void;
+  id?: string;
 }
 
 export default function ProfessionalSidebar({
   activeItem = "inicio",
   onItemClick,
+  id,
 }: ProfessionalSidebarProps) {
   const { user, logout } = useAuth();
   const router = useRouter();
@@ -102,14 +104,48 @@ export default function ProfessionalSidebar({
   ];
 
   return (
-    <div className="w-64 bg-white shadow-lg flex flex-col h-full">
-      {/* User Profile Section */}
-      <div className="p-6 border-b border-gray-200">
+    <nav
+      id={id}
+      className="w-64 md:w-72 lg:w-64 bg-white shadow-lg flex flex-col h-full overflow-y-auto"
+      aria-label="Menú principal del profesional"
+    >
+      {/* Mobile Header with Close Button - Compact in Landscape */}
+      <div className="lg:hidden flex items-center justify-between p-2 md:p-3 lg:p-4 border-b border-gray-200 bg-white sticky top-0 z-10">
+        <h2 className="text-base md:text-lg font-semibold text-blue-900">
+          Menú
+        </h2>
+        <button
+          onClick={() => {
+            // Close will be handled by parent via overlay click
+            const event = new CustomEvent("closeMobileMenu");
+            window.dispatchEvent(event);
+          }}
+          className="p-1.5 md:p-2 rounded-md text-gray-600 hover:bg-gray-100 transition-colors"
+          aria-label="Cerrar menú"
+        >
+          <svg
+            className="w-5 h-5 md:w-6 md:h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
+      </div>
+
+      {/* User Profile Section - Very Compact in Landscape */}
+      <div className="p-2 md:p-3 lg:p-6 border-b border-gray-200">
         <div className="flex flex-col items-center">
-          {/* Avatar */}
-          <div className="w-16 h-16 bg-gray-200 rounded-full mb-4 flex items-center justify-center">
+          {/* Avatar - Smaller in Landscape */}
+          <div className="w-10 h-10 md:w-12 md:h-12 lg:w-16 lg:h-16 bg-gray-200 rounded-full mb-2 md:mb-3 lg:mb-4 flex items-center justify-center flex-shrink-0">
             <svg
-              className="w-8 h-8 text-gray-400"
+              className="w-5 h-5 md:w-6 md:h-6 lg:w-8 lg:h-8 text-gray-400"
               fill="currentColor"
               viewBox="0 0 20 20"
             >
@@ -121,49 +157,68 @@ export default function ProfessionalSidebar({
             </svg>
           </div>
 
-          {/* Name */}
-          <h2 className="text-lg font-semibold text-blue-900 mb-1">
+          {/* Name - Compact in Landscape */}
+          <h2 className="text-sm md:text-base lg:text-lg font-semibold text-blue-900 mb-0.5 md:mb-1 text-center truncate w-full px-2">
             {user?.name || "Juan Pérez"}
           </h2>
 
-          {/* Role */}
-          <p className="text-sm text-primary font-medium">Profesional</p>
+          {/* Role - Hidden in very small landscape */}
+          <p className="text-[10px] md:text-xs lg:text-sm text-primary font-medium hidden md:block">
+            Profesional
+          </p>
         </div>
       </div>
 
-      {/* Navigation Section */}
-      <div className="flex-1 px-4 py-6">
-        <h3 className="text-sm font-semibold text-blue-900 mb-4">Labels</h3>
+      {/* Navigation Section - Optimized for Landscape */}
+      <div className="flex-1 px-2 md:px-3 lg:px-4 py-2 md:py-3 lg:py-6 overflow-y-auto min-h-0">
+        <h3
+          className="text-[10px] md:text-xs lg:text-sm font-semibold text-blue-900 mb-2 md:mb-3 lg:mb-4 px-1 md:px-2 lg:px-0"
+          id="professional-navigation-heading"
+        >
+          Navegación
+        </h3>
 
-        <nav className="space-y-2">
+        <div
+          className="space-y-1 md:space-y-1.5 lg:space-y-2"
+          role="group"
+          aria-labelledby="professional-navigation-heading"
+        >
           {navigationItems.map((item) => (
             <button
               key={item.id}
               onClick={() => handleItemClick(item.id)}
-              className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors relative ${
+              className={`w-full flex items-center space-x-2 md:space-x-3 px-2 md:px-3 py-2 md:py-2.5 lg:py-3 rounded-lg transition-colors relative touch-manipulation ${
                 activeItem === item.id
                   ? "bg-purple-50 text-purple-700"
-                  : "text-blue-900 hover:bg-gray-50"
+                  : "text-blue-900 hover:bg-gray-50 active:bg-gray-100"
               }`}
+              aria-current={activeItem === item.id ? "page" : undefined}
+              aria-label={item.label}
             >
               <div
-                className={`${
+                className={`flex-shrink-0 ${
                   activeItem === item.id ? "text-primary" : "text-gray-400"
                 }`}
               >
                 {item.icon}
               </div>
-              <span className="font-medium">{item.label}</span>
+              <span className="font-medium text-xs md:text-sm lg:text-base truncate">
+                {item.label}
+              </span>
+              {activeItem === item.id && (
+                <div className="absolute right-2 md:right-3 w-1.5 h-1.5 bg-primary rounded-full" />
+              )}
             </button>
           ))}
-        </nav>
+        </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="p-4 space-y-3">
+      {/* Action Buttons - Compact in Landscape */}
+      <div className="p-2 md:p-3 lg:p-4 space-y-1.5 md:space-y-2 lg:space-y-3 border-t border-gray-200 bg-gray-50 lg:bg-white flex-shrink-0">
         <button
           onClick={() => handleItemClick("soporte")}
-          className="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+          className="w-full bg-primary hover:bg-primary/90 active:bg-primary/80 text-white font-medium py-2 md:py-2.5 lg:py-3 px-3 md:px-4 rounded-lg transition-colors touch-manipulation text-xs md:text-sm lg:text-base"
+          aria-label="Abrir soporte"
         >
           Soporte
         </button>
@@ -176,16 +231,21 @@ export default function ProfessionalSidebar({
               // Redirigir al login después del logout
               router.push("/iniciar-sesion");
             } catch (error) {
-              logger.error("Error durante el logout", error, "ProfessionalSidebar");
+              logger.error(
+                "Error durante el logout",
+                error,
+                "ProfessionalSidebar"
+              );
               // Aún así, redirigir al login si hay error
               router.push("/iniciar-sesion");
             }
           }}
-          className="w-full bg-primary/40 hover:bg-primary/50 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+          className="w-full bg-primary/40 hover:bg-primary/50 active:bg-primary/60 text-white font-medium py-2 md:py-2.5 lg:py-3 px-3 md:px-4 rounded-lg transition-colors touch-manipulation text-xs md:text-sm lg:text-base"
+          aria-label="Cerrar sesión"
         >
           Cerrar Sesión
         </button>
       </div>
-    </div>
+    </nav>
   );
 }

@@ -37,10 +37,15 @@ export default function AccesibilitySection() {
               controls
               preload="metadata"
               playsInline
+              aria-describedby="accessibility-video-description"
+              aria-label="Video sobre opciones de accesibilidad en Naxine"
             >
               <source src="/naxine-accesibilidad.mp4" type="video/mp4" />
               Tu navegador no soporta la reproducción de video.
             </video>
+            <p id="accessibility-video-description" className="sr-only">
+              Video que muestra las funciones de accesibilidad disponibles en la plataforma Naxine.
+            </p>
           </div>
         </motion.div>
       </div>

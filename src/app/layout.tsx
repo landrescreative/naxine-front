@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Atkinson_Hyperlegible, Nunito } from "next/font/google";
 import "./globals.css";
 import ConditionalLayout from "@/components/layout/ConditionalLayout";
@@ -85,6 +86,11 @@ export default function RootLayout({
         className={`${atkinsonHyperlegible.variable} ${nunito.variable} antialiased`}
       >
         <ConditionalLayout>{children}</ConditionalLayout>
+        <Script
+          src="https://cdn.userway.org/widget.js"
+          data-account="AAYHnoKLAL"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );

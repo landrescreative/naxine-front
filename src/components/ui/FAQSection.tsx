@@ -97,12 +97,18 @@ const FAQSection: React.FC = () => {
     isOpen: boolean;
     onToggle: (id: number) => void;
   }) => {
+    const questionId = `faq-question-${item.id}`;
+    const panelId = `faq-panel-${item.id}`;
+
     return (
       <div className="border border-primary rounded-lg bg-white shadow-sm hover:shadow-md hover:border-primary transition-all duration-300 ease-in-out">
         <button
           type="button"
           onClick={() => onToggle(item.id)}
           className="w-full px-6 py-4 text-left flex justify-between items-center focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50 rounded-lg hover:bg-primary/5 transition-colors duration-200 ease-in-out"
+          aria-expanded={isOpen}
+          aria-controls={panelId}
+          id={questionId}
         >
           <span
             className="text-gray-900 !font-bold text-lg pr-4"
@@ -125,6 +131,9 @@ const FAQSection: React.FC = () => {
           className={`overflow-hidden transition-all duration-300 ease-in-out ${
             isOpen ? "max-h-screen opacity-100" : "max-h-0 opacity-0"
           }`}
+          id={panelId}
+          role="region"
+          aria-labelledby={questionId}
         >
           <div className="px-6 pb-4">
             <div className="border-t border-primary/20 pt-4">

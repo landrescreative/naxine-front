@@ -418,8 +418,33 @@ export default function AdminProfesionalesPage() {
           response.success
         );
         console.log("[AdminProfesionalesPage] response.data:", response.data);
+        console.log("[AdminProfesionalesPage] response.data (JSON):", JSON.stringify(response.data, null, 2));
 
         if (response.success && response.data) {
+          console.log(
+            "[AdminProfesionalesPage] Keys de response.data:",
+            Object.keys(response.data)
+          );
+          if (response.data.data) {
+            console.log(
+              "[AdminProfesionalesPage] Keys de response.data.data:",
+              Object.keys(response.data.data)
+            );
+            console.log(
+              "[AdminProfesionalesPage] response.data.data.profesionales:",
+              response.data.data.profesionales
+            );
+            console.log(
+              "[AdminProfesionalesPage] response.data.data.profesionales es array?",
+              Array.isArray(response.data.data.profesionales)
+            );
+            if (Array.isArray(response.data.data.profesionales)) {
+              console.log(
+                "[AdminProfesionalesPage] Cantidad de profesionales:",
+                response.data.data.profesionales.length
+              );
+            }
+          }
           let professionalsData: any[] = [];
 
           if (Array.isArray(response.data)) {

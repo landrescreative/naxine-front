@@ -8,6 +8,11 @@ import UpcomingSessions from "@/components/dashboard/UpcomingSessions";
 import SessionCalendar from "@/components/dashboard/SessionCalendar";
 import LatestPayments from "@/components/dashboard/LatestPayments";
 import { lazyLoad } from "@/lib/lazy-loading";
+import {
+  UpcomingSessionsSkeleton,
+  SessionCalendarSkeleton,
+  LatestPaymentsSkeleton,
+} from "@/components/dashboard/Skeletons";
 
 // Lazy load del modal pesado - solo se carga cuando se necesita
 const AppointmentDetailModal = lazyLoad(() => import("@/components/dashboard/AppointmentDetailModal"));
@@ -82,10 +87,12 @@ export default function ProfesionalDashboard() {
         } else {
           console.error("[ProfesionalDashboard] Error en respuesta:", response.error);
           setError(response.error || "Error al cargar información del profesional");
+          setLoading(false);
         }
       } catch (err) {
         console.error("[ProfesionalDashboard] Error loading professional ID:", err);
         setError("Error al cargar información del profesional");
+        setLoading(false);
       }
     };
 
@@ -94,8 +101,11 @@ export default function ProfesionalDashboard() {
 
   // Cargar citas y pagos cuando tengamos el professionalId
   useEffect(() => {
-    if (!professionalId || !isAuthenticated) {
+    if (!isAuthenticated) {
       setLoading(false);
+      return;
+    }
+    if (!professionalId) {
       return;
     }
 
@@ -457,16 +467,6 @@ export default function ProfesionalDashboard() {
     setSelectedAppointment(null);
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando datos...</p>
-        </div>
-      </div>
-    );
-  }
 
   if (error) {
     return (
@@ -477,33 +477,43 @@ export default function ProfesionalDashboard() {
   }
 
   return (
-    <div className="space-y-8">
-      {upcomingSessionsData.length > 0 && (
-        <UpcomingSessions
-          sessions={upcomingSessionsData}
-          basePath="/dashboard/profesional"
-          onViewDetails={handleViewDetails}
-        />
-      )}
-      {calendarAppointmentsData.length > 0 && (
-        <SessionCalendar
-          appointments={calendarAppointmentsData}
-          basePath="/dashboard/profesional"
-          onAppointmentClick={handleViewDetails}
-        />
-      )}
-      {latestPaymentsData.length > 0 && (
-        <LatestPayments payments={latestPaymentsData} />
-      )}
-      {!loading && upcomingSessionsData.length === 0 && calendarAppointmentsData.length === 0 && latestPaymentsData.length === 0 && (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            No hay datos disponibles
-          </h3>
-          <p className="text-gray-600">
-            Aún no tienes citas o pagos registrados.
-          </p>
-        </div>
+    <div className="space-y-6 sm:space-y-8">
+      {loading ? (
+        <>
+          <UpcomingSessionsSkeleton />
+          <SessionCalendarSkeleton />
+          <LatestPaymentsSkeleton />
+        </>
+      ) : (
+        <>
+          {upcomingSessionsData.length > 0 && (
+            <UpcomingSessions
+              sessions={upcomingSessionsData}
+              basePath="/dashboard/profesional"
+              onViewDetails={handleViewDetails}
+            />
+          )}
+          {calendarAppointmentsData.length > 0 && (
+            <SessionCalendar
+              appointments={calendarAppointmentsData}
+              basePath="/dashboard/profesional"
+              onAppointmentClick={handleViewDetails}
+            />
+          )}
+          {latestPaymentsData.length > 0 && (
+            <LatestPayments payments={latestPaymentsData} />
+          )}
+          {!loading && upcomingSessionsData.length === 0 && calendarAppointmentsData.length === 0 && latestPaymentsData.length === 0 && (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                No hay datos disponibles
+              </h3>
+              <p className="text-gray-600">
+                Aún no tienes citas o pagos registrados.
+              </p>
+            </div>
+          )}
+        </>
       )}
 
       {/* Modal de detalles de la cita - Lazy loaded */}

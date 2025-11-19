@@ -91,16 +91,16 @@ export default function SoportePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="min-h-[calc(100vh-4rem)] bg-gray-50 flex items-center justify-center p-4 sm:p-6">
       <div className="w-full max-w-2xl">
         {/* Header */}
-        <h1 className="text-3xl font-bold text-black mb-8">Soporte</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-black mb-6 sm:mb-8">Soporte</h1>
 
         {/* Main Card */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 lg:p-8">
           {/* Contact Us Section */}
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-black mb-4">Contáctanos</h2>
+          <div className="mb-6 sm:mb-8">
+            <h2 className="text-xl sm:text-2xl font-bold text-black mb-3 sm:mb-4">Contáctanos</h2>
             <p className="text-gray-600 text-base leading-relaxed">
               Deja un mensaje al centro de soporte de Nexine y te contactaremos
               lo más brevemente posible.
@@ -108,12 +108,12 @@ export default function SoportePage() {
           </div>
 
           {/* User Information */}
-          <div className="flex items-center mb-8">
+          <div className="flex flex-col sm:flex-row items-center mb-6 sm:mb-8 text-center sm:text-left">
             {/* User Icon */}
             <img
               src="/PNG-03.png"
               alt="Usuario"
-              className="w-12 h-12 mr-4 flex-shrink-0"
+              className="w-12 h-12 mb-3 sm:mb-0 sm:mr-4 flex-shrink-0"
             />
 
             {/* User Info */}

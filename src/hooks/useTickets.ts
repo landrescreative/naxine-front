@@ -40,21 +40,49 @@ export const useTickets = (options: UseTicketsOptions = {}) => {
 
       const response = await ticketsService.getTickets(params);
 
+      console.log('[useTickets] Respuesta completa:', response);
+      console.log('[useTickets] response.data:', response.data);
+      console.log('[useTickets] response.data (JSON):', JSON.stringify(response.data, null, 2));
+
       if (response.success && response.data) {
         // El backend devuelve: { success: true, data: { tickets: [...], total: ... } }
-        // Y el apiClient lo envuelve en: { success: true, data: { success: true, data: {...} } }
-        // Entonces necesitamos acceder a response.data.data o response.data dependiendo del caso
-        
+        // ApiClient devuelve esto completo en response.data, así que necesitamos acceder a response.data.data
         let ticketsData: Ticket[] = [];
         let totalCount = 0;
 
-        // Acceder directamente a response.data
         const actualData = response.data;
+        let ticketsArray: any[] = [];
+        let totalValue: any = 0;
 
-        if (actualData.tickets && Array.isArray(actualData.tickets)) {
-          // Si tiene estructura { tickets: [...], total: ... }
+        // Intentar diferentes estructuras
+        if (actualData.data && actualData.data.tickets && Array.isArray(actualData.data.tickets)) {
+          // Estructura: { success: true, data: { tickets: [...], total: ... } }
+          ticketsArray = actualData.data.tickets;
+          totalValue = actualData.data.total || actualData.data.tickets.length;
+          console.log('[useTickets] Usando actualData.data.tickets, cantidad:', ticketsArray.length);
+        } else if (actualData.tickets && Array.isArray(actualData.tickets)) {
+          // Estructura: { tickets: [...], total: ... }
+          ticketsArray = actualData.tickets;
+          totalValue = actualData.total || actualData.tickets.length;
+          console.log('[useTickets] Usando actualData.tickets, cantidad:', ticketsArray.length);
+        } else if (Array.isArray(actualData)) {
+          // Estructura: array directo
+          ticketsArray = actualData;
+          totalValue = actualData.length;
+          console.log('[useTickets] Usando actualData como array, cantidad:', ticketsArray.length);
+        } else if (actualData.data && Array.isArray(actualData.data)) {
+          // Estructura: { data: [...] }
+          ticketsArray = actualData.data;
+          totalValue = actualData.data.length;
+          console.log('[useTickets] Usando actualData.data como array, cantidad:', ticketsArray.length);
+        } else {
+          console.warn('[useTickets] No se pudo encontrar el array de tickets en la respuesta');
+          console.warn('[useTickets] Estructura completa:', JSON.stringify(actualData, null, 2));
+        }
+
+        if (ticketsArray.length > 0) {
           // Mapear los tickets del formato del backend al formato del frontend
-          ticketsData = actualData.tickets.map((ticket: any) => {
+          ticketsData = ticketsArray.map((ticket: any) => {
             // El backend ahora siempre envía rol_usuario en cada ticket
             // Priorizar rol_usuario ya que es el campo que el backend envía directamente
             let userRole = ticket.rol_usuario || ticket.usuario?.rol || ticket.rol || 'cliente';
@@ -88,13 +116,9 @@ export const useTickets = (options: UseTicketsOptions = {}) => {
             };
           });
           // El total puede venir como string desde el backend
-          totalCount = typeof actualData.total === 'string' 
-            ? parseInt(actualData.total, 10) 
-            : (actualData.total || actualData.tickets.length);
-        } else {
-          console.warn("[useTickets] Formato de respuesta desconocido:", response.data);
-          ticketsData = [];
-          totalCount = 0;
+          totalCount = typeof totalValue === 'string' 
+            ? parseInt(totalValue, 10) 
+            : (totalValue || ticketsArray.length);
         }
 
         setTickets(ticketsData);

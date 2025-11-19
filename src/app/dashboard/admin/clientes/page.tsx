@@ -129,6 +129,7 @@ export default function AdminClientesPage() {
         console.log("[AdminClientesPage] Respuesta completa:", response);
         console.log("[AdminClientesPage] response.success:", response.success);
         console.log("[AdminClientesPage] response.data:", response.data);
+        console.log("[AdminClientesPage] response.data (JSON):", JSON.stringify(response.data, null, 2));
 
         if (response.success && response.data) {
           // El backend puede devolver los datos en diferentes formatos
@@ -144,16 +145,36 @@ export default function AdminClientesPage() {
             Array.isArray(response.data)
           );
           console.log(
+            "[AdminClientesPage] Keys de response.data:",
+            Object.keys(response.data)
+          );
+          console.log(
             "[AdminClientesPage] response.data.data:",
             response.data.data
           );
+          if (response.data.data) {
+            console.log(
+              "[AdminClientesPage] Keys de response.data.data:",
+              Object.keys(response.data.data)
+            );
+            console.log(
+              "[AdminClientesPage] response.data.data.clientes:",
+              response.data.data.clientes
+            );
+            console.log(
+              "[AdminClientesPage] response.data.data.clientes es array?",
+              Array.isArray(response.data.data.clientes)
+            );
+            if (Array.isArray(response.data.data.clientes)) {
+              console.log(
+                "[AdminClientesPage] Cantidad de clientes:",
+                response.data.data.clientes.length
+              );
+            }
+          }
           console.log(
             "[AdminClientesPage] response.data.clientes:",
             response.data.clientes
-          );
-          console.log(
-            "[AdminClientesPage] Keys de response.data:",
-            Object.keys(response.data)
           );
 
           // Intentar diferentes estructuras de respuesta
@@ -426,8 +447,18 @@ export default function AdminClientesPage() {
         </div>
       )}
 
+      {/* Empty State */}
+      {!loading && !error && clients.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="text-gray-500 text-center">
+            <p className="text-lg font-medium mb-2">No se encontraron clientes</p>
+            <p className="text-sm">No hay clientes registrados en el sistema.</p>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
-      {!loading && !error && (
+      {!loading && !error && clients.length > 0 && (
         <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">

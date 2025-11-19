@@ -220,6 +220,16 @@ export default function RegisterProfessionalPage() {
     }
   };
 
+  const statusMessageId = "professional-register-status";
+  const successMessageId = `${statusMessageId}-success`;
+  const describedByIds =
+    [
+      errors.submit ? statusMessageId : "",
+      successMsg ? successMessageId : "",
+    ]
+      .filter(Boolean)
+      .join(" ") || undefined;
+
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
       {/* Left Side - Registration Form */}
@@ -236,7 +246,12 @@ export default function RegisterProfessionalPage() {
           </div>
 
           {/* Registration Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-4"
+            aria-describedby={describedByIds}
+            aria-busy={loading}
+          >
             {/* Name and Last Name Row */}
             <div className="grid grid-cols-2 gap-4">
               {/* Name Field */}
@@ -259,9 +274,13 @@ export default function RegisterProfessionalPage() {
                   placeholder="Tu nombre"
                   required
                   disabled={!!successMsg}
+                aria-invalid={Boolean(errors.nombre)}
+                aria-describedby={errors.nombre ? "nombre-prof-error" : undefined}
                 />
                 {errors.nombre && (
-                  <p className="mt-1 text-sm text-red-600">{errors.nombre}</p>
+                <p id="nombre-prof-error" className="mt-1 text-sm text-red-600">
+                  {errors.nombre}
+                </p>
                 )}
               </div>
 
@@ -285,9 +304,11 @@ export default function RegisterProfessionalPage() {
                   placeholder="Tus apellidos"
                   required
                   disabled={!!successMsg}
+                aria-invalid={Boolean(errors.apellidos)}
+                aria-describedby={errors.apellidos ? "apellidos-prof-error" : undefined}
                 />
                 {errors.apellidos && (
-                  <p className="mt-1 text-sm text-red-600">
+                <p id="apellidos-prof-error" className="mt-1 text-sm text-red-600">
                     {errors.apellidos}
                   </p>
                 )}
@@ -314,9 +335,13 @@ export default function RegisterProfessionalPage() {
                 placeholder="tu@email.com"
                   required
                   disabled={!!successMsg}
+                aria-invalid={Boolean(errors.email)}
+                aria-describedby={errors.email ? "email-prof-error" : undefined}
               />
               {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+                <p id="email-prof-error" className="mt-1 text-sm text-red-600">
+                  {errors.email}
+                </p>
               )}
             </div>
 
@@ -341,11 +366,15 @@ export default function RegisterProfessionalPage() {
                   placeholder="Mínimo 6 caracteres"
                   required
                   disabled={!!successMsg}
+                aria-invalid={Boolean(errors.password)}
+                aria-describedby={errors.password ? "password-prof-error" : undefined}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                aria-pressed={showPassword}
                 >
                   {showPassword ? (
                     <svg
@@ -385,7 +414,9 @@ export default function RegisterProfessionalPage() {
                 </button>
               </div>
               {errors.password && (
-                <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+                <p id="password-prof-error" className="mt-1 text-sm text-red-600">
+                  {errors.password}
+                </p>
               )}
             </div>
 
@@ -412,11 +443,21 @@ export default function RegisterProfessionalPage() {
                   placeholder="Confirma tu contraseña"
                   required
                   disabled={!!successMsg}
+                aria-invalid={Boolean(errors.confirmPassword)}
+                aria-describedby={
+                  errors.confirmPassword ? "confirm-password-prof-error" : undefined
+                }
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                aria-label={
+                  showConfirmPassword
+                    ? "Ocultar confirmación de contraseña"
+                    : "Mostrar confirmación de contraseña"
+                }
+                aria-pressed={showConfirmPassword}
                 >
                   {showConfirmPassword ? (
                     <svg
@@ -456,7 +497,10 @@ export default function RegisterProfessionalPage() {
                 </button>
               </div>
               {errors.confirmPassword && (
-                <p className="mt-1 text-sm text-red-600">
+                <p
+                  id="confirm-password-prof-error"
+                  className="mt-1 text-sm text-red-600"
+                >
                   {errors.confirmPassword}
                 </p>
               )}
@@ -482,9 +526,13 @@ export default function RegisterProfessionalPage() {
                 placeholder="+34 600 123 456"
                   required
                   disabled={!!successMsg}
+                aria-invalid={Boolean(errors.telefono)}
+                aria-describedby={errors.telefono ? "telefono-prof-error" : undefined}
               />
               {errors.telefono && (
-                <p className="mt-1 text-sm text-red-600">{errors.telefono}</p>
+                <p id="telefono-prof-error" className="mt-1 text-sm text-red-600">
+                  {errors.telefono}
+                </p>
               )}
             </div>
 
@@ -508,9 +556,13 @@ export default function RegisterProfessionalPage() {
                 placeholder="Número de colegiado"
                   required
                   disabled={!!successMsg}
+                aria-invalid={Boolean(errors.numeroColegiado)}
+                aria-describedby={
+                  errors.numeroColegiado ? "colegiado-prof-error" : undefined
+                }
               />
               {errors.numeroColegiado && (
-                <p className="mt-1 text-sm text-red-600">
+                <p id="colegiado-prof-error" className="mt-1 text-sm text-red-600">
                   {errors.numeroColegiado}
                 </p>
               )}
@@ -536,9 +588,13 @@ export default function RegisterProfessionalPage() {
                 placeholder="Tu especialidad profesional"
                   required
                   disabled={!!successMsg}
+                aria-invalid={Boolean(errors.especialidad)}
+                aria-describedby={
+                  errors.especialidad ? "especialidad-prof-error" : undefined
+                }
               />
               {errors.especialidad && (
-                <p className="mt-1 text-sm text-red-600">
+                <p id="especialidad-prof-error" className="mt-1 text-sm text-red-600">
                   {errors.especialidad}
                 </p>
               )}
@@ -566,12 +622,22 @@ export default function RegisterProfessionalPage() {
 
             {/* Success / Error Messages */}
             {successMsg && (
-              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+              <div
+                className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg"
+                role="status"
+                aria-live="polite"
+                id={successMessageId}
+              >
                 {successMsg}
               </div>
             )}
             {!successMsg && errors.submit && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              <div
+                className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg"
+                role="alert"
+                aria-live="assertive"
+                id={statusMessageId}
+              >
                 {errors.submit}
               </div>
             )}

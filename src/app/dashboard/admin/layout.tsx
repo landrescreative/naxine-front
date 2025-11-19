@@ -119,7 +119,7 @@ export default function AdminDashboardLayout({
       <AdminSidebar activeItem={activeItem} onItemClick={handleItemClick} />
 
       {/* Main Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto" role="main">
         <div className="p-6">
           {children}
         </div>

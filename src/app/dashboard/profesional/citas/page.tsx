@@ -8,6 +8,11 @@ import UpcomingSessions from "@/components/dashboard/UpcomingSessions";
 import SessionCalendar from "@/components/dashboard/SessionCalendar";
 import PendingSessionsTable from "@/components/dashboard/PendingSessionsTable";
 import { lazyLoad } from "@/lib/lazy-loading";
+import {
+  UpcomingSessionsSkeleton,
+  SessionCalendarSkeleton,
+  PendingSessionsTableSkeleton,
+} from "@/components/dashboard/Skeletons";
 
 // Lazy load del modal pesado - solo se carga cuando se necesita
 const AppointmentDetailModal = lazyLoad(() => import("@/components/dashboard/AppointmentDetailModal"));
@@ -81,10 +86,12 @@ export default function CitasPage() {
         } else {
           console.error("[CitasPage] Error en respuesta:", response.error);
           setError(response.error || "Error al cargar información del profesional");
+          setLoading(false);
         }
       } catch (err) {
         console.error("[CitasPage] Error loading professional ID:", err);
         setError("Error al cargar información del profesional");
+        setLoading(false);
       }
     };
 
@@ -93,8 +100,11 @@ export default function CitasPage() {
 
   // Cargar citas cuando tengamos el professionalId
   useEffect(() => {
-    if (!professionalId || !isAuthenticated) {
+    if (!isAuthenticated) {
       setLoading(false);
+      return;
+    }
+    if (!professionalId) {
       return;
     }
 
@@ -433,16 +443,6 @@ export default function CitasPage() {
     });
   }, [appointments]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando citas...</p>
-        </div>
-      </div>
-    );
-  }
 
   if (error) {
     return (
@@ -453,37 +453,47 @@ export default function CitasPage() {
   }
 
   return (
-    <div className="space-y-8">
-      {upcomingSessionsData.length > 0 && (
-        <UpcomingSessions
-          sessions={upcomingSessionsData}
-          basePath="/dashboard/profesional"
-          onViewDetails={handleViewDetails}
-        />
+    <div className="space-y-6 sm:space-y-8">
+      {loading ? (
+        <>
+          <UpcomingSessionsSkeleton />
+          <SessionCalendarSkeleton />
+          <PendingSessionsTableSkeleton />
+        </>
+      ) : (
+        <>
+          {upcomingSessionsData.length > 0 && (
+            <UpcomingSessions
+              sessions={upcomingSessionsData}
+              basePath="/dashboard/profesional"
+              onViewDetails={handleViewDetails}
+            />
+          )}
+          {calendarAppointmentsData.length > 0 && (
+            <SessionCalendar
+              appointments={calendarAppointmentsData}
+              basePath="/dashboard/profesional"
+              onAppointmentClick={handleViewDetails}
+            />
+          )}
+          {pendingSessionsData.length > 0 ? (
+            <PendingSessionsTable
+              sessions={pendingSessionsData}
+              basePath="/dashboard/profesional"
+              onViewDetails={handleViewDetails}
+            />
+          ) : !error ? (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                No tienes citas programadas
+              </h3>
+              <p className="text-gray-600">
+                Cuando tengas citas programadas, aparecerán aquí.
+              </p>
+            </div>
+          ) : null}
+        </>
       )}
-      {calendarAppointmentsData.length > 0 && (
-        <SessionCalendar
-          appointments={calendarAppointmentsData}
-          basePath="/dashboard/profesional"
-          onAppointmentClick={handleViewDetails}
-        />
-      )}
-      {pendingSessionsData.length > 0 ? (
-        <PendingSessionsTable
-          sessions={pendingSessionsData}
-          basePath="/dashboard/profesional"
-          onViewDetails={handleViewDetails}
-        />
-      ) : !error ? (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            No tienes citas programadas
-          </h3>
-          <p className="text-gray-600">
-            Cuando tengas citas programadas, aparecerán aquí.
-          </p>
-        </div>
-      ) : null}
 
       {/* Appointment Detail Modal - Lazy loaded */}
       {selectedAppointment && (

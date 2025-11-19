@@ -109,24 +109,49 @@ export default function AdminPagosPage() {
         fecha_hasta: fecha_fin,
       });
 
+      console.log('[AdminPagosPage] Respuesta completa:', pagosResponse);
+      console.log('[AdminPagosPage] pagosResponse.data:', pagosResponse.data);
+      console.log('[AdminPagosPage] pagosResponse.data (JSON):', JSON.stringify(pagosResponse.data, null, 2));
+
       if (pagosResponse.success && pagosResponse.data) {
-        pagosData = pagosResponse.data.pagos || [];
-        setPagos(pagosData);
+        // El backend devuelve: { success: true, data: { pagos: [...], paginacion: {...} } }
+        // ApiClient devuelve esto completo en response.data, así que necesitamos acceder a response.data.data
+        console.log('[AdminPagosPage] Keys de pagosResponse.data:', Object.keys(pagosResponse.data));
         
-        // Debug: Log para ver qué está devolviendo el backend
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[AdminPagosPage] Respuesta completa:', pagosResponse);
-          console.log('[AdminPagosPage] pagosResponse.data:', pagosResponse.data);
-          console.log('[AdminPagosPage] pagosResponse.data.paginacion:', pagosResponse.data.paginacion);
-          console.log('[AdminPagosPage] pagosData.length:', pagosData.length);
+        let paginacionData: any = { total: 0 };
+        
+        // Intentar diferentes estructuras
+        if (pagosResponse.data.data && pagosResponse.data.data.pagos && Array.isArray(pagosResponse.data.data.pagos)) {
+          // Estructura: { success: true, data: { pagos: [...], paginacion: {...} } }
+          pagosData = pagosResponse.data.data.pagos;
+          paginacionData = pagosResponse.data.data.paginacion || { total: 0 };
+          console.log('[AdminPagosPage] Usando pagosResponse.data.data.pagos, cantidad:', pagosData.length);
+        } else if (pagosResponse.data.pagos && Array.isArray(pagosResponse.data.pagos)) {
+          // Estructura: { pagos: [...], paginacion: {...} }
+          pagosData = pagosResponse.data.pagos;
+          paginacionData = pagosResponse.data.paginacion || { total: 0 };
+          console.log('[AdminPagosPage] Usando pagosResponse.data.pagos, cantidad:', pagosData.length);
+        } else if (Array.isArray(pagosResponse.data)) {
+          // Estructura: array directo
+          pagosData = pagosResponse.data;
+          console.log('[AdminPagosPage] Usando pagosResponse.data como array, cantidad:', pagosData.length);
+        } else if (pagosResponse.data.data && Array.isArray(pagosResponse.data.data)) {
+          // Estructura: { data: [...] }
+          pagosData = pagosResponse.data.data;
+          console.log('[AdminPagosPage] Usando pagosResponse.data.data como array, cantidad:', pagosData.length);
+        } else {
+          console.warn('[AdminPagosPage] No se pudo encontrar el array de pagos en la respuesta');
+          console.warn('[AdminPagosPage] Estructura completa:', JSON.stringify(pagosResponse.data, null, 2));
         }
+        
+        setPagos(pagosData);
         
         // Obtener total de pagos de la respuesta de paginación
         let totalCalculado = 0;
         
         // Priorizar el total del backend si está disponible
-        if (pagosResponse.data.paginacion) {
-          const totalFromBackend = pagosResponse.data.paginacion.total;
+        if (paginacionData && paginacionData.total) {
+          const totalFromBackend = paginacionData.total;
           if (typeof totalFromBackend === 'number' && totalFromBackend > 0) {
             totalCalculado = totalFromBackend;
           } else if (typeof totalFromBackend === 'string') {
@@ -155,7 +180,17 @@ export default function AdminPagosPage() {
                   fecha_hasta: fecha_fin,
                 });
                 if (testResponse.success && testResponse.data) {
-                  const testPagos = testResponse.data.pagos || [];
+                  // Intentar diferentes estructuras para la respuesta de prueba
+                  let testPagos: any[] = [];
+                  if (testResponse.data.data && testResponse.data.data.pagos && Array.isArray(testResponse.data.data.pagos)) {
+                    testPagos = testResponse.data.data.pagos;
+                  } else if (testResponse.data.pagos && Array.isArray(testResponse.data.pagos)) {
+                    testPagos = testResponse.data.pagos;
+                  } else if (Array.isArray(testResponse.data)) {
+                    testPagos = testResponse.data;
+                  } else if (testResponse.data.data && Array.isArray(testResponse.data.data)) {
+                    testPagos = testResponse.data.data;
+                  }
                   // Si hay más resultados, usar el total del backend si está disponible, sino estimar
                   if (testPagos.length > 0) {
                     // Hay más resultados, pero no sabemos cuántos exactamente

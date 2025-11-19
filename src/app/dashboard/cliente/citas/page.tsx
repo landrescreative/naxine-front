@@ -9,6 +9,11 @@ import UpcomingSessions from "@/components/dashboard/UpcomingSessions";
 import SessionCalendar from "@/components/dashboard/SessionCalendar";
 import PendingSessionsTable from "@/components/dashboard/PendingSessionsTable";
 import { lazyLoad } from "@/lib/lazy-loading";
+import {
+  UpcomingSessionsSkeleton,
+  SessionCalendarSkeleton,
+  PendingSessionsTableSkeleton,
+} from "@/components/dashboard/Skeletons";
 
 // Lazy load del modal pesado - solo se carga cuando se necesita
 const AppointmentDetailModal = lazyLoad(() => import("@/components/dashboard/AppointmentDetailModal"));
@@ -919,17 +924,6 @@ export default function CitasPage() {
     });
   }, [appointments]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando citas...</p>
-        </div>
-      </div>
-    );
-  }
-
   if (error) {
     return (
       <div className="space-y-8">
@@ -1008,59 +1002,69 @@ export default function CitasPage() {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Upcoming Sessions Section */}
-      {upcomingSessionsData.length > 0 && (
-        <UpcomingSessions
-          sessions={upcomingSessionsData}
-          onViewDetails={handleViewDetails}
-        />
-      )}
-
-      {/* Session Calendar Section */}
-      {calendarAppointmentsData.length > 0 && (
-        <SessionCalendar
-          appointments={calendarAppointmentsData}
-          basePath="/dashboard/cliente"
-          onAppointmentClick={handleViewDetails}
-        />
-      )}
-
-      {/* Pending Sessions Table Section */}
-      {pendingSessionsData.length > 0 ? (
-        <PendingSessionsTable
-          sessions={pendingSessionsData}
-          onViewDetails={handleViewDetails}
-        />
-      ) : !error ? (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
-          <svg
-            className="w-16 h-16 text-gray-400 mx-auto mb-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+    <div className="space-y-6 sm:space-y-8">
+      {loading ? (
+        <>
+          <UpcomingSessionsSkeleton />
+          <SessionCalendarSkeleton />
+          <PendingSessionsTableSkeleton />
+        </>
+      ) : (
+        <>
+          {/* Upcoming Sessions Section */}
+          {upcomingSessionsData.length > 0 && (
+            <UpcomingSessions
+              sessions={upcomingSessionsData}
+              onViewDetails={handleViewDetails}
             />
-          </svg>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            No tienes citas programadas
-          </h3>
-          <p className="text-gray-600 mb-4">
-            Cuando reserves una cita, aparecerá aquí.
-          </p>
-          <Link
-            href="/servicios"
-            className="inline-block bg-primary text-white px-6 py-3 rounded-lg font-bold hover:bg-primary-dark transition-colors"
-          >
-            Explorar Servicios
-          </Link>
-        </div>
-      ) : null}
+          )}
+
+          {/* Session Calendar Section */}
+          {calendarAppointmentsData.length > 0 && (
+            <SessionCalendar
+              appointments={calendarAppointmentsData}
+              basePath="/dashboard/cliente"
+              onAppointmentClick={handleViewDetails}
+            />
+          )}
+
+          {/* Pending Sessions Table Section */}
+          {pendingSessionsData.length > 0 ? (
+            <PendingSessionsTable
+              sessions={pendingSessionsData}
+              onViewDetails={handleViewDetails}
+            />
+          ) : !error ? (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
+              <svg
+                className="w-16 h-16 text-gray-400 mx-auto mb-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
+              </svg>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                No tienes citas programadas
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Cuando reserves una cita, aparecerá aquí.
+              </p>
+              <Link
+                href="/servicios"
+                className="inline-block bg-primary text-white px-6 py-3 rounded-lg font-bold hover:bg-primary-dark transition-colors"
+              >
+                Explorar Servicios
+              </Link>
+            </div>
+          ) : null}
+        </>
+      )}
 
       {/* Appointment Detail Modal - Lazy loaded */}
       {selectedAppointment && (

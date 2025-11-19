@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion, useInView } from "framer-motion";
 import thumbnail from "@/assets/screenshot.png";
 import office from "@/assets/d000ab4e4d45c2420e8885344d33c191b167b033.png";
@@ -7,6 +7,9 @@ import office from "@/assets/d000ab4e4d45c2420e8885344d33c191b167b033.png";
 export default function GlobalCTA() {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const lastFocusedElementRef = useRef<HTMLElement | null>(null);
   const isInView = useInView(sectionRef, {
     once: true,
     margin: "-100px 0px -100px 0px",
@@ -23,6 +26,54 @@ export default function GlobalCTA() {
       setIsPopupOpen(false);
     }
   };
+
+  useEffect(() => {
+    if (!isPopupOpen) {
+      if (lastFocusedElementRef.current) {
+        lastFocusedElementRef.current.focus();
+      }
+      return;
+    }
+
+    lastFocusedElementRef.current = document.activeElement as HTMLElement;
+    closeButtonRef.current?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsPopupOpen(false);
+        return;
+      }
+
+      if (event.key === "Tab" && dialogRef.current) {
+        const focusableElements = dialogRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusableElements.length === 0) {
+          event.preventDefault();
+          return;
+        }
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (!event.shiftKey && document.activeElement === lastElement) {
+          event.preventDefault();
+          firstElement.focus();
+        } else if (event.shiftKey && document.activeElement === firstElement) {
+          event.preventDefault();
+          lastElement.focus();
+        }
+      }
+    };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isPopupOpen]);
 
   return (
     <>
@@ -91,8 +142,14 @@ export default function GlobalCTA() {
         <div
           className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4"
           onClick={handlePopupClose}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Video explicativo: Cómo funciona"
         >
-          <div className="relative w-full max-w-4xl bg-black rounded-2xl overflow-hidden">
+          <div
+            className="relative w-full max-w-4xl bg-black rounded-2xl overflow-hidden"
+            ref={dialogRef}
+          >
             {/* Close button */}
             <button
               onClick={() => {
@@ -100,6 +157,7 @@ export default function GlobalCTA() {
               }}
               className="absolute top-4 right-4 z-30 w-10 h-10 bg-black bg-opacity-70 text-white rounded-full flex items-center justify-center hover:bg-opacity-90 transition-all duration-200"
               aria-label="Cerrar video"
+              ref={closeButtonRef}
             >
               <svg
                 className="w-6 h-6"
@@ -124,10 +182,14 @@ export default function GlobalCTA() {
                 controls
                 preload="metadata"
                 playsInline
+                aria-describedby="global-cta-video-description"
               >
                 <source src="/naxine-como-funciona.mp4" type="video/mp4" />
                 Tu navegador no soporta la reproducción de video.
               </video>
+              <p id="global-cta-video-description" className="sr-only">
+                Video que explica el proceso para contratar profesionales en Naxine.
+              </p>
             </div>
           </div>
         </div>

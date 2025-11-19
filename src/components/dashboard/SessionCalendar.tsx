@@ -205,7 +205,7 @@ export default function SessionCalendar({
           {daysOfWeek.map((day) => (
             <div
               key={day}
-              className="bg-primary text-white text-xs font-medium py-3 text-center"
+              className="bg-primary text-white text-[10px] sm:text-xs font-medium py-2 sm:py-3 text-center"
             >
               {day}
             </div>
@@ -223,12 +223,12 @@ export default function SessionCalendar({
             return (
               <div
                 key={index}
-                className={`min-h-[80px] p-2 border-r border-b border-gray-200 last:border-r-0 ${
+                className={`min-h-[60px] sm:min-h-[80px] p-1 sm:p-2 border-r border-b border-gray-200 last:border-r-0 ${
                   dayData.isCurrentMonth ? "bg-white" : "bg-gray-50"
                 }`}
               >
                 <div
-                  className={`text-sm font-medium mb-1 ${
+                  className={`text-xs sm:text-sm font-medium mb-1 ${
                     dayData.isCurrentMonth
                       ? dayData.isToday
                         ? "text-primary font-bold"
@@ -241,16 +241,16 @@ export default function SessionCalendar({
 
                 {appointment && (
                   <div
-                    className="bg-primary/15 rounded p-2 text-xs cursor-pointer hover:bg-primary/25 transition-colors"
+                    className="bg-primary/15 rounded p-1 sm:p-2 text-[10px] sm:text-xs cursor-pointer hover:bg-primary/25 transition-colors"
                     onClick={() => handleAppointmentClick(appointment)}
                   >
                     <div className="font-medium text-primary truncate">
                       {appointment.specialty}
                     </div>
-                    <div className="text-primary truncate">
+                    <div className="text-primary truncate hidden sm:block">
                       {appointment.professional}
                     </div>
-                    <div className="text-primary">{appointment.time}</div>
+                    <div className="text-primary hidden sm:block">{appointment.time}</div>
                   </div>
                 )}
               </div>

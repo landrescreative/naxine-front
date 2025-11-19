@@ -102,6 +102,16 @@ export default function RegisterPage() {
     }
   };
 
+  const statusMessageId = "client-register-status";
+  const acceptanceStatusId = `${statusMessageId}-policies`;
+  const describedByIds =
+    [
+      errors.submit || authError ? statusMessageId : "",
+      errors.acceptance ? acceptanceStatusId : "",
+    ]
+      .filter(Boolean)
+      .join(" ") || undefined;
+
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
       {/* Left Side - Registration Form */}
@@ -118,19 +128,39 @@ export default function RegisterPage() {
           </div>
 
           {/* Registration Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-4"
+            aria-describedby={describedByIds}
+            aria-busy={loading}
+          >
             {/* Error Message */}
             {(errors.submit || authError) && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              <div
+                className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg"
+                role="alert"
+                aria-live="assertive"
+                id={statusMessageId}
+              >
                 {errors.submit || authError}
               </div>
             )}
 
             {/* Acceptance Error */}
             {errors.acceptance && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              <div
+                className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg"
+                role="alert"
+                aria-live="assertive"
+                id={acceptanceStatusId}
+              >
                 {errors.acceptance}
               </div>
+            )}
+            {!errors.submit && !authError && !errors.acceptance && (
+              <p id={statusMessageId} className="sr-only" aria-live="polite">
+                Formulario listo para completar el registro de usuario.
+              </p>
             )}
             {/* Name Field */}
             <div>
@@ -150,9 +180,13 @@ export default function RegisterPage() {
                 }`}
                 placeholder="Ingresa tu nombre"
                 required
+                aria-invalid={Boolean(errors.nombre)}
+                aria-describedby={errors.nombre ? "nombre-error" : undefined}
               />
               {errors.nombre && (
-                <p className="mt-1 text-sm text-red-600">{errors.nombre}</p>
+                <p id="nombre-error" className="mt-1 text-sm text-red-600">
+                  {errors.nombre}
+                </p>
               )}
             </div>
 
@@ -174,9 +208,13 @@ export default function RegisterPage() {
                 }`}
                 placeholder="Ingresa tu email"
                 required
+                aria-invalid={Boolean(errors.email)}
+                aria-describedby={errors.email ? "email-error" : undefined}
               />
               {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+                <p id="email-error" className="mt-1 text-sm text-red-600">
+                  {errors.email}
+                </p>
               )}
             </div>
 
@@ -199,11 +237,15 @@ export default function RegisterPage() {
                   }`}
                   placeholder="Ingresa tu contraseña"
                   required
+                  aria-invalid={Boolean(errors.password)}
+                  aria-describedby={errors.password ? "password-error" : undefined}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                  aria-pressed={showPassword}
                 >
                   {showPassword ? (
                     <svg
@@ -243,7 +285,9 @@ export default function RegisterPage() {
                 </button>
               </div>
               {errors.password && (
-                <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+                <p id="password-error" className="mt-1 text-sm text-red-600">
+                  {errors.password}
+                </p>
               )}
             </div>
 
@@ -266,11 +310,19 @@ export default function RegisterPage() {
                   }`}
                   placeholder="Confirma tu contraseña"
                   required
+                  aria-invalid={Boolean(errors.confirmPassword)}
+                  aria-describedby={errors.confirmPassword ? "confirm-password-error" : undefined}
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  aria-label={
+                    showConfirmPassword
+                      ? "Ocultar confirmación de contraseña"
+                      : "Mostrar confirmación de contraseña"
+                  }
+                  aria-pressed={showConfirmPassword}
                 >
                   {showConfirmPassword ? (
                     <svg
@@ -310,7 +362,12 @@ export default function RegisterPage() {
                 </button>
               </div>
               {errors.confirmPassword && (
-                <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
+                <p
+                  id="confirm-password-error"
+                  className="mt-1 text-sm text-red-600"
+                >
+                  {errors.confirmPassword}
+                </p>
               )}
             </div>
 

@@ -480,6 +480,12 @@ export default function Navbar() {
                       ? "bg-gray-100 ring-1 ring-gray-200 rounded-lg"
                       : ""
                   } text-gray-800 hover:text-gray-600 focus:outline-none p-2 transition-colors`}
+                  type="button"
+                  aria-label={
+                    isUserMenuOpen ? "Cerrar menú de usuario" : "Abrir menú de usuario"
+                  }
+                  aria-expanded={isUserMenuOpen}
+                  aria-controls="mobile-user-menu"
                 >
                   {isUserMenuOpen ? (
                     <X className="h-6 w-6" />
@@ -492,6 +498,7 @@ export default function Navbar() {
                 <AnimatePresence>
                   {isUserMenuOpen && (
                     <motion.div
+                      id="mobile-user-menu"
                       className="absolute left-0 mt-3 w-72 bg-white/80 backdrop-blur rounded-xl shadow-lg border border-gray-200/60 ring-1 ring-black/5 z-50 overflow-hidden"
                       initial={{ opacity: 0, y: -10, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -582,6 +589,12 @@ export default function Navbar() {
               <button
                 onClick={toggleMobileMenu}
                 className="text-gray-800 hover:text-gray-600 focus:outline-none p-2"
+                type="button"
+                aria-label={
+                  isMobileMenuOpen ? "Cerrar menú principal" : "Abrir menú principal"
+                }
+                aria-expanded={isMobileMenuOpen}
+                aria-controls="mobile-primary-menu"
               >
                 {isMobileMenuOpen ? (
                   <X className="h-6 w-6" />
@@ -603,6 +616,14 @@ export default function Navbar() {
                       ? "bg-gray-100 ring-1 ring-gray-200 rounded-lg"
                       : ""
                   } text-gray-800 hover:text-gray-600 focus:outline-none p-2 transition-colors`}
+                  type="button"
+                  aria-label={
+                    isDesktopMenuOpen
+                      ? "Cerrar menú de navegación"
+                      : "Abrir menú de navegación"
+                  }
+                  aria-expanded={isDesktopMenuOpen}
+                  aria-controls="desktop-primary-menu"
                 >
                   <Menu className="h-6 w-6" />
                 </button>
@@ -679,6 +700,7 @@ export default function Navbar() {
               {isDesktopMenuOpen && (
                 <motion.div
                   ref={desktopMenuRef}
+                  id="desktop-primary-menu"
                   className="hidden lg:block absolute left-4 top-16 w-72 bg-white/80 backdrop-blur rounded-xl shadow-lg border border-gray-200/60 ring-1 ring-black/5 z-50 overflow-hidden"
                   initial={{ opacity: 0, y: -10, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -753,7 +775,10 @@ export default function Navbar() {
         {/* Menú hamburguesa desplegable */}
         {isMobileMenuOpen && (
           <div className="lg:hidden">
-            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t border-gray-200">
+            <div
+              className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t border-gray-200"
+              id="mobile-primary-menu"
+            >
               {/* Categorías de servicios */}
               <div className="py-2">
                 <h3 className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -806,6 +831,7 @@ export default function Navbar() {
                           }}
                           className="w-full flex items-center justify-between px-3 py-2 text-gray-800 hover:text-purple-600 hover:bg-gray-50 rounded-lg transition-colors"
                           aria-expanded={openMobileCategory === category.key}
+                          aria-controls={`mobile-category-panel-${category.key}`}
                         >
                           <span className="flex items-center space-x-3">
                             <Icon className="h-5 w-5" />
@@ -822,7 +848,12 @@ export default function Navbar() {
                           />
                         </button>
                         {openMobileCategory === category.key && (
-                          <div className="pl-9 pr-3 pb-2 space-y-1">
+                          <div
+                            className="pl-9 pr-3 pb-2 space-y-1"
+                            id={`mobile-category-panel-${category.key}`}
+                            role="region"
+                            aria-label={`Servicios para ${category.title}`}
+                          >
                             {isLoadingServices(
                               category.specialtyId || category.key
                             ) ? (

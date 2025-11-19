@@ -29,6 +29,7 @@ export default function PreguntasFrecuentesPage() {
       {/* Imagen de fondo con opacidad reducida */}
       <div
         className="absolute inset-0 opacity-60"
+        aria-hidden="true"
         style={{
           backgroundImage:
             "url('/assets/1d4a61ccf5b36a094b40bc55b9036d8f91e5c8cc.jpg')",

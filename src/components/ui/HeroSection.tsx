@@ -38,9 +38,12 @@ export default function HeroSection() {
         playsInline
         onLoadedData={handleVideoLoad}
         onCanPlay={handleVideoLoad}
+        aria-hidden="true"
+        tabIndex={-1}
         className={`absolute inset-0 w-full h-full object-cover transition-all duration-1200 ease-out ${
           isVisible ? "scale-100 opacity-100" : "scale-95 opacity-0"
         }`}
+        role="presentation"
       >
         <source src="/video-hero-section.mp4" type="video/mp4" />
       </video>

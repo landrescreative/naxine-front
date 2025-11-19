@@ -17,6 +17,7 @@ export default function ClientDashboardShell({
   const pathname = usePathname();
   const [activeItem, setActiveItem] = useState("inicio");
   const [loggingOut, setLoggingOut] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Auth guard: require session and client role
   useEffect(() => {
@@ -85,6 +86,7 @@ export default function ClientDashboardShell({
       default:
         break;
     }
+    setIsMobileMenuOpen(false);
   };
 
   if (loading || loggingOut) {
@@ -103,9 +105,60 @@ export default function ClientDashboardShell({
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <ClientSidebar activeItem={activeItem} onItemClick={handleItemClick} />
-      <div className="flex-1 overflow-y-auto p-6">{children}</div>
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+      {/* Mobile overlay */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Sidebar */}
+      <div
+        className={`fixed lg:static inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out ${
+          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        }`}
+      >
+        <ClientSidebar
+          id="client-sidebar"
+          activeItem={activeItem}
+          onItemClick={handleItemClick}
+          onCloseMobileMenu={() => setIsMobileMenuOpen(false)}
+        />
+      </div>
+
+      {/* Main content */}
+      <div className="flex-1 overflow-y-auto w-full lg:w-auto" role="main">
+        <div className="lg:hidden bg-white border-b border-gray-200 px-3 md:px-4 py-2 md:py-3 flex items-center justify-between sticky top-0 z-30">
+          <button
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="p-2 rounded-md text-gray-600 hover:bg-gray-100"
+            aria-label="Abrir menú de navegación"
+            aria-expanded={isMobileMenuOpen}
+            aria-controls="client-sidebar"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 6h16M4 12h16M4 18h16"
+              />
+            </svg>
+          </button>
+          <h1 className="text-base md:text-lg font-semibold text-gray-900">Dashboard</h1>
+          <div className="w-10" />
+        </div>
+
+        <div className="p-4 sm:p-6">{children}</div>
+      </div>
     </div>
   );
 }

@@ -47,7 +47,7 @@ export default function UpcomingSessions({
         {sessions.map((session) => (
           <div
             key={session.id}
-              className="relative rounded-[28px] p-8 pb-12 w-96 flex-shrink-0"
+              className="relative rounded-[20px] sm:rounded-[28px] p-6 sm:p-8 pb-12 sm:pb-12 w-[280px] sm:w-96 flex-shrink-0"
             style={{ backgroundColor: "#DED9FF" }}
           >
             {/* Icon según tipo de atención */}
@@ -113,7 +113,7 @@ export default function UpcomingSessions({
                       onViewDetails(session.id);
                     }
                   }}
-                className="inline-block bg-primary hover:bg-primary/90 text-white text-sm font-medium py-2.5 px-10 rounded-2xl transition-colors absolute right-5 bottom-5"
+                className="inline-block bg-primary hover:bg-primary/90 text-white text-xs sm:text-sm font-medium py-2 sm:py-2.5 px-6 sm:px-10 rounded-xl sm:rounded-2xl transition-colors absolute right-3 sm:right-5 bottom-4 sm:bottom-5"
               >
                 Ver detalles
                 </button>

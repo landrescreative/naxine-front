@@ -180,22 +180,22 @@ export default function ProfessionalPaymentsTable({
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-white">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Orden
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
                 Fecha
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Cantidad
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
                 Tipo
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
                 Estado
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Acciones
               </th>
             </tr>
@@ -205,13 +205,13 @@ export default function ProfessionalPaymentsTable({
               return (
               <tr key={row.id} className="hover:bg-gray-50">
                 {/* Orden (PDF icon + specialty/name) */}
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
-                    <div className="flex-shrink-0 h-9 w-9 mr-3">
+                    <div className="flex-shrink-0 h-8 w-8 sm:h-9 sm:w-9 mr-2 sm:mr-3">
                       {/* PDF icon style */}
-                      <div className="h-9 w-9 rounded bg-purple-100 flex items-center justify-center">
+                      <div className="h-8 w-8 sm:h-9 sm:w-9 rounded bg-purple-100 flex items-center justify-center">
                         <svg
-                          className="w-4 h-4 text-purple-700"
+                          className="w-3 h-3 sm:w-4 sm:h-4 text-purple-700"
                           fill="currentColor"
                           viewBox="0 0 20 20"
                         >
@@ -220,33 +220,36 @@ export default function ProfessionalPaymentsTable({
                       </div>
                     </div>
                     <div>
-                      <div className="text-sm font-medium text-gray-900">
+                      <div className="text-xs sm:text-sm font-medium text-gray-900">
                         {row.professional.specialty}
                       </div>
-                      <div className="text-sm text-gray-600">
+                      <div className="text-xs sm:text-sm text-gray-600 hidden sm:block">
                         {row.professional.name}
+                      </div>
+                      <div className="text-xs text-gray-500 sm:hidden">
+                        {row.date}
                       </div>
                     </div>
                   </div>
                 </td>
 
                 {/* Fecha */}
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900 hidden sm:table-cell">
                   {row.date}
                 </td>
 
                 {/* Cantidad */}
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900">
                   {row.amount}
                 </td>
 
                 {/* Tipo */}
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900 hidden md:table-cell">
                   {row.type}
                 </td>
 
                 {/* Estado (pill) */}
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-3 sm:px-6 py-4 whitespace-nowrap hidden lg:table-cell">
                   <span
                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusStyle(
                       row.status
@@ -257,34 +260,35 @@ export default function ProfessionalPaymentsTable({
                 </td>
 
                 {/* Acciones */}
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center space-x-2">
+                <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
+                  <div className="flex items-center flex-wrap gap-1 sm:gap-2">
                     <label 
-                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                      className={`px-2 sm:px-3 py-1.5 text-[10px] sm:text-xs font-medium rounded-md transition-colors ${
                         uploadingPagoId === row.id
                           ? 'bg-gray-400 text-white cursor-not-allowed'
                           : row.necesitaFacturaFiscal
                           ? 'bg-amber-500 hover:bg-amber-600 text-white cursor-pointer animate-pulse'
                           : 'bg-primary hover:bg-primary/90 text-white cursor-pointer'
-                      } flex items-center gap-2`}
+                      } flex items-center gap-1 sm:gap-2`}
                       title={row.necesitaFacturaFiscal ? 'Sube la factura fiscal para ver el monto de este pago' : ''}
                     >
                       {uploadingPagoId === row.id ? (
                         <>
-                          <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <svg className="animate-spin h-3 w-3 sm:h-4 sm:w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                           </svg>
-                          Subiendo...
+                          <span className="hidden sm:inline">Subiendo...</span>
                         </>
                       ) : (
                         <>
                           {row.necesitaFacturaFiscal && (
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                             </svg>
                           )}
-                          {row.url_factura_fiscal ? 'Actualizar Factura' : 'Subir Factura'}
+                          <span className="hidden sm:inline">{row.url_factura_fiscal ? 'Actualizar Factura' : 'Subir Factura'}</span>
+                          <span className="sm:hidden">Factura</span>
                         </>
                       )}
                       <input
@@ -299,7 +303,7 @@ export default function ProfessionalPaymentsTable({
                       <button 
                         onClick={() => handleDownloadInvoice(row.id, row.url_factura_fiscal)}
                         disabled={loadingInvoicePagoId === row.id}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-2 ${
+                        className={`px-2 sm:px-3 py-1.5 text-[10px] sm:text-xs font-medium rounded-md transition-colors flex items-center gap-1 sm:gap-2 ${
                           loadingInvoicePagoId === row.id
                             ? 'bg-gray-400 text-white cursor-not-allowed'
                             : 'bg-green-600 hover:bg-green-700 text-white cursor-pointer'
@@ -307,18 +311,19 @@ export default function ProfessionalPaymentsTable({
                       >
                         {loadingInvoicePagoId === row.id ? (
                           <>
-                            <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <svg className="animate-spin h-3 w-3 sm:h-4 sm:w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
-                            Descargando...
+                            <span className="hidden sm:inline">Descargando...</span>
                           </>
                         ) : (
                           <>
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                             </svg>
-                            Descargar Factura Fiscal
+                            <span className="hidden sm:inline">Descargar Factura Fiscal</span>
+                            <span className="sm:hidden">Factura</span>
                           </>
                         )}
                       </button>
@@ -326,13 +331,14 @@ export default function ProfessionalPaymentsTable({
                     <button 
                       onClick={() => handleDownloadComprobante(row.url_comprobante_pago)}
                       disabled={!isValidUrl(row.url_comprobante_pago)}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                      className={`px-2 sm:px-3 py-1.5 text-[10px] sm:text-xs font-medium rounded-md transition-colors ${
                         isValidUrl(row.url_comprobante_pago)
                           ? 'bg-secondary hover:bg-secondary/90 text-white cursor-pointer'
                           : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       }`}
                     >
-                      Descargar Comprobante Naxine
+                      <span className="hidden sm:inline">Descargar Comprobante Naxine</span>
+                      <span className="sm:hidden">Comprobante</span>
                     </button>
                   </div>
                 </td>

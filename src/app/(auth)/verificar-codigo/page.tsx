@@ -145,6 +145,9 @@ function VerifyCodeForm() {
     }
   };
 
+  const statusMessageId = "verify-code-status";
+  const instructionId = "verify-code-instructions";
+
   if (isVerified) {
     return (
       <div className="min-h-screen flex flex-col lg:flex-row">
@@ -171,7 +174,7 @@ function VerifyCodeForm() {
                 <h1 className="text-3xl font-bold text-gray-800 mb-4">
                   Solicitud Pendiente
                 </h1>
-                <p className="text-gray-600 mb-8">
+                <p className="text-gray-600 mb-8" role="status" aria-live="polite">
                   {approvalMessage || "Tu solicitud está pendiente de aprobación por un administrador. Te notificaremos por email cuando tu cuenta sea aprobada y puedas acceder a la plataforma."}
                 </p>
                 <p className="text-sm text-gray-500">
@@ -198,7 +201,7 @@ function VerifyCodeForm() {
                 <h1 className="text-3xl font-bold text-gray-800 mb-4">
                   ¡Código verificado!
                 </h1>
-                <p className="text-gray-600 mb-8">
+                <p className="text-gray-600 mb-8" role="status" aria-live="polite">
                   Tu código ha sido verificado correctamente. Iniciando sesión...
                 </p>
               </>
@@ -258,18 +261,33 @@ function VerifyCodeForm() {
             <h1 className="text-3xl font-bold text-gray-800 mb-2">
               Verificar código
             </h1>
-            <p className="text-gray-600">
+            <p className="text-gray-600" id={instructionId}>
               Un código de verificación ha sido enviado a <strong>{email}</strong>
             </p>
           </div>
 
           {/* Verification Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-6"
+            aria-describedby={`${instructionId} ${statusMessageId}`}
+            aria-busy={loading}
+          >
             {/* Error Message */}
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              <div
+                className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg"
+                role="alert"
+                aria-live="assertive"
+                id={statusMessageId}
+              >
                 {error}
               </div>
+            )}
+            {!error && (
+              <p id={statusMessageId} className="sr-only" aria-live="polite">
+                Introduce el código recibido para completar tu verificación.
+              </p>
             )}
             {/* Code Input Field */}
             <div>
@@ -288,11 +306,15 @@ function VerifyCodeForm() {
                   className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
                   placeholder="Ingresa el código de verificación"
                   required
+                  aria-invalid={Boolean(error)}
+                  aria-describedby={`${instructionId} ${statusMessageId}`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowCode(!showCode)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  aria-label={showCode ? "Ocultar código" : "Mostrar código"}
+                  aria-pressed={showCode}
                 >
                   {showCode ? (
                     <svg

@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { pagosService } from "@/services";
 import { Pago } from "@/services/api/pagos";
 import AppointmentHistoryTable from "@/components/dashboard/AppointmentHistoryTable";
+import { AppointmentHistorySkeleton } from "@/components/dashboard/Skeletons";
 
 interface AppointmentHistory {
   id: string;
@@ -192,17 +193,6 @@ export default function PagosPage() {
     });
   }, [pagos]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando pagos...</p>
-        </div>
-      </div>
-    );
-  }
-
   if (error) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-6">
@@ -248,9 +238,10 @@ export default function PagosPage() {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Appointment History Table */}
-      {appointmentHistory.length > 0 ? (
+    <div className="space-y-6 sm:space-y-8">
+      {loading ? (
+        <AppointmentHistorySkeleton />
+      ) : appointmentHistory.length > 0 ? (
         <AppointmentHistoryTable appointments={appointmentHistory} />
       ) : (
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">

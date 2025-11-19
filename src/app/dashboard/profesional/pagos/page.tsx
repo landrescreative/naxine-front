@@ -5,6 +5,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { pagosService, professionalsService } from "@/services";
 import ProfessionalPaymentsTable from "@/components/dashboard/ProfessionalPaymentsTable";
 import { logger } from "@/lib/logger";
+import {
+  PaymentsSummarySkeleton,
+  ProfessionalPaymentsTableSkeleton,
+} from "@/components/dashboard/Skeletons";
 
 interface PaymentRow {
   id: string;
@@ -69,9 +73,11 @@ export default function PagosPage() {
           setError(
             response.error || "Error al cargar información del profesional"
           );
+          setLoading(false);
         }
       } catch (err) {
         setError("Error al cargar información del profesional");
+        setLoading(false);
       }
     };
 
@@ -80,8 +86,11 @@ export default function PagosPage() {
 
   // Cargar pagos cuando tengamos el professionalId
   useEffect(() => {
-    if (!professionalId || !isAuthenticated) {
+    if (!isAuthenticated) {
       setLoading(false);
+      return;
+    }
+    if (!professionalId) {
       return;
     }
 
@@ -436,16 +445,6 @@ export default function PagosPage() {
     });
   }, [payments]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando pagos...</p>
-        </div>
-      </div>
-    );
-  }
 
   if (error) {
     return (
@@ -456,9 +455,16 @@ export default function PagosPage() {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="space-y-6 sm:space-y-8">
+      {loading ? (
+        <>
+          <PaymentsSummarySkeleton />
+          <ProfessionalPaymentsTableSkeleton />
+        </>
+      ) : (
+        <>
+          {/* Summary */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
         <div className="overflow-hidden shadow rounded-lg bg-primary">
           <div className="p-5">
             <div className="flex items-center">
@@ -550,7 +556,7 @@ export default function PagosPage() {
 
           {/* Paginación - Mostrar si hay más de una página o si hay pageSize elementos (indica más páginas) */}
           {(pagination.totalPages > 1 || paymentRows.length >= pageSize) && (
-            <div className="flex items-center justify-between bg-white px-4 py-3 border-t border-gray-200 sm:px-6 rounded-b-lg">
+            <div className="flex items-center justify-between bg-white px-3 sm:px-4 py-3 border-t border-gray-200 sm:px-6 rounded-b-lg">
               <div className="flex flex-1 justify-between sm:hidden">
                 <button
                   onClick={() => {
@@ -720,6 +726,8 @@ export default function PagosPage() {
             Cuando recibas pagos, aparecerán aquí.
           </p>
         </div>
+      )}
+        </>
       )}
     </div>
   );

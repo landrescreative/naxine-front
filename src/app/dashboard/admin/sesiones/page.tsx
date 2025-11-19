@@ -181,10 +181,42 @@ export default function AdminSesionesPage() {
 
       const response = await citasService.getAllCitas(params);
 
+      console.log("[AdminSesionesPage] Respuesta completa:", response);
+      console.log("[AdminSesionesPage] response.success:", response.success);
+      console.log("[AdminSesionesPage] response.data:", response.data);
+      console.log("[AdminSesionesPage] response.data (JSON):", JSON.stringify(response.data, null, 2));
+
       if (response.success && response.data) {
-        // El apiClient envuelve la respuesta
-        const citas = response.data.citas || [];
-        const paginacion = response.data.paginacion || { total: 0 };
+        // El backend devuelve: { success: true, data: { citas: [...], paginacion: {...} } }
+        // ApiClient devuelve esto completo en response.data, así que necesitamos acceder a response.data.data
+        console.log("[AdminSesionesPage] Keys de response.data:", Object.keys(response.data));
+        
+        let citas: any[] = [];
+        let paginacion: any = { total: 0 };
+
+        // Intentar diferentes estructuras
+        if (response.data.data && response.data.data.citas && Array.isArray(response.data.data.citas)) {
+          // Estructura: { success: true, data: { citas: [...], paginacion: {...} } }
+          citas = response.data.data.citas;
+          paginacion = response.data.data.paginacion || { total: 0 };
+          console.log("[AdminSesionesPage] Usando response.data.data.citas, cantidad:", citas.length);
+        } else if (response.data.citas && Array.isArray(response.data.citas)) {
+          // Estructura: { citas: [...], paginacion: {...} }
+          citas = response.data.citas;
+          paginacion = response.data.paginacion || { total: 0 };
+          console.log("[AdminSesionesPage] Usando response.data.citas, cantidad:", citas.length);
+        } else if (Array.isArray(response.data)) {
+          // Estructura: array directo
+          citas = response.data;
+          console.log("[AdminSesionesPage] Usando response.data como array, cantidad:", citas.length);
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          // Estructura: { data: [...] }
+          citas = response.data.data;
+          console.log("[AdminSesionesPage] Usando response.data.data como array, cantidad:", citas.length);
+        } else {
+          console.warn("[AdminSesionesPage] No se pudo encontrar el array de citas en la respuesta");
+          console.warn("[AdminSesionesPage] Estructura completa:", JSON.stringify(response.data, null, 2));
+        }
 
         // Verificar que citas sea un array
         if (!Array.isArray(citas)) {

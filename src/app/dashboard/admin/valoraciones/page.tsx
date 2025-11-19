@@ -79,9 +79,45 @@ export default function AdminValoracionesPage() {
         setError(null);
         const offset = (page - 1) * pageSize;
         const resp = await valoracionesService.getAll({ limit: pageSize, offset });
+        
+        console.log('[AdminValoracionesPage] Respuesta completa:', resp);
+        console.log('[AdminValoracionesPage] resp.data:', resp.data);
+        console.log('[AdminValoracionesPage] resp.data (JSON):', JSON.stringify(resp.data, null, 2));
+        
         if (resp.success && resp.data) {
-          const list: ValoracionItem[] = resp.data.valoraciones || [];
-          const pag = resp.data.paginacion || { total: list.length };
+          // El backend devuelve: { success: true, data: { valoraciones: [...], paginacion: {...} } }
+          // ApiClient devuelve esto completo en response.data, así que necesitamos acceder a response.data.data
+          console.log('[AdminValoracionesPage] Keys de resp.data:', Object.keys(resp.data));
+          
+          let list: ValoracionItem[] = [];
+          let pag: any = { total: 0 };
+          
+          // Intentar diferentes estructuras
+          if (resp.data.data && resp.data.data.valoraciones && Array.isArray(resp.data.data.valoraciones)) {
+            // Estructura: { success: true, data: { valoraciones: [...], paginacion: {...} } }
+            list = resp.data.data.valoraciones;
+            pag = resp.data.data.paginacion || { total: list.length };
+            console.log('[AdminValoracionesPage] Usando resp.data.data.valoraciones, cantidad:', list.length);
+          } else if (resp.data.valoraciones && Array.isArray(resp.data.valoraciones)) {
+            // Estructura: { valoraciones: [...], paginacion: {...} }
+            list = resp.data.valoraciones;
+            pag = resp.data.paginacion || { total: list.length };
+            console.log('[AdminValoracionesPage] Usando resp.data.valoraciones, cantidad:', list.length);
+          } else if (Array.isArray(resp.data)) {
+            // Estructura: array directo
+            list = resp.data;
+            pag = { total: list.length };
+            console.log('[AdminValoracionesPage] Usando resp.data como array, cantidad:', list.length);
+          } else if (resp.data.data && Array.isArray(resp.data.data)) {
+            // Estructura: { data: [...] }
+            list = resp.data.data;
+            pag = { total: list.length };
+            console.log('[AdminValoracionesPage] Usando resp.data.data como array, cantidad:', list.length);
+          } else {
+            console.warn('[AdminValoracionesPage] No se pudo encontrar el array de valoraciones en la respuesta');
+            console.warn('[AdminValoracionesPage] Estructura completa:', JSON.stringify(resp.data, null, 2));
+          }
+          
           setItems(list);
           setTotal(pag.total || list.length);
           setSelectedRows([]);
