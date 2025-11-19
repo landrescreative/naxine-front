@@ -12,7 +12,9 @@ import { lazyLoad } from "@/lib/lazy-loading";
 import { Suspense } from "react";
 
 // Lazy load del modal de filtros - solo se carga cuando se necesita
-const FilterModal = lazyLoad(() => import("@/components/dashboard/FilterModal"));
+const FilterModal = lazyLoad(
+  () => import("@/components/dashboard/FilterModal")
+);
 import { usersService } from "@/services/api/users";
 import { type AdminClient } from "@/data/adminClients";
 
@@ -129,7 +131,10 @@ export default function AdminClientesPage() {
         console.log("[AdminClientesPage] Respuesta completa:", response);
         console.log("[AdminClientesPage] response.success:", response.success);
         console.log("[AdminClientesPage] response.data:", response.data);
-        console.log("[AdminClientesPage] response.data (JSON):", JSON.stringify(response.data, null, 2));
+        console.log(
+          "[AdminClientesPage] response.data (JSON):",
+          JSON.stringify(response.data, null, 2)
+        );
 
         if (response.success && response.data) {
           // El backend puede devolver los datos en diferentes formatos
@@ -451,8 +456,12 @@ export default function AdminClientesPage() {
       {!loading && !error && clients.length === 0 && (
         <div className="flex flex-col items-center justify-center py-12">
           <div className="text-gray-500 text-center">
-            <p className="text-lg font-medium mb-2">No se encontraron clientes</p>
-            <p className="text-sm">No hay clientes registrados en el sistema.</p>
+            <p className="text-lg font-medium mb-2">
+              No se encontraron clientes
+            </p>
+            <p className="text-sm">
+              No hay clientes registrados en el sistema.
+            </p>
           </div>
         </div>
       )}

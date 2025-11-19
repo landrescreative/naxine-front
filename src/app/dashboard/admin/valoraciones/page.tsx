@@ -86,7 +86,7 @@ export default function AdminValoracionesPage() {
         
         if (resp.success && resp.data) {
           console.log('[AdminValoracionesPage] Keys de resp.data:', Object.keys(resp.data));
-
+          
           let list: ValoracionItem[] = Array.isArray(resp.data.valoraciones)
             ? resp.data.valoraciones
             : [];
@@ -108,7 +108,7 @@ export default function AdminValoracionesPage() {
               );
             } else if (Array.isArray(legacyData)) {
               list = legacyData;
-              pag = { total: list.length };
+            pag = { total: list.length };
               console.log(
                 '[AdminValoracionesPage] Usando legacy array directo, cantidad:',
                 list.length
@@ -118,7 +118,7 @@ export default function AdminValoracionesPage() {
               Array.isArray(legacyData.data)
             ) {
               list = legacyData.data;
-              pag = { total: list.length };
+            pag = { total: list.length };
               console.log(
                 '[AdminValoracionesPage] Usando legacy data[] como array, cantidad:',
                 list.length

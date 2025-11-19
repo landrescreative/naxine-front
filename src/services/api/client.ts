@@ -1,6 +1,6 @@
 /**
  * Cliente HTTP centralizado para todas las llamadas a la API
- * 
+ *
  * @module api/client
  * @description
  * Este módulo proporciona un cliente HTTP configurable que maneja:
@@ -8,11 +8,11 @@
  * - Manejo centralizado de errores
  * - Timeouts configurables
  * - Logging de requests y responses
- * 
+ *
  * @example
  * ```typescript
  * import { apiClient } from '@/services/api/client';
- * 
+ *
  * const response = await apiClient.get<User>('/users/1');
  * if (response.success) {
  *   console.log(response.data);
@@ -23,12 +23,13 @@
 // src/services/api/client.ts
 import { logger } from "@/lib/logger";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
 const API_TIMEOUT = parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || "15000");
 
 /**
  * Respuesta estándar de la API
- * 
+ *
  * @template T - Tipo de datos esperados en la respuesta
  */
 export interface ApiResponse<T> {
@@ -58,7 +59,7 @@ export interface ApiError {
 
 /**
  * Cliente HTTP para realizar peticiones a la API
- * 
+ *
  * @class ApiClient
  * @description
  * Maneja automáticamente:
@@ -78,19 +79,19 @@ class ApiClient {
 
   /**
    * Realiza una petición HTTP a la API
-   * 
+   *
    * @template T - Tipo de datos esperados en la respuesta
    * @param endpoint - Ruta del endpoint (sin el base URL)
    * @param options - Opciones de fetch estándar + skipAuth para omitir autenticación
    * @returns Promise con la respuesta de la API
-   * 
+   *
    * @example
    * ```typescript
    * // Petición GET con autenticación
    * const response = await apiClient.request<User>('/users/1', { method: 'GET' });
-   * 
+   *
    * // Petición POST sin autenticación
-   * const response = await apiClient.request('/public/endpoint', { 
+   * const response = await apiClient.request('/public/endpoint', {
    *   method: 'POST',
    *   skipAuth: true,
    *   body: JSON.stringify(data)
@@ -106,7 +107,7 @@ class ApiClient {
 
     // Crear headers usando Headers para asegurar que se envíen correctamente
     const headers = new Headers();
-    
+
     // Solo establecer Content-Type si no es FormData
     // FormData establece automáticamente el Content-Type con el boundary correcto
     if (!(options.body instanceof FormData)) {
@@ -133,7 +134,7 @@ class ApiClient {
       if (options.headers instanceof Headers) {
         options.headers.forEach((value, key) => {
           // No establecer Content-Type si es FormData
-          if (isFormData && key.toLowerCase() === 'content-type') {
+          if (isFormData && key.toLowerCase() === "content-type") {
             return;
           }
           headers.set(key, value);
@@ -141,7 +142,7 @@ class ApiClient {
       } else if (Array.isArray(options.headers)) {
         options.headers.forEach(([key, value]) => {
           // No establecer Content-Type si es FormData
-          if (isFormData && key.toLowerCase() === 'content-type') {
+          if (isFormData && key.toLowerCase() === "content-type") {
             return;
           }
           headers.set(key, value);
@@ -149,7 +150,7 @@ class ApiClient {
       } else {
         Object.entries(options.headers).forEach(([key, value]) => {
           // No establecer Content-Type si es FormData
-          if (isFormData && key.toLowerCase() === 'content-type') {
+          if (isFormData && key.toLowerCase() === "content-type") {
             return;
           }
           headers.set(key, value as string);
@@ -185,7 +186,7 @@ class ApiClient {
 
     try {
       // Log del body antes de enviar (solo en desarrollo)
-      if (options.body && typeof options.body === 'string') {
+      if (options.body && typeof options.body === "string") {
         try {
           const bodyObj = JSON.parse(options.body);
           logger.debug("Request body", bodyObj, "ApiClient");
@@ -208,39 +209,60 @@ class ApiClient {
         let errorMessage = `HTTP ${response.status}`;
         let errorDetails: any = null;
         const contentType = response.headers.get("content-type");
-        
+
         if (contentType && contentType.includes("application/json")) {
           try {
             const errorData = await response.json();
             errorDetails = errorData;
-            
+
             // Verificar si el objeto está vacío
             const isEmpty = !errorData || Object.keys(errorData).length === 0;
-            
+
             // Log detallado del error
             if (isEmpty) {
-              logger.error("Error response vacío", {
-                status: response.status,
-                statusText: response.statusText,
-                url: url,
-                method: options.method || 'GET',
-              }, "ApiClient");
+              logger.error(
+                "Error response vacío",
+                {
+                  status: response.status,
+                  statusText: response.statusText,
+                  url: url,
+                  method: options.method || "GET",
+                },
+                "ApiClient"
+              );
             } else {
               logger.error("Error response", errorData, "ApiClient");
               if (errorData.errors && Array.isArray(errorData.errors)) {
-                logger.error("Errores de validación", errorData.errors, "ApiClient");
+                logger.error(
+                  "Errores de validación",
+                  errorData.errors,
+                  "ApiClient"
+                );
               }
             }
-            
+
             if (!isEmpty) {
               // Intentar extraer el mensaje de error del JSON
-              if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+              if (
+                errorData.errors &&
+                Array.isArray(errorData.errors) &&
+                errorData.errors.length > 0
+              ) {
                 // Si hay errores de validación, construir un mensaje detallado
-                const validationErrors = errorData.errors.map((e: any) => {
-                  if (typeof e === 'string') return e;
-                  return e.message || e.msg || e.field ? `${e.field}: ${e.message || e.msg || e}` : JSON.stringify(e);
-                }).join(', ');
-                errorMessage = validationErrors || errorData.message || errorData.error || errorData.msg || `HTTP ${response.status}`;
+                const validationErrors = errorData.errors
+                  .map((e: any) => {
+                    if (typeof e === "string") return e;
+                    return e.message || e.msg || e.field
+                      ? `${e.field}: ${e.message || e.msg || e}`
+                      : JSON.stringify(e);
+                  })
+                  .join(", ");
+                errorMessage =
+                  validationErrors ||
+                  errorData.message ||
+                  errorData.error ||
+                  errorData.msg ||
+                  `HTTP ${response.status}`;
               } else {
                 errorMessage =
                   errorData.message ||
@@ -250,17 +272,22 @@ class ApiClient {
               }
             } else {
               // Si el objeto está vacío, usar el status code con información adicional
-              errorMessage = `HTTP ${response.status}: ${response.statusText || 'Error desconocido'}`;
+              errorMessage = `HTTP ${response.status}: ${
+                response.statusText || "Error desconocido"
+              }`;
               // En desarrollo, agregar más contexto
-              if (process.env.NODE_ENV === 'development') {
-                errorMessage += ` (Respuesta vacía del servidor para ${options.method || 'GET'} ${endpoint})`;
+              if (process.env.NODE_ENV === "development") {
+                errorMessage += ` (Respuesta vacía del servidor para ${
+                  options.method || "GET"
+                } ${endpoint})`;
               }
             }
           } catch (parseError) {
             // Si falla el parseo, intentar leer como texto
             try {
               const errorText = await response.text();
-              errorMessage = errorText || `HTTP ${response.status}: Error parsing JSON`;
+              errorMessage =
+                errorText || `HTTP ${response.status}: Error parsing JSON`;
             } catch {
               errorMessage = `HTTP ${response.status}: Error parsing response`;
             }
@@ -273,7 +300,7 @@ class ApiClient {
             errorMessage = `HTTP ${response.status}: Unknown error`;
           }
         }
-        
+
         // Manejo centralizado de autenticación: 401/403
         if (response.status === 401 || response.status === 403) {
           // Normalizar mensaje para el frontend y cerrar sesión
@@ -292,7 +319,7 @@ class ApiClient {
             errorDetails: errorDetails || { status: response.status },
           };
         }
-        
+
         return {
           success: false,
           error: errorMessage,
@@ -301,19 +328,29 @@ class ApiClient {
       }
 
       const data = await response.json();
-      
+
       // Log para debugging con más detalle
-      logger.debug("Respuesta exitosa", {
-        url,
-        dataType: typeof data,
-        isArray: Array.isArray(data),
-        dataKeys: data && typeof data === 'object' ? Object.keys(data) : [],
-        hasData: !!(data?.data),
-        dataDataKeys: data?.data && typeof data.data === 'object' ? Object.keys(data.data) : [],
-        // Solo loguear una muestra pequeña para no saturar los logs
-        dataSample: data && typeof data === 'object' ? JSON.stringify(data).substring(0, 200) : data
-      }, "ApiClient");
-      
+      logger.debug(
+        "Respuesta exitosa",
+        {
+          url,
+          dataType: typeof data,
+          isArray: Array.isArray(data),
+          dataKeys: data && typeof data === "object" ? Object.keys(data) : [],
+          hasData: !!data?.data,
+          dataDataKeys:
+            data?.data && typeof data.data === "object"
+              ? Object.keys(data.data)
+              : [],
+          // Solo loguear una muestra pequeña para no saturar los logs
+          dataSample:
+            data && typeof data === "object"
+              ? JSON.stringify(data).substring(0, 200)
+              : data,
+        },
+        "ApiClient"
+      );
+
       return {
         success: true,
         data,
@@ -346,33 +383,45 @@ class ApiClient {
           try {
             const user = JSON.parse(userData);
             const token = user?.token || null;
-            
+
             if (token) {
-              logger.debug("Token obtenido", { 
-                hasToken: true,
-                userId: user?.id,
-                email: user?.email,
-                tokenLength: token.length
-              }, "ApiClient");
-            } else {
-              // Solo loguear warning si realmente hay datos de usuario pero sin token
-              if (user && typeof user === 'object') {
-                logger.warn("Token no encontrado en user data", { 
-                  hasUserData: true,
+              logger.debug(
+                "Token obtenido",
+                {
+                  hasToken: true,
                   userId: user?.id,
                   email: user?.email,
-                  userKeys: user ? Object.keys(user) : []
-                }, "ApiClient");
+                  tokenLength: token.length,
+                },
+                "ApiClient"
+              );
+            } else {
+              // Solo loguear warning si realmente hay datos de usuario pero sin token
+              if (user && typeof user === "object") {
+                logger.warn(
+                  "Token no encontrado en user data",
+                  {
+                    hasUserData: true,
+                    userId: user?.id,
+                    email: user?.email,
+                    userKeys: user ? Object.keys(user) : [],
+                  },
+                  "ApiClient"
+                );
               }
             }
-            
+
             return token;
           } catch (error) {
             logger.error("Error parsing user data", error, "ApiClient");
             return null;
           }
         } else {
-          logger.debug("No hay user data en localStorage", undefined, "ApiClient");
+          logger.debug(
+            "No hay user data en localStorage",
+            undefined,
+            "ApiClient"
+          );
         }
       } catch (error) {
         logger.error("Error accediendo a localStorage", error, "ApiClient");
@@ -384,12 +433,12 @@ class ApiClient {
 
   /**
    * Realiza una petición GET
-   * 
+   *
    * @template T - Tipo de datos esperados en la respuesta
    * @param endpoint - Ruta del endpoint
    * @param params - Parámetros de consulta (query params)
    * @returns Promise con la respuesta de la API
-   * 
+   *
    * @example
    * ```typescript
    * const response = await apiClient.get<User[]>('/users', { page: 1, limit: 10 });
@@ -407,54 +456,67 @@ class ApiClient {
 
   /**
    * Realiza una petición POST
-   * 
+   *
    * @template T - Tipo de datos esperados en la respuesta
    * @param endpoint - Ruta del endpoint
    * @param data - Datos a enviar en el body (se serializa a JSON automáticamente, excepto FormData)
    * @param options - Opciones adicionales (headers personalizados, skipAuth)
    * @returns Promise con la respuesta de la API
-   * 
+   *
    * @example
    * ```typescript
    * // POST con JSON
    * const response = await apiClient.post<User>('/users', { name: 'John', email: 'john@example.com' });
-   * 
+   *
    * // POST con FormData (para uploads)
    * const formData = new FormData();
    * formData.append('file', file);
    * const response = await apiClient.post('/upload', formData);
    * ```
    */
-  async post<T>(endpoint: string, data?: any, options?: { headers?: Record<string, string>; skipAuth?: boolean }): Promise<ApiResponse<T>> {
+  async post<T>(
+    endpoint: string,
+    data?: any,
+    options?: { headers?: Record<string, string>; skipAuth?: boolean }
+  ): Promise<ApiResponse<T>> {
     // Log para debugging
     if (data && !(data instanceof FormData)) {
-      logger.debug("POST request", { endpoint, hasEmail: !!data.email }, "ApiClient");
+      logger.debug(
+        "POST request",
+        { endpoint, hasEmail: !!data.email },
+        "ApiClient"
+      );
     }
-    
+
     const headers: Record<string, string> = {};
-    
+
     // Si es FormData, NO establecer Content-Type (el navegador lo hará automáticamente con el boundary)
     if (data instanceof FormData) {
       // No establecer Content-Type para FormData - el navegador lo maneja automáticamente
       // Si hay headers personalizados, eliminar Content-Type si existe
       if (options?.headers) {
         Object.entries(options.headers).forEach(([key, value]) => {
-          if (key.toLowerCase() !== 'content-type') {
+          if (key.toLowerCase() !== "content-type") {
             headers[key] = value;
           }
         });
       }
     } else {
-      headers['Content-Type'] = 'application/json';
+      headers["Content-Type"] = "application/json";
       // Merge con headers personalizados si existen
       if (options?.headers) {
         Object.assign(headers, options.headers);
       }
     }
-    
+
     return this.request<T>(endpoint, {
       method: "POST",
-      body: data instanceof FormData ? data : (data ? JSON.stringify(data) : undefined),
+      body:
+        data instanceof FormData
+          ? data
+          : data
+          ? JSON.stringify(data)
+          : undefined,
       headers: Object.keys(headers).length > 0 ? headers : undefined,
       skipAuth: options?.skipAuth,
     });
