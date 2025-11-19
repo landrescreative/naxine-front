@@ -85,37 +85,50 @@ export default function AdminValoracionesPage() {
         console.log('[AdminValoracionesPage] resp.data (JSON):', JSON.stringify(resp.data, null, 2));
         
         if (resp.success && resp.data) {
-          // El backend devuelve: { success: true, data: { valoraciones: [...], paginacion: {...} } }
-          // ApiClient devuelve esto completo en response.data, así que necesitamos acceder a response.data.data
           console.log('[AdminValoracionesPage] Keys de resp.data:', Object.keys(resp.data));
-          
-          let list: ValoracionItem[] = [];
-          let pag: any = { total: 0 };
-          
-          // Intentar diferentes estructuras
-          if (resp.data.data && resp.data.data.valoraciones && Array.isArray(resp.data.data.valoraciones)) {
-            // Estructura: { success: true, data: { valoraciones: [...], paginacion: {...} } }
-            list = resp.data.data.valoraciones;
-            pag = resp.data.data.paginacion || { total: list.length };
-            console.log('[AdminValoracionesPage] Usando resp.data.data.valoraciones, cantidad:', list.length);
-          } else if (resp.data.valoraciones && Array.isArray(resp.data.valoraciones)) {
-            // Estructura: { valoraciones: [...], paginacion: {...} }
-            list = resp.data.valoraciones;
-            pag = resp.data.paginacion || { total: list.length };
-            console.log('[AdminValoracionesPage] Usando resp.data.valoraciones, cantidad:', list.length);
-          } else if (Array.isArray(resp.data)) {
-            // Estructura: array directo
-            list = resp.data;
-            pag = { total: list.length };
-            console.log('[AdminValoracionesPage] Usando resp.data como array, cantidad:', list.length);
-          } else if (resp.data.data && Array.isArray(resp.data.data)) {
-            // Estructura: { data: [...] }
-            list = resp.data.data;
-            pag = { total: list.length };
-            console.log('[AdminValoracionesPage] Usando resp.data.data como array, cantidad:', list.length);
+
+          let list: ValoracionItem[] = Array.isArray(resp.data.valoraciones)
+            ? resp.data.valoraciones
+            : [];
+          let pag: any = resp.data.paginacion || { total: list.length };
+
+          // Compatibilidad con estructuras antiguas
+          if (list.length === 0) {
+            const legacyData = resp.data as any;
+
+            if (
+              legacyData?.data?.valoraciones &&
+              Array.isArray(legacyData.data.valoraciones)
+            ) {
+              list = legacyData.data.valoraciones;
+              pag = legacyData.data.paginacion || pag;
+              console.log(
+                '[AdminValoracionesPage] Usando legacy data.valoraciones, cantidad:',
+                list.length
+              );
+            } else if (Array.isArray(legacyData)) {
+              list = legacyData;
+              pag = { total: list.length };
+              console.log(
+                '[AdminValoracionesPage] Usando legacy array directo, cantidad:',
+                list.length
+              );
+            } else if (
+              legacyData?.data &&
+              Array.isArray(legacyData.data)
+            ) {
+              list = legacyData.data;
+              pag = { total: list.length };
+              console.log(
+                '[AdminValoracionesPage] Usando legacy data[] como array, cantidad:',
+                list.length
+              );
+            } else {
+              console.warn('[AdminValoracionesPage] No se pudo encontrar el array de valoraciones en la respuesta');
+              console.warn('[AdminValoracionesPage] Estructura completa:', JSON.stringify(legacyData, null, 2));
+            }
           } else {
-            console.warn('[AdminValoracionesPage] No se pudo encontrar el array de valoraciones en la respuesta');
-            console.warn('[AdminValoracionesPage] Estructura completa:', JSON.stringify(resp.data, null, 2));
+            console.log('[AdminValoracionesPage] Usando resp.data.valoraciones, cantidad:', list.length);
           }
           
           setItems(list);

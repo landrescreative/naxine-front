@@ -45,39 +45,62 @@ export const useTickets = (options: UseTicketsOptions = {}) => {
       console.log('[useTickets] response.data (JSON):', JSON.stringify(response.data, null, 2));
 
       if (response.success && response.data) {
-        // El backend devuelve: { success: true, data: { tickets: [...], total: ... } }
-        // ApiClient devuelve esto completo en response.data, así que necesitamos acceder a response.data.data
+        // El backend devuelve: { tickets: [...], total: ... }
         let ticketsData: Ticket[] = [];
         let totalCount = 0;
 
         const actualData = response.data;
-        let ticketsArray: any[] = [];
-        let totalValue: any = 0;
+        let ticketsArray: any[] = Array.isArray(actualData.tickets)
+          ? actualData.tickets
+          : [];
+        let totalValue: any =
+          actualData.total ?? ticketsArray.length ?? 0;
 
-        // Intentar diferentes estructuras
-        if (actualData.data && actualData.data.tickets && Array.isArray(actualData.data.tickets)) {
-          // Estructura: { success: true, data: { tickets: [...], total: ... } }
-          ticketsArray = actualData.data.tickets;
-          totalValue = actualData.data.total || actualData.data.tickets.length;
-          console.log('[useTickets] Usando actualData.data.tickets, cantidad:', ticketsArray.length);
-        } else if (actualData.tickets && Array.isArray(actualData.tickets)) {
-          // Estructura: { tickets: [...], total: ... }
-          ticketsArray = actualData.tickets;
-          totalValue = actualData.total || actualData.tickets.length;
-          console.log('[useTickets] Usando actualData.tickets, cantidad:', ticketsArray.length);
-        } else if (Array.isArray(actualData)) {
-          // Estructura: array directo
-          ticketsArray = actualData;
-          totalValue = actualData.length;
-          console.log('[useTickets] Usando actualData como array, cantidad:', ticketsArray.length);
-        } else if (actualData.data && Array.isArray(actualData.data)) {
-          // Estructura: { data: [...] }
-          ticketsArray = actualData.data;
-          totalValue = actualData.data.length;
-          console.log('[useTickets] Usando actualData.data como array, cantidad:', ticketsArray.length);
+        // Compatibilidad con estructuras antiguas
+        if (ticketsArray.length === 0) {
+          const legacyData = actualData as any;
+          if (
+            legacyData?.data?.tickets &&
+            Array.isArray(legacyData.data.tickets)
+          ) {
+            ticketsArray = legacyData.data.tickets;
+            totalValue =
+              legacyData.data.total ?? legacyData.data.tickets.length;
+            console.log(
+              "[useTickets] Usando legacy data.tickets, cantidad:",
+              ticketsArray.length
+            );
+          } else if (Array.isArray(legacyData)) {
+            ticketsArray = legacyData;
+            totalValue = legacyData.length;
+            console.log(
+              "[useTickets] Usando legacy array directo, cantidad:",
+              ticketsArray.length
+            );
+          } else if (
+            legacyData?.data &&
+            Array.isArray(legacyData.data)
+          ) {
+            ticketsArray = legacyData.data;
+            totalValue = legacyData.data.length;
+            console.log(
+              "[useTickets] Usando legacy data[] como array, cantidad:",
+              ticketsArray.length
+            );
+          } else {
+            console.warn(
+              "[useTickets] No se pudo encontrar el array de tickets en la respuesta"
+            );
+            console.warn(
+              "[useTickets] Estructura completa:",
+              JSON.stringify(legacyData, null, 2)
+            );
+          }
         } else {
-          console.warn('[useTickets] No se pudo encontrar el array de tickets en la respuesta');
-          console.warn('[useTickets] Estructura completa:', JSON.stringify(actualData, null, 2));
+          console.log(
+            "[useTickets] Usando actualData.tickets, cantidad:",
+            ticketsArray.length
+          );
         }
 
         if (ticketsArray.length > 0) {

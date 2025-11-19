@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition, type ReactNode } from "react";
 import {
   Activity,
   RefreshCw,
@@ -42,7 +42,7 @@ const statusConfig: Record<
   },
 };
 
-const serviceIcons: Record<string, JSX.Element> = {
+const serviceIcons: Record<string, ReactNode> = {
   backend: <Server className="h-5 w-5 text-primary" />,
   database: <Database className="h-5 w-5 text-primary" />,
   vercel: <Cloud className="h-5 w-5 text-primary" />,

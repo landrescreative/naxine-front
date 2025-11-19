@@ -129,10 +129,12 @@ export async function getPlatformDiagnostics(): Promise<PlatformDiagnostics> {
             "No se pudo contactar el endpoint /health",
         };
 
-  const healthData: Record<string, any> =
-    backendResponse.success && backendResponse.data
+  const backendData =
+    backendResponse.success && "data" in backendResponse
       ? (backendResponse.data as Record<string, any>)
-      : {};
+      : undefined;
+
+  const healthData: Record<string, any> = backendData ?? {};
 
   const backendStatus = normalizeStatus(
     backendResponse.success ? healthData?.status ?? "operational" : "down"

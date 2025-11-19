@@ -114,36 +114,57 @@ export default function AdminPagosPage() {
       console.log('[AdminPagosPage] pagosResponse.data (JSON):', JSON.stringify(pagosResponse.data, null, 2));
 
       if (pagosResponse.success && pagosResponse.data) {
-        // El backend devuelve: { success: true, data: { pagos: [...], paginacion: {...} } }
-        // ApiClient devuelve esto completo en response.data, así que necesitamos acceder a response.data.data
-        console.log('[AdminPagosPage] Keys de pagosResponse.data:', Object.keys(pagosResponse.data));
-        
-        let paginacionData: any = { total: 0 };
-        
-        // Intentar diferentes estructuras
-        if (pagosResponse.data.data && pagosResponse.data.data.pagos && Array.isArray(pagosResponse.data.data.pagos)) {
-          // Estructura: { success: true, data: { pagos: [...], paginacion: {...} } }
-          pagosData = pagosResponse.data.data.pagos;
-          paginacionData = pagosResponse.data.data.paginacion || { total: 0 };
-          console.log('[AdminPagosPage] Usando pagosResponse.data.data.pagos, cantidad:', pagosData.length);
-        } else if (pagosResponse.data.pagos && Array.isArray(pagosResponse.data.pagos)) {
-          // Estructura: { pagos: [...], paginacion: {...} }
-          pagosData = pagosResponse.data.pagos;
-          paginacionData = pagosResponse.data.paginacion || { total: 0 };
-          console.log('[AdminPagosPage] Usando pagosResponse.data.pagos, cantidad:', pagosData.length);
-        } else if (Array.isArray(pagosResponse.data)) {
-          // Estructura: array directo
-          pagosData = pagosResponse.data;
-          console.log('[AdminPagosPage] Usando pagosResponse.data como array, cantidad:', pagosData.length);
-        } else if (pagosResponse.data.data && Array.isArray(pagosResponse.data.data)) {
-          // Estructura: { data: [...] }
-          pagosData = pagosResponse.data.data;
-          console.log('[AdminPagosPage] Usando pagosResponse.data.data como array, cantidad:', pagosData.length);
+        // Normalizar respuesta principal tipada
+        let paginacionData: any = pagosResponse.data.paginacion || { total: 0 };
+        pagosData = Array.isArray(pagosResponse.data.pagos)
+          ? pagosResponse.data.pagos
+          : [];
+
+        // Compatibilidad con respuestas antiguas o distintas estructuras
+        if (pagosData.length === 0) {
+          const legacyData = pagosResponse.data as any;
+
+          if (
+            legacyData?.data?.pagos &&
+            Array.isArray(legacyData.data.pagos)
+          ) {
+            pagosData = legacyData.data.pagos;
+            paginacionData = legacyData.data.paginacion || paginacionData;
+            console.log(
+              "[AdminPagosPage] Usando legacy data.pagos, cantidad:",
+              pagosData.length
+            );
+          } else if (Array.isArray(legacyData)) {
+            pagosData = legacyData;
+            console.log(
+              "[AdminPagosPage] Usando legacy array directo, cantidad:",
+              pagosData.length
+            );
+          } else if (
+            legacyData?.data &&
+            Array.isArray(legacyData.data)
+          ) {
+            pagosData = legacyData.data;
+            console.log(
+              "[AdminPagosPage] Usando legacy data[] como array, cantidad:",
+              pagosData.length
+            );
+          } else {
+            console.warn(
+              "[AdminPagosPage] No se pudo encontrar el array de pagos en la respuesta"
+            );
+            console.warn(
+              "[AdminPagosPage] Estructura completa:",
+              JSON.stringify(legacyData, null, 2)
+            );
+          }
         } else {
-          console.warn('[AdminPagosPage] No se pudo encontrar el array de pagos en la respuesta');
-          console.warn('[AdminPagosPage] Estructura completa:', JSON.stringify(pagosResponse.data, null, 2));
+          console.log(
+            "[AdminPagosPage] Usando pagosResponse.data.pagos, cantidad:",
+            pagosData.length
+          );
         }
-        
+
         setPagos(pagosData);
         
         // Obtener total de pagos de la respuesta de paginación
@@ -181,15 +202,25 @@ export default function AdminPagosPage() {
                 });
                 if (testResponse.success && testResponse.data) {
                   // Intentar diferentes estructuras para la respuesta de prueba
-                  let testPagos: any[] = [];
-                  if (testResponse.data.data && testResponse.data.data.pagos && Array.isArray(testResponse.data.data.pagos)) {
-                    testPagos = testResponse.data.data.pagos;
-                  } else if (testResponse.data.pagos && Array.isArray(testResponse.data.pagos)) {
-                    testPagos = testResponse.data.pagos;
-                  } else if (Array.isArray(testResponse.data)) {
-                    testPagos = testResponse.data;
-                  } else if (testResponse.data.data && Array.isArray(testResponse.data.data)) {
-                    testPagos = testResponse.data.data;
+                  let testPagos: any[] = Array.isArray(testResponse.data.pagos)
+                    ? testResponse.data.pagos
+                    : [];
+
+                  if (testPagos.length === 0) {
+                    const legacyTestData = testResponse.data as any;
+                    if (
+                      legacyTestData?.data?.pagos &&
+                      Array.isArray(legacyTestData.data.pagos)
+                    ) {
+                      testPagos = legacyTestData.data.pagos;
+                    } else if (Array.isArray(legacyTestData)) {
+                      testPagos = legacyTestData;
+                    } else if (
+                      legacyTestData?.data &&
+                      Array.isArray(legacyTestData.data)
+                    ) {
+                      testPagos = legacyTestData.data;
+                    }
                   }
                   // Si hay más resultados, usar el total del backend si está disponible, sino estimar
                   if (testPagos.length > 0) {
