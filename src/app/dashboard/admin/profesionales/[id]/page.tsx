@@ -21,6 +21,7 @@ import {
   ChevronRight as ChevronRightIcon,
   ChevronUp,
   RotateCcw,
+  Copy,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { type AdminProfessional } from "@/data/adminProfessionals";
@@ -30,9 +31,15 @@ import { lazyLoad } from "@/lib/lazy-loading";
 import { Suspense } from "react";
 
 // Lazy load de modales pesados - solo se cargan cuando se necesitan
-const PasswordResetModal = lazyLoad(() => import("@/components/dashboard/PasswordResetModal"));
-const SaveChangesModal = lazyLoad(() => import("@/components/dashboard/SaveChangesModal"));
-const DeactivateUserModal = lazyLoad(() => import("@/components/dashboard/DeactivateUserModal"));
+const PasswordResetModal = lazyLoad(
+  () => import("@/components/dashboard/PasswordResetModal")
+);
+const SaveChangesModal = lazyLoad(
+  () => import("@/components/dashboard/SaveChangesModal")
+);
+const DeactivateUserModal = lazyLoad(
+  () => import("@/components/dashboard/DeactivateUserModal")
+);
 
 export default function AdminProfessionalEditPage() {
   const router = useRouter();
@@ -41,14 +48,20 @@ export default function AdminProfessionalEditPage() {
     ? params?.id[0]
     : (params?.id as string);
 
-  const [professional, setProfessional] = useState<AdminProfessional | null>(null);
-  const [professionalIdProfesional, setProfessionalIdProfesional] = useState<string | null>(null);
+  const [professional, setProfessional] = useState<AdminProfessional | null>(
+    null
+  );
+  const [professionalIdProfesional, setProfessionalIdProfesional] = useState<
+    string | null
+  >(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [resettingPassword, setResettingPassword] = useState(false);
-  const [passwordResetError, setPasswordResetError] = useState<string | null>(null);
+  const [passwordResetError, setPasswordResetError] = useState<string | null>(
+    null
+  );
   const [changingStatus, setChangingStatus] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
   // Balance y transacciones
@@ -86,7 +99,9 @@ export default function AdminProfessionalEditPage() {
     }>
   >([]);
   const [savingSchedule, setSavingSchedule] = useState(false);
-  const [existingScheduleTypes, setExistingScheduleTypes] = useState<Set<"presencial" | "en_linea" | "a_domicilio">>(new Set());
+  const [existingScheduleTypes, setExistingScheduleTypes] = useState<
+    Set<"presencial" | "en_linea" | "a_domicilio">
+  >(new Set());
   const timeOptions = Array.from({ length: 24 * 2 }).map((_, i) => {
     const hour = Math.floor(i / 2);
     const minute = i % 2 === 0 ? "00" : "30";
@@ -95,10 +110,12 @@ export default function AdminProfessionalEditPage() {
     return `${hour12}:${minute} ${period}`;
   });
   // Vista agrupada por tipo (máximo 3 bloques)
-  const [scheduleByType, setScheduleByType] = useState<Record<
-    "presencial" | "en_linea" | "a_domicilio",
-    { enabled: boolean; dias: string[]; desde: string; hasta: string }
-  >>({
+  const [scheduleByType, setScheduleByType] = useState<
+    Record<
+      "presencial" | "en_linea" | "a_domicilio",
+      { enabled: boolean; dias: string[]; desde: string; hasta: string }
+    >
+  >({
     presencial: { enabled: false, dias: [], desde: "", hasta: "" },
     en_linea: { enabled: false, dias: [], desde: "", hasta: "" },
     a_domicilio: { enabled: false, dias: [], desde: "", hasta: "" },
@@ -112,8 +129,7 @@ export default function AdminProfessionalEditPage() {
     "sábado",
     "domingo",
   ];
-  const displayDay = (d: string) =>
-    d.charAt(0).toUpperCase() + d.slice(1);
+  const displayDay = (d: string) => d.charAt(0).toUpperCase() + d.slice(1);
 
   // Local form state
   const [form, setForm] = useState({
@@ -194,10 +210,9 @@ export default function AdminProfessionalEditPage() {
         setVideoError("Token de administrador no disponible.");
         return;
       }
-      const apiBase = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api").replace(
-        /\/$/,
-        ""
-      );
+      const apiBase = (
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
+      ).replace(/\/$/, "");
       const formData = new FormData();
       formData.append("video", videoFile);
       const res = await fetch(
@@ -210,7 +225,9 @@ export default function AdminProfessionalEditPage() {
       );
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setVideoError(data?.message || data?.error || "Error al subir el video");
+        setVideoError(
+          data?.message || data?.error || "Error al subir el video"
+        );
         return;
       }
       // No hay campo de video en AdminProfessional; cerrar modal tras éxito
@@ -226,7 +243,10 @@ export default function AdminProfessionalEditPage() {
   const mapBackendProfessionalToAdminProfessional = (
     backendProfessional: any
   ): AdminProfessional => {
-    const statusMap: Record<string, "activo" | "inactivo" | "pendiente" | "suspendido"> = {
+    const statusMap: Record<
+      string,
+      "activo" | "inactivo" | "pendiente" | "suspendido"
+    > = {
       activo: "activo",
       inactivo: "inactivo",
       pendiente: "pendiente",
@@ -235,7 +255,10 @@ export default function AdminProfessionalEditPage() {
       inactiva: "inactivo",
     };
 
-    const estado = backendProfessional.estado_aprobacion || backendProfessional.estado || "pendiente";
+    const estado =
+      backendProfessional.estado_aprobacion ||
+      backendProfessional.estado ||
+      "pendiente";
     const mappedStatus = statusMap[estado.toLowerCase()] || "pendiente";
 
     // Derivar dirección desde campos del backend
@@ -253,16 +276,21 @@ export default function AdminProfessionalEditPage() {
           ""
       ),
       name:
-        `${backendProfessional.nombre || ""} ${backendProfessional.apellidos || ""}`.trim() ||
+        `${backendProfessional.nombre || ""} ${
+          backendProfessional.apellidos || ""
+        }`.trim() ||
         backendProfessional.nombre_completo ||
         backendProfessional.name ||
         "",
       fullName:
-        `${backendProfessional.nombre || ""} ${backendProfessional.apellidos || ""}`.trim() ||
+        `${backendProfessional.nombre || ""} ${
+          backendProfessional.apellidos || ""
+        }`.trim() ||
         backendProfessional.nombre_completo ||
         backendProfessional.fullName ||
         "",
-      email: backendProfessional.email || backendProfessional.email_usuario || "",
+      email:
+        backendProfessional.email || backendProfessional.email_usuario || "",
       phone: backendProfessional.telefono || backendProfessional.phone || "",
       username: (backendProfessional.email || "").split("@")[0] || "",
       city:
@@ -274,29 +302,54 @@ export default function AdminProfessionalEditPage() {
         backendProfessional.codigo_postal ||
         backendProfessional.postalCode ||
         "",
-      specialty: backendProfessional.especialidad || backendProfessional.specialty || "",
-      licenseNumber: backendProfessional.numero_colegiado || backendProfessional.licenseNumber || "",
-      experience: backendProfessional.experiencia_años || backendProfessional.experience || 0,
-      rating: backendProfessional.calificacion || backendProfessional.rating || 0,
-      totalSessions: backendProfessional.total_sesiones || backendProfessional.totalSessions || 0,
-      incomeUsd: backendProfessional.ingreso || backendProfessional.incomeUsd || 0,
+      specialty:
+        backendProfessional.especialidad || backendProfessional.specialty || "",
+      licenseNumber:
+        backendProfessional.numero_colegiado ||
+        backendProfessional.licenseNumber ||
+        "",
+      experience:
+        backendProfessional.experiencia_años ||
+        backendProfessional.experience ||
+        0,
+      rating:
+        backendProfessional.calificacion || backendProfessional.rating || 0,
+      totalSessions:
+        backendProfessional.total_sesiones ||
+        backendProfessional.totalSessions ||
+        0,
+      incomeUsd:
+        backendProfessional.ingreso || backendProfessional.incomeUsd || 0,
       status: mappedStatus,
-      joinDate: backendProfessional.created_at || backendProfessional.joinDate || new Date().toISOString(),
-      lastActive: backendProfessional.ultimo_acceso || backendProfessional.lastActive || new Date().toISOString(),
-      profileImage: backendProfessional.imagen_perfil || backendProfessional.profileImage,
+      joinDate:
+        backendProfessional.created_at ||
+        backendProfessional.joinDate ||
+        new Date().toISOString(),
+      lastActive:
+        backendProfessional.ultimo_acceso ||
+        backendProfessional.lastActive ||
+        new Date().toISOString(),
+      profileImage:
+        backendProfessional.imagen_perfil || backendProfessional.profileImage,
       bio: backendProfessional.descripcion || backendProfessional.bio || "",
-      education: backendProfessional.educacion || backendProfessional.education || [],
-      certifications: backendProfessional.certificaciones || backendProfessional.certifications || [],
-      languages: backendProfessional.idiomas || backendProfessional.languages || [],
-      availability: backendProfessional.disponibilidad || backendProfessional.availability || {
-        monday: [],
-        tuesday: [],
-        wednesday: [],
-        thursday: [],
-        friday: [],
-        saturday: [],
-        sunday: [],
-      },
+      education:
+        backendProfessional.educacion || backendProfessional.education || [],
+      certifications:
+        backendProfessional.certificaciones ||
+        backendProfessional.certifications ||
+        [],
+      languages:
+        backendProfessional.idiomas || backendProfessional.languages || [],
+      availability: backendProfessional.disponibilidad ||
+        backendProfessional.availability || {
+          monday: [],
+          tuesday: [],
+          wednesday: [],
+          thursday: [],
+          friday: [],
+          saturday: [],
+          sunday: [],
+        },
     };
   };
 
@@ -339,16 +392,30 @@ export default function AdminProfessionalEditPage() {
           );
 
           if (foundProfessional) {
-            const mappedProfessional = mapBackendProfessionalToAdminProfessional(foundProfessional);
+            const mappedProfessional =
+              mapBackendProfessionalToAdminProfessional(foundProfessional);
             // Intentar obtener foto de perfil desde API admin
             try {
-              const adminToken = typeof window !== "undefined" ? JSON.parse(window.localStorage.getItem("user") || "{}").token : null;
+              const adminToken =
+                typeof window !== "undefined"
+                  ? JSON.parse(window.localStorage.getItem("user") || "{}")
+                      .token
+                  : null;
               if (adminToken) {
-                const apiBase = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api").replace(/\/$/, "");
-                const profId = String(foundProfessional.id_profesional || foundProfessional.id || userId);
-                const photoRes = await fetch(`${apiBase}/profesionales/${profId}/foto-perfil`, {
-                  headers: { Authorization: `Bearer ${adminToken}` },
-                });
+                const apiBase = (
+                  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
+                ).replace(/\/$/, "");
+                const profId = String(
+                  foundProfessional.id_profesional ||
+                    foundProfessional.id ||
+                    userId
+                );
+                const photoRes = await fetch(
+                  `${apiBase}/profesionales/${profId}/foto-perfil`,
+                  {
+                    headers: { Authorization: `Bearer ${adminToken}` },
+                  }
+                );
                 if (photoRes.ok) {
                   const photoData = await photoRes.json();
                   if (photoData?.data?.imageUrl) {
@@ -357,11 +424,20 @@ export default function AdminProfessionalEditPage() {
                 }
               }
             } catch (photoErr) {
-              console.warn("[AdminProfessionalEditPage] No se pudo cargar la foto de perfil:", photoErr);
+              console.warn(
+                "[AdminProfessionalEditPage] No se pudo cargar la foto de perfil:",
+                photoErr
+              );
             }
             setProfessional(mappedProfessional);
             // Guardar el id_profesional original para usar en la actualización
-            setProfessionalIdProfesional(String(foundProfessional.id_profesional || foundProfessional.id || userId));
+            setProfessionalIdProfesional(
+              String(
+                foundProfessional.id_profesional ||
+                  foundProfessional.id ||
+                  userId
+              )
+            );
           } else {
             setError(`Profesional con ID ${userId} no encontrado`);
           }
@@ -393,10 +469,9 @@ export default function AdminProfessionalEditPage() {
             ? JSON.parse(window.localStorage.getItem("user") || "{}")?.token
             : null;
         if (!adminToken) return;
-        const apiBase = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api").replace(
-          /\/$/,
-          ""
-        );
+        const apiBase = (
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
+        ).replace(/\/$/, "");
         // Balance (según rutas de pagos)
         const balanceRes = await fetch(
           `${apiBase}/pagos/profesional/${professionalIdProfesional}/balance`,
@@ -418,8 +493,10 @@ export default function AdminProfessionalEditPage() {
           let list: any[] = [];
           if (Array.isArray(txData)) list = txData;
           else if (Array.isArray(txData?.data)) list = txData.data;
-          else if (Array.isArray(txData?.data?.transacciones)) list = txData.data.transacciones;
-          else if (Array.isArray(txData?.transactions)) list = txData.transactions;
+          else if (Array.isArray(txData?.data?.transacciones))
+            list = txData.data.transacciones;
+          else if (Array.isArray(txData?.transactions))
+            list = txData.transactions;
           else if (Array.isArray(txData?.data?.pagos)) list = txData.data.pagos;
           else if (Array.isArray(txData?.pagos)) list = txData.pagos;
           setTransactions(list);
@@ -431,7 +508,9 @@ export default function AdminProfessionalEditPage() {
           setTxTotal(Number(total) || 0);
         }
       } catch (e: any) {
-        setFinanceError(e?.message || "Error al cargar balance o transacciones");
+        setFinanceError(
+          e?.message || "Error al cargar balance o transacciones"
+        );
       } finally {
         setLoadingFinance(false);
       }
@@ -458,9 +537,15 @@ export default function AdminProfessionalEditPage() {
         numeroLicencia: professional.licenseNumber,
         experiencia: professional.experience.toString(),
         biografia: professional.bio,
-        educacion: Array.isArray(professional.education) ? professional.education.join("\n") : "",
-        certificaciones: Array.isArray(professional.certifications) ? professional.certifications.join("\n") : "",
-        idiomas: Array.isArray(professional.languages) ? professional.languages.join(", ") : "",
+        educacion: Array.isArray(professional.education)
+          ? professional.education.join("\n")
+          : "",
+        certificaciones: Array.isArray(professional.certifications)
+          ? professional.certifications.join("\n")
+          : "",
+        idiomas: Array.isArray(professional.languages)
+          ? professional.languages.join(", ")
+          : "",
       });
     }
   }, [professional]);
@@ -512,10 +597,9 @@ export default function AdminProfessionalEditPage() {
         setPhotoError("Token de administrador no disponible.");
         return;
       }
-      const apiBase = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api").replace(
-        /\/$/,
-        ""
-      );
+      const apiBase = (
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
+      ).replace(/\/$/, "");
       const formData = new FormData();
       formData.append("foto", photoFile);
       const res = await fetch(
@@ -532,7 +616,10 @@ export default function AdminProfessionalEditPage() {
         return;
       }
       const imageUrl =
-        data?.data?.imageUrl || data?.imageUrl || data?.url || professional?.profileImage;
+        data?.data?.imageUrl ||
+        data?.imageUrl ||
+        data?.url ||
+        professional?.profileImage;
       // Actualizar imagen en pantalla
       setProfessional((prev) =>
         prev ? { ...prev, profileImage: imageUrl || prev.profileImage } : prev
@@ -579,7 +666,11 @@ export default function AdminProfessionalEditPage() {
       if (apellidos) {
         updateData.apellidos = apellidos;
       }
-      if (form.email && form.email.trim() && form.email !== professional.email) {
+      if (
+        form.email &&
+        form.email.trim() &&
+        form.email !== professional.email
+      ) {
         updateData.email = form.email.trim();
       }
       if (form.telefono !== undefined) {
@@ -604,10 +695,19 @@ export default function AdminProfessionalEditPage() {
       // Usar el id_profesional guardado
       const professionalId = professionalIdProfesional || professional.id;
 
-      console.log("[AdminProfessionalEditPage] Actualizando profesional con ID:", professionalId);
-      console.log("[AdminProfessionalEditPage] Datos a actualizar:", updateData);
+      console.log(
+        "[AdminProfessionalEditPage] Actualizando profesional con ID:",
+        professionalId
+      );
+      console.log(
+        "[AdminProfessionalEditPage] Datos a actualizar:",
+        updateData
+      );
 
-      const response = await professionalsService.updateAdminProfessional(professionalId, updateData);
+      const response = await professionalsService.updateAdminProfessional(
+        professionalId,
+        updateData
+      );
 
       if (response.success) {
         setIsSaveChangesOpen(false);
@@ -646,13 +746,18 @@ export default function AdminProfessionalEditPage() {
 
     try {
       // Usar id_usuario para el endpoint de restablecer contraseña
-      const response = await usersService.resetUserPassword(professional.id, password);
+      const response = await usersService.resetUserPassword(
+        professional.id,
+        password
+      );
 
       if (response.success) {
         setIsPasswordResetOpen(false);
         router.push("/dashboard/admin/profesionales");
       } else {
-        setPasswordResetError(response.error || "Error al restablecer la contraseña");
+        setPasswordResetError(
+          response.error || "Error al restablecer la contraseña"
+        );
         console.error("Error al restablecer contraseña:", response);
       }
     } catch (err: any) {
@@ -681,7 +786,10 @@ export default function AdminProfessionalEditPage() {
     try {
       // Usar id_usuario para el endpoint de estado
       // Desactivar usuario (is_active: false)
-      const response = await usersService.updateUserStatus(professional.id, false);
+      const response = await usersService.updateUserStatus(
+        professional.id,
+        false
+      );
 
       if (response.success) {
         setIsDeactivateOpen(false);
@@ -757,6 +865,24 @@ export default function AdminProfessionalEditPage() {
     setEditValue("");
   };
 
+  const publicProfileId = professionalIdProfesional || professional?.id;
+  const publicProfileUrl = publicProfileId
+    ? `/profesionales/${publicProfileId}`
+    : null;
+  const [copyToastVisible, setCopyToastVisible] = useState(false);
+  const handleCopyPublicUrl = async () => {
+    if (!publicProfileUrl || typeof window === "undefined") return;
+    try {
+      await navigator.clipboard.writeText(
+        `${window.location.origin}${publicProfileUrl}`
+      );
+      setCopyToastVisible(true);
+      setTimeout(() => setCopyToastVisible(false), 1600);
+    } catch (err) {
+      console.error("No se pudo copiar la URL:", err);
+    }
+  };
+
   // Show loading state
   if (loading) {
     return (
@@ -819,6 +945,45 @@ export default function AdminProfessionalEditPage() {
           </div>
 
           <div className="flex items-center gap-3">
+            {publicProfileUrl && (
+              <div className="flex items-center gap-2 relative">
+                <a
+                  href={publicProfileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  title="Ver perfil público del profesional"
+                >
+                  <Eye className="h-4 w-4" />
+                  Ver perfil público
+                </a>
+                <button
+                  type="button"
+                  onClick={handleCopyPublicUrl}
+                  className={`inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-all hover:bg-gray-50 ${
+                    copyToastVisible
+                      ? "bg-green-50 border-green-200 text-green-700"
+                      : ""
+                  }`}
+                  title="Copiar URL pública"
+                >
+                  <Copy
+                    className={`h-4 w-4 ${copyToastVisible ? "scale-110" : ""}`}
+                  />
+                  <span className="sr-only">Copiar URL pública</span>
+                </button>
+                <div
+                  className={`pointer-events-none absolute -top-12 left-1/2 -translate-x-1/2 z-20 rounded-lg bg-green-600/90 text-white text-xs font-medium px-3 py-2 shadow-lg backdrop-blur-sm transition-all duration-300 ease-out ${
+                    copyToastVisible
+                      ? "opacity-100 translate-y-0 scale-100"
+                      : "opacity-0 translate-y-2 scale-95"
+                  }`}
+                  aria-live="polite"
+                >
+                  Enlace agregado al portapapeles
+                </div>
+              </div>
+            )}
             <button
               onClick={async () => {
                 if (!professionalIdProfesional) return;
@@ -828,14 +993,22 @@ export default function AdminProfessionalEditPage() {
                 try {
                   const adminToken =
                     typeof window !== "undefined"
-                      ? JSON.parse(window.localStorage.getItem("user") || "{}").token
+                      ? JSON.parse(window.localStorage.getItem("user") || "{}")
+                          .token
                       : null;
-                  if (!adminToken) throw new Error("Token de administrador no disponible");
-                  const apiBase = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api").replace(/\/$/, "");
+                  if (!adminToken)
+                    throw new Error("Token de administrador no disponible");
+                  const apiBase = (
+                    process.env.NEXT_PUBLIC_API_URL ||
+                    "http://localhost:3000/api"
+                  ).replace(/\/$/, "");
                   // Cargar horarios desde disponibilidad_horarios (ruta protegida)
-                  const res = await fetch(`${apiBase}/disponibilidad-horarios/profesional/${professionalIdProfesional}`, {
-                    headers: { Authorization: `Bearer ${adminToken}` },
-                  });
+                  const res = await fetch(
+                    `${apiBase}/disponibilidad-horarios/profesional/${professionalIdProfesional}`,
+                    {
+                      headers: { Authorization: `Bearer ${adminToken}` },
+                    }
+                  );
                   if (!res.ok) {
                     throw new Error(`Error ${res.status} al cargar horarios`);
                   }
@@ -846,7 +1019,11 @@ export default function AdminProfessionalEditPage() {
                     const visit = (node: any) => {
                       if (!node) return;
                       if (Array.isArray(node)) {
-                        if (node.length && typeof node[0] === "object" && ("dia_semana" in (node[0] || {}))) {
+                        if (
+                          node.length &&
+                          typeof node[0] === "object" &&
+                          "dia_semana" in (node[0] || {})
+                        ) {
                           results.push(node);
                         } else {
                           node.forEach(visit);
@@ -868,9 +1045,13 @@ export default function AdminProfessionalEditPage() {
                     return results.flat();
                   };
                   const horariosSource: any[] = collectArraysWithDia(data);
-                  const horarios: any[] = Array.isArray(horariosSource) ? horariosSource : [];
+                  const horarios: any[] = Array.isArray(horariosSource)
+                    ? horariosSource
+                    : [];
                   // Normalización de tipo_atencion (en_linea / presencial / a_domicilio) y campos comunes
-                  const normalizeTipo = (val: any): "presencial" | "en_linea" | "a_domicilio" | null => {
+                  const normalizeTipo = (
+                    val: any
+                  ): "presencial" | "en_linea" | "a_domicilio" | null => {
                     if (!val && typeof val !== "string") return null;
                     const raw = String(val || "")
                       .toLowerCase()
@@ -881,10 +1062,14 @@ export default function AdminProfessionalEditPage() {
                     const s = raw
                       .replace(/\s+/g, "_")
                       .replace(/en-linea|en_linea|online/, "en_linea")
-                      .replace(/a-domicilio|a__domicilio|a_domicilio/, "a_domicilio");
+                      .replace(
+                        /a-domicilio|a__domicilio|a_domicilio/,
+                        "a_domicilio"
+                      );
                     if (s.includes("en_linea")) return "en_linea";
                     if (s.includes("a_domicilio")) return "a_domicilio";
-                    if (s.includes("presencial") || s === "") return "presencial";
+                    if (s.includes("presencial") || s === "")
+                      return "presencial";
                     return null;
                   };
                   const mapped = horarios.map((h: any) => {
@@ -892,7 +1077,8 @@ export default function AdminProfessionalEditPage() {
                     return {
                       id_disponibilidad: h.id_disponibilidad,
                       dia_semana: (h.dia_semana || "").toLowerCase(),
-                      hora_inicio: h.hora_inicio?.slice?.(0, 5) || h.hora_inicio,
+                      hora_inicio:
+                        h.hora_inicio?.slice?.(0, 5) || h.hora_inicio,
                       hora_fin: h.hora_fin?.slice?.(0, 5) || h.hora_fin,
                       tipo_atencion: tipo,
                       activo: h.activo ?? true,
@@ -900,19 +1086,48 @@ export default function AdminProfessionalEditPage() {
                   });
                   setScheduleItems(mapped);
                   // Construir vista por tipo
-                  const initial: Record<"presencial"|"en_linea"|"a_domicilio",{enabled:boolean; dias:string[]; desde:string; hasta:string}> = {
-                    presencial: { enabled: false, dias: [], desde: "", hasta: "" },
-                    en_linea: { enabled: false, dias: [], desde: "", hasta: "" },
-                    a_domicilio: { enabled: false, dias: [], desde: "", hasta: "" },
+                  const initial: Record<
+                    "presencial" | "en_linea" | "a_domicilio",
+                    {
+                      enabled: boolean;
+                      dias: string[];
+                      desde: string;
+                      hasta: string;
+                    }
+                  > = {
+                    presencial: {
+                      enabled: false,
+                      dias: [],
+                      desde: "",
+                      hasta: "",
+                    },
+                    en_linea: {
+                      enabled: false,
+                      dias: [],
+                      desde: "",
+                      hasta: "",
+                    },
+                    a_domicilio: {
+                      enabled: false,
+                      dias: [],
+                      desde: "",
+                      hasta: "",
+                    },
                   };
-                  const presentTipos = new Set<"presencial" | "en_linea" | "a_domicilio">();
-                  ["presencial","en_linea","a_domicilio"].forEach((tipo) => {
-                    const rows = mapped.filter((r) => (r.tipo_atencion || "") === tipo);
+                  const presentTipos = new Set<
+                    "presencial" | "en_linea" | "a_domicilio"
+                  >();
+                  ["presencial", "en_linea", "a_domicilio"].forEach((tipo) => {
+                    const rows = mapped.filter(
+                      (r) => (r.tipo_atencion || "") === tipo
+                    );
                     if (rows.length) {
                       presentTipos.add(tipo as any);
                       initial[tipo as keyof typeof initial].enabled = true;
                       // Unificar días
-                      const dias = Array.from(new Set(rows.map((r) => r.dia_semana).filter(Boolean)));
+                      const dias = Array.from(
+                        new Set(rows.map((r) => r.dia_semana).filter(Boolean))
+                      );
                       initial[tipo as keyof typeof initial].dias = dias;
                       // Tomar desde/hasta del primer registro
                       const first = rows[0];
@@ -926,14 +1141,20 @@ export default function AdminProfessionalEditPage() {
                         const h12 = hh % 12 === 0 ? 12 : hh % 12;
                         return `${h12}:${mm} ${per}`;
                       };
-                      initial[tipo as keyof typeof initial].desde = to12(first.hora_inicio);
-                      initial[tipo as keyof typeof initial].hasta = to12(first.hora_fin);
+                      initial[tipo as keyof typeof initial].desde = to12(
+                        first.hora_inicio
+                      );
+                      initial[tipo as keyof typeof initial].hasta = to12(
+                        first.hora_fin
+                      );
                     }
                   });
                   // Compatibilidad: si hay filas sin tipo_atencion, tratarlas como 'presencial'
                   if (!presentTipos.size && mapped.length) {
                     const rows = mapped;
-                    const dias = Array.from(new Set(rows.map((r) => r.dia_semana).filter(Boolean)));
+                    const dias = Array.from(
+                      new Set(rows.map((r) => r.dia_semana).filter(Boolean))
+                    );
                     const to12 = (v: string) => {
                       if (!v) return "";
                       const [hhRaw, mmRaw] = v.split(":");
@@ -955,9 +1176,24 @@ export default function AdminProfessionalEditPage() {
                   setScheduleError(e?.message || "Error al cargar horarios");
                   setScheduleItems([]);
                   setScheduleByType({
-                    presencial: { enabled: false, dias: [], desde: "", hasta: "" },
-                    en_linea: { enabled: false, dias: [], desde: "", hasta: "" },
-                    a_domicilio: { enabled: false, dias: [], desde: "", hasta: "" },
+                    presencial: {
+                      enabled: false,
+                      dias: [],
+                      desde: "",
+                      hasta: "",
+                    },
+                    en_linea: {
+                      enabled: false,
+                      dias: [],
+                      desde: "",
+                      hasta: "",
+                    },
+                    a_domicilio: {
+                      enabled: false,
+                      dias: [],
+                      desde: "",
+                      hasta: "",
+                    },
                   });
                   setExistingScheduleTypes(new Set());
                 } finally {
@@ -1010,7 +1246,11 @@ export default function AdminProfessionalEditPage() {
                       type="button"
                       onClick={openPhotoModal}
                       className="w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-lg overflow-hidden"
-                      title={professional.profileImage ? "Ver / Cambiar foto" : "Agregar foto de perfil"}
+                      title={
+                        professional.profileImage
+                          ? "Ver / Cambiar foto"
+                          : "Agregar foto de perfil"
+                      }
                     >
                       {professional.profileImage ? (
                         <img
@@ -1033,7 +1273,9 @@ export default function AdminProfessionalEditPage() {
                       <h2 className="text-2xl font-bold text-black mb-1">
                         {professional.name}
                       </h2>
-                      <p className="text-gray-600 text-sm">@{professional.username}</p>
+                      <p className="text-gray-600 text-sm">
+                        @{professional.username}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -1076,7 +1318,9 @@ export default function AdminProfessionalEditPage() {
                       </div>
                     ) : (
                       <>
-                        <span className="text-sm font-medium">{professional.id}</span>
+                        <span className="text-sm font-medium">
+                          {professional.id}
+                        </span>
                         <Edit
                           className="h-4 w-4 text-gray-400 cursor-pointer hover:text-gray-600"
                           onClick={() =>
@@ -1177,10 +1421,7 @@ export default function AdminProfessionalEditPage() {
                         <Edit
                           className="h-4 w-4 text-gray-400 cursor-pointer hover:text-gray-600"
                           onClick={() =>
-                            handleEditField(
-                              "biografia",
-                              professional.bio || ""
-                            )
+                            handleEditField("biografia", professional.bio || "")
                           }
                         />
                       </>
@@ -1221,11 +1462,16 @@ export default function AdminProfessionalEditPage() {
                       </div>
                     ) : (
                       <>
-                        <span className="text-sm font-medium">{professional.specialty || "Sin especialidad"}</span>
+                        <span className="text-sm font-medium">
+                          {professional.specialty || "Sin especialidad"}
+                        </span>
                         <Edit
                           className="h-4 w-4 text-gray-400 cursor-pointer hover:text-gray-600"
                           onClick={() =>
-                            handleEditField("especialidad", professional.specialty || "")
+                            handleEditField(
+                              "especialidad",
+                              professional.specialty || ""
+                            )
                           }
                         />
                       </>
@@ -1266,10 +1512,17 @@ export default function AdminProfessionalEditPage() {
                       </div>
                     ) : (
                       <>
-                        <span className="text-sm font-medium">{professional.rating.toFixed(1)}</span>
+                        <span className="text-sm font-medium">
+                          {professional.rating.toFixed(1)}
+                        </span>
                         <Edit
                           className="h-4 w-4 text-gray-400 cursor-pointer hover:text-gray-600"
-                          onClick={() => handleEditField("rating", professional.rating.toString())}
+                          onClick={() =>
+                            handleEditField(
+                              "rating",
+                              professional.rating.toString()
+                            )
+                          }
                         />
                       </>
                     )}
@@ -1317,7 +1570,10 @@ export default function AdminProfessionalEditPage() {
                         <Edit
                           className="h-4 w-4 text-gray-400 cursor-pointer hover:text-gray-600"
                           onClick={() =>
-                            handleEditField("telefono", professional.phone || "")
+                            handleEditField(
+                              "telefono",
+                              professional.phone || ""
+                            )
                           }
                         />
                       </>
@@ -1370,7 +1626,8 @@ export default function AdminProfessionalEditPage() {
                               (professional as any)?.consultorio ||
                               "";
                             if (dir && dir.trim().length > 0) return dir;
-                            if (consultorio && consultorio.trim().length > 0) return consultorio;
+                            if (consultorio && consultorio.trim().length > 0)
+                              return consultorio;
                             return "Sin dirección";
                           })()}
                         </span>
@@ -1385,11 +1642,16 @@ export default function AdminProfessionalEditPage() {
                                   (professional as any)?.address ||
                                   "";
                                 const consultorio =
-                                  (professional as any)?.domicilio_consultorio ||
+                                  (professional as any)
+                                    ?.domicilio_consultorio ||
                                   (professional as any)?.consultorio ||
                                   "";
                                 if (dir && dir.trim().length > 0) return dir;
-                                if (consultorio && consultorio.trim().length > 0) return consultorio;
+                                if (
+                                  consultorio &&
+                                  consultorio.trim().length > 0
+                                )
+                                  return consultorio;
                                 return "";
                               })()
                             )
@@ -1439,7 +1701,9 @@ export default function AdminProfessionalEditPage() {
                         </span>
                         <Edit
                           className="h-4 w-4 text-gray-400 cursor-pointer hover:text-gray-600"
-                          onClick={() => handleEditField("ciudad", professional.city || "")}
+                          onClick={() =>
+                            handleEditField("ciudad", professional.city || "")
+                          }
                         />
                       </>
                     )}
@@ -1481,7 +1745,8 @@ export default function AdminProfessionalEditPage() {
                         balance?.total ??
                         (typeof balance === "number" ? balance : null);
                       if (cents != null) {
-                        const amount = typeof cents === "number" ? cents : Number(cents);
+                        const amount =
+                          typeof cents === "number" ? cents : Number(cents);
                         const normalized = amount / 100;
                         return `$${normalized.toFixed(2)}`;
                       }
@@ -1509,7 +1774,9 @@ export default function AdminProfessionalEditPage() {
                     </svg>
                   </div>
                   <p className="text-sm text-gray-600 mb-1">Sesiones Totales</p>
-                  <p className="text-2xl font-bold text-gray-900">{professional.totalSessions.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {professional.totalSessions.toLocaleString()}
+                  </p>
                 </div>
               </div>
 
@@ -1578,25 +1845,36 @@ export default function AdminProfessionalEditPage() {
                   <tbody>
                     {loadingFinance && (
                       <tr>
-                        <td colSpan={5} className="py-4 px-4 text-sm text-gray-600">
+                        <td
+                          colSpan={5}
+                          className="py-4 px-4 text-sm text-gray-600"
+                        >
                           Cargando transacciones...
                         </td>
                       </tr>
                     )}
                     {!loadingFinance && financeError && (
                       <tr>
-                        <td colSpan={5} className="py-4 px-4 text-sm text-red-600">
+                        <td
+                          colSpan={5}
+                          className="py-4 px-4 text-sm text-red-600"
+                        >
                           {financeError}
                         </td>
                       </tr>
                     )}
-                    {!loadingFinance && !financeError && (!transactions || transactions.length === 0) && (
-                      <tr>
-                        <td colSpan={5} className="py-4 px-4 text-sm text-gray-600">
-                          No hay transacciones para mostrar.
-                        </td>
-                      </tr>
-                    )}
+                    {!loadingFinance &&
+                      !financeError &&
+                      (!transactions || transactions.length === 0) && (
+                        <tr>
+                          <td
+                            colSpan={5}
+                            className="py-4 px-4 text-sm text-gray-600"
+                          >
+                            No hay transacciones para mostrar.
+                          </td>
+                        </tr>
+                      )}
                     {(transactions || []).map((tx: any, index: number) => {
                       const id =
                         tx.id_pago ||
@@ -1610,7 +1888,9 @@ export default function AdminProfessionalEditPage() {
                         tx.product ||
                         tx.servicio ||
                         tx.nombre_paquete ||
-                        (tx.amount || tx.total || tx.monto ? "Pago" : "Transacción");
+                        (tx.amount || tx.total || tx.monto
+                          ? "Pago"
+                          : "Transacción");
                       const total =
                         typeof tx.amount === "number"
                           ? `$${(tx.amount / 100).toFixed(2)}`
@@ -1619,7 +1899,11 @@ export default function AdminProfessionalEditPage() {
                           : typeof tx.total === "number"
                           ? `$${Number(tx.total).toFixed(2)}`
                           : tx.total || tx.amount || tx.monto || "$0.00";
-                      const status = tx.status || tx.estado || tx.estado_pago || "Procesando";
+                      const status =
+                        tx.status ||
+                        tx.estado ||
+                        tx.estado_pago ||
+                        "Procesando";
                       const date =
                         tx.created_at ||
                         tx.created ||
@@ -1627,39 +1911,43 @@ export default function AdminProfessionalEditPage() {
                         tx.fecha_pago ||
                         new Date().toLocaleDateString();
                       const statusColor =
-                        status === "succeeded" || status === "pagado" || status === "Completada"
+                        status === "succeeded" ||
+                        status === "pagado" ||
+                        status === "Completada"
                           ? "bg-green-100 text-green-800"
                           : status === "pending" || status === "Pendiente"
                           ? "bg-blue-100 text-blue-800"
                           : "bg-orange-100 text-orange-800";
                       return (
                         <tr key={index} className="border-b border-gray-100">
-                        <td className="py-3 px-4 text-sm font-medium text-blue-600 cursor-pointer hover:text-blue-800">
-                          {id}
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
-                              <div className="w-full h-full bg-gray-100 rounded-full" />
+                          <td className="py-3 px-4 text-sm font-medium text-blue-600 cursor-pointer hover:text-blue-800">
+                            {id}
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
+                                <div className="w-full h-full bg-gray-100 rounded-full" />
+                              </div>
+                              <span className="text-sm text-gray-900">
+                                {product}
+                              </span>
                             </div>
-                            <span className="text-sm text-gray-900">
-                              {product}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-sm font-medium text-gray-900 text-right">
-                          {total}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <span
+                          </td>
+                          <td className="py-3 px-4 text-sm font-medium text-gray-900 text-right">
+                            {total}
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <span
                               className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor}`}
-                          >
+                            >
                               {status}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-sm text-gray-600 text-right">
-                          {typeof date === "string" ? date : new Date(date).toLocaleDateString()}
-                        </td>
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-600 text-right">
+                            {typeof date === "string"
+                              ? date
+                              : new Date(date).toLocaleDateString()}
+                          </td>
                         </tr>
                       );
                     })}
@@ -1672,10 +1960,10 @@ export default function AdminProfessionalEditPage() {
                 <p className="text-sm text-gray-600">
                   Mostrando{" "}
                   {txTotal > 0
-                    ? `${Math.min((txPage - 1) * txLimit + 1, txTotal)}–${Math.min(
-                        txPage * txLimit,
+                    ? `${Math.min(
+                        (txPage - 1) * txLimit + 1,
                         txTotal
-                      )} de ${txTotal}`
+                      )}–${Math.min(txPage * txLimit, txTotal)} de ${txTotal}`
                     : "0 de 0"}
                 </p>
                 <div className="flex items-center space-x-2">
@@ -1692,10 +1980,14 @@ export default function AdminProfessionalEditPage() {
                   <button
                     className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
                     onClick={() => {
-                      const maxPage = txTotal > 0 ? Math.ceil(txTotal / txLimit) : txPage + 1;
+                      const maxPage =
+                        txTotal > 0 ? Math.ceil(txTotal / txLimit) : txPage + 1;
                       setTxPage((p) => Math.min(maxPage, p + 1));
                     }}
-                    disabled={loadingFinance || (txTotal > 0 && txPage >= Math.ceil(txTotal / txLimit))}
+                    disabled={
+                      loadingFinance ||
+                      (txTotal > 0 && txPage >= Math.ceil(txTotal / txLimit))
+                    }
                   >
                     <ChevronRightIcon className="h-4 w-4" />
                   </button>
@@ -1848,7 +2140,9 @@ export default function AdminProfessionalEditPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl mx-4">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Horarios del profesional</h2>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Horarios del profesional
+              </h2>
               <button
                 onClick={() => {
                   setIsScheduleModalOpen(false);
@@ -1870,127 +2164,172 @@ export default function AdminProfessionalEditPage() {
               ) : (
                 <>
                   <div className="space-y-5 max-h-[60vh] overflow-y-auto pr-2">
-                    {(["presencial","en_linea","a_domicilio"] as const).map((tipo) => (
-                      <div key={tipo} className="border border-gray-200 rounded-lg">
-                        <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
-                          <div className="flex items-center gap-3">
-                            <span className="text-sm font-medium text-gray-900">
-                              {tipo === "presencial" ? "Presencial" : tipo === "en_linea" ? "En línea" : "A domicilio"}
-                            </span>
-                            {scheduleByType[tipo].enabled ? (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                                Configurado
+                    {(["presencial", "en_linea", "a_domicilio"] as const).map(
+                      (tipo) => (
+                        <div
+                          key={tipo}
+                          className="border border-gray-200 rounded-lg"
+                        >
+                          <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
+                            <div className="flex items-center gap-3">
+                              <span className="text-sm font-medium text-gray-900">
+                                {tipo === "presencial"
+                                  ? "Presencial"
+                                  : tipo === "en_linea"
+                                  ? "En línea"
+                                  : "A domicilio"}
                               </span>
-                            ) : (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                                Sin configurar
-                              </span>
-                            )}
-                          </div>
-                          {/* Para tipos ya existentes, no mostrar acciones de agregar/quitar para evitar confusión */}
-                          {existingScheduleTypes.has(tipo)
-                            ? null
-                            : scheduleByType[tipo].enabled
-                            ? (
+                              {scheduleByType[tipo].enabled ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                  Configurado
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                                  Sin configurar
+                                </span>
+                              )}
+                            </div>
+                            {/* Para tipos ya existentes, no mostrar acciones de agregar/quitar para evitar confusión */}
+                            {existingScheduleTypes.has(
+                              tipo
+                            ) ? null : scheduleByType[tipo].enabled ? (
                               <button
                                 className="px-3 py-1 text-xs rounded-lg border bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                                 onClick={() =>
                                   setScheduleByType((prev) => ({
                                     ...prev,
-                                    [tipo]: { enabled: false, dias: [], desde: "", hasta: "" },
+                                    [tipo]: {
+                                      enabled: false,
+                                      dias: [],
+                                      desde: "",
+                                      hasta: "",
+                                    },
                                   }))
                                 }
                               >
                                 Quitar horario
                               </button>
-                            )
-                            : (
+                            ) : (
                               <button
                                 className="px-3 py-1 text-xs rounded-lg border bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-200"
                                 onClick={() =>
                                   setScheduleByType((prev) => ({
                                     ...prev,
-                                    [tipo]: { enabled: true, dias: [], desde: "", hasta: "" },
+                                    [tipo]: {
+                                      enabled: true,
+                                      dias: [],
+                                      desde: "",
+                                      hasta: "",
+                                    },
                                   }))
                                 }
                               >
                                 Agregar horario
                               </button>
                             )}
-                        </div>
-                        {scheduleByType[tipo].enabled && (
-                          <div className="p-4 space-y-3">
-                            <div>
-                              <label className="block text-xs text-gray-600 mb-1">Días disponibles</label>
-                              <div className="flex flex-wrap gap-2">
-                                {allDays.map((d) => {
-                                  const sel = scheduleByType[tipo].dias.includes(d);
-                                  return (
-                                    <button
-                                      key={`${tipo}-${d}`}
-                                      className={`px-2.5 py-1 rounded-full text-xs border ${sel ? "bg-primary/10 border-primary text-primary" : "bg-white border-gray-300 text-gray-700"}`}
-                                      onClick={() =>
-                                        setScheduleByType((prev) => {
-                                          const current = prev[tipo];
-                                          const dias = sel
-                                            ? current.dias.filter((x) => x !== d)
-                                            : [...current.dias, d];
-                                          return { ...prev, [tipo]: { ...current, dias } };
-                                        })
-                                      }
-                                    >
-                                      {displayDay(d)}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <label className="block text-xs text-gray-600 mb-1">Desde</label>
-                                <select
-                                  value={scheduleByType[tipo].desde || ""}
-                                  onChange={(e) =>
-                                    setScheduleByType((prev) => ({
-                                      ...prev,
-                                      [tipo]: { ...prev[tipo], desde: e.target.value },
-                                    }))
-                                  }
-                                  className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg bg-white"
-                                >
-                                  <option value="">Selecciona</option>
-                                  {timeOptions.map((t) => (
-                                    <option key={`${tipo}-desde-${t}`} value={t}>
-                                      {t}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                              <div>
-                                <label className="block text-xs text-gray-600 mb-1">Hasta</label>
-                                <select
-                                  value={scheduleByType[tipo].hasta || ""}
-                                  onChange={(e) =>
-                                    setScheduleByType((prev) => ({
-                                      ...prev,
-                                      [tipo]: { ...prev[tipo], hasta: e.target.value },
-                                    }))
-                                  }
-                                  className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg bg-white"
-                                >
-                                  <option value="">Selecciona</option>
-                                  {timeOptions.map((t) => (
-                                    <option key={`${tipo}-hasta-${t}`} value={t}>
-                                      {t}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                            </div>
                           </div>
-                        )}
-                      </div>
-                    ))}
+                          {scheduleByType[tipo].enabled && (
+                            <div className="p-4 space-y-3">
+                              <div>
+                                <label className="block text-xs text-gray-600 mb-1">
+                                  Días disponibles
+                                </label>
+                                <div className="flex flex-wrap gap-2">
+                                  {allDays.map((d) => {
+                                    const sel =
+                                      scheduleByType[tipo].dias.includes(d);
+                                    return (
+                                      <button
+                                        key={`${tipo}-${d}`}
+                                        className={`px-2.5 py-1 rounded-full text-xs border ${
+                                          sel
+                                            ? "bg-primary/10 border-primary text-primary"
+                                            : "bg-white border-gray-300 text-gray-700"
+                                        }`}
+                                        onClick={() =>
+                                          setScheduleByType((prev) => {
+                                            const current = prev[tipo];
+                                            const dias = sel
+                                              ? current.dias.filter(
+                                                  (x) => x !== d
+                                                )
+                                              : [...current.dias, d];
+                                            return {
+                                              ...prev,
+                                              [tipo]: { ...current, dias },
+                                            };
+                                          })
+                                        }
+                                      >
+                                        {displayDay(d)}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="block text-xs text-gray-600 mb-1">
+                                    Desde
+                                  </label>
+                                  <select
+                                    value={scheduleByType[tipo].desde || ""}
+                                    onChange={(e) =>
+                                      setScheduleByType((prev) => ({
+                                        ...prev,
+                                        [tipo]: {
+                                          ...prev[tipo],
+                                          desde: e.target.value,
+                                        },
+                                      }))
+                                    }
+                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg bg-white"
+                                  >
+                                    <option value="">Selecciona</option>
+                                    {timeOptions.map((t) => (
+                                      <option
+                                        key={`${tipo}-desde-${t}`}
+                                        value={t}
+                                      >
+                                        {t}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="block text-xs text-gray-600 mb-1">
+                                    Hasta
+                                  </label>
+                                  <select
+                                    value={scheduleByType[tipo].hasta || ""}
+                                    onChange={(e) =>
+                                      setScheduleByType((prev) => ({
+                                        ...prev,
+                                        [tipo]: {
+                                          ...prev[tipo],
+                                          hasta: e.target.value,
+                                        },
+                                      }))
+                                    }
+                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg bg-white"
+                                  >
+                                    <option value="">Selecciona</option>
+                                    {timeOptions.map((t) => (
+                                      <option
+                                        key={`${tipo}-hasta-${t}`}
+                                        value={t}
+                                      >
+                                        {t}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    )}
                   </div>
                 </>
               )}
@@ -2015,10 +2354,16 @@ export default function AdminProfessionalEditPage() {
                     setScheduleError(null);
                     const adminToken =
                       typeof window !== "undefined"
-                        ? JSON.parse(window.localStorage.getItem("user") || "{}")?.token
+                        ? JSON.parse(
+                            window.localStorage.getItem("user") || "{}"
+                          )?.token
                         : null;
-                    if (!adminToken) throw new Error("Token de administrador no disponible");
-                    const apiBase = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api").replace(/\/$/, "");
+                    if (!adminToken)
+                      throw new Error("Token de administrador no disponible");
+                    const apiBase = (
+                      process.env.NEXT_PUBLIC_API_URL ||
+                      "http://localhost:3000/api"
+                    ).replace(/\/$/, "");
                     const to24 = (v: string) => {
                       const m = v.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
                       if (!m) return v.length === 5 ? `${v}:00` : v;
@@ -2031,10 +2376,17 @@ export default function AdminProfessionalEditPage() {
                     };
                     // Construir payload a partir de bloques por tipo (una fila por día seleccionado)
                     const payload: Array<any> = [];
-                    (["presencial","en_linea","a_domicilio"] as const).forEach((tipo) => {
+                    (
+                      ["presencial", "en_linea", "a_domicilio"] as const
+                    ).forEach((tipo) => {
                       const section = scheduleByType[tipo];
                       if (!section.enabled) return;
-                      if (!section.desde || !section.hasta || !section.dias.length) return;
+                      if (
+                        !section.desde ||
+                        !section.hasta ||
+                        !section.dias.length
+                      )
+                        return;
                       for (const dia of section.dias) {
                         payload.push({
                           dia_semana: dia,
@@ -2046,14 +2398,18 @@ export default function AdminProfessionalEditPage() {
                       }
                     });
                     if (payload.length === 0) {
-                      throw new Error("Debes configurar al menos un horario antes de guardar.");
+                      throw new Error(
+                        "Debes configurar al menos un horario antes de guardar."
+                      );
                     }
                     // 1) Obtener horarios actuales para borrarlos
                     const currentRes = await fetch(
                       `${apiBase}/disponibilidad-horarios/profesional/${professionalIdProfesional}`,
                       { headers: { Authorization: `Bearer ${adminToken}` } }
                     );
-                    const currentData = await currentRes.json().catch(() => ({}));
+                    const currentData = await currentRes
+                      .json()
+                      .catch(() => ({}));
                     const currentList: any[] =
                       (Array.isArray(currentData) && currentData) ||
                       currentData?.data?.disponibilidad ||
@@ -2061,22 +2417,26 @@ export default function AdminProfessionalEditPage() {
                       currentData?.data ||
                       [];
                     for (const cur of currentList) {
-                      const delId =
-                        cur.id_disponibilidad ||
-                        cur.id ||
-                        null;
+                      const delId = cur.id_disponibilidad || cur.id || null;
                       if (!delId) continue;
-                      await fetch(`${apiBase}/disponibilidad-horarios/${delId}`, {
-                        method: "DELETE",
-                        headers: { Authorization: `Bearer ${adminToken}` },
-                      });
+                      await fetch(
+                        `${apiBase}/disponibilidad-horarios/${delId}`,
+                        {
+                          method: "DELETE",
+                          headers: { Authorization: `Bearer ${adminToken}` },
+                        }
+                      );
                     }
                     // 2) Crear nuevos registros
                     for (const row of payload) {
                       // Calcular turno
                       const hStart = row.hora_inicio || "09:00:00";
                       const hh = parseInt(String(hStart).split(":")[0], 10);
-                      const turno = isNaN(hh) ? null : hh < 14 ? "matutino" : "vespertino";
+                      const turno = isNaN(hh)
+                        ? null
+                        : hh < 14
+                        ? "matutino"
+                        : "vespertino";
                       const createBody = {
                         id_profesional: Number(professionalIdProfesional),
                         dia_semana: row.dia_semana,
@@ -2086,22 +2446,31 @@ export default function AdminProfessionalEditPage() {
                         turno: turno,
                         activo: 1,
                       };
-                      const postRes = await fetch(`${apiBase}/disponibilidad-horarios`, {
-                        method: "POST",
-                        headers: {
-                          "Content-Type": "application/json",
-                          Authorization: `Bearer ${adminToken}`,
-                        },
-                        body: JSON.stringify(createBody),
-                      });
+                      const postRes = await fetch(
+                        `${apiBase}/disponibilidad-horarios`,
+                        {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                            Authorization: `Bearer ${adminToken}`,
+                          },
+                          body: JSON.stringify(createBody),
+                        }
+                      );
                       if (!postRes.ok) {
                         const postErr = await postRes.json().catch(() => ({}));
-                        throw new Error(postErr?.message || postErr?.error || "Error al crear horario");
+                        throw new Error(
+                          postErr?.message ||
+                            postErr?.error ||
+                            "Error al crear horario"
+                        );
                       }
                     }
                     setIsScheduleModalOpen(false);
                   } catch (e: any) {
-                    setScheduleError(e?.message || "Error al actualizar horarios");
+                    setScheduleError(
+                      e?.message || "Error al actualizar horarios"
+                    );
                   } finally {
                     setSavingSchedule(false);
                   }
@@ -2191,9 +2560,14 @@ export default function AdminProfessionalEditPage() {
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">
-                {professional?.profileImage ? "Foto de perfil" : "Agregar foto de perfil"}
+                {professional?.profileImage
+                  ? "Foto de perfil"
+                  : "Agregar foto de perfil"}
               </h2>
-              <button onClick={closePhotoModal} className="text-gray-400 hover:text-gray-600">
+              <button
+                onClick={closePhotoModal}
+                className="text-gray-400 hover:text-gray-600"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -2274,8 +2648,13 @@ export default function AdminProfessionalEditPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Video de presentación</h2>
-              <button onClick={closeVideoModal} className="text-gray-400 hover:text-gray-600">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Video de presentación
+              </h2>
+              <button
+                onClick={closeVideoModal}
+                className="text-gray-400 hover:text-gray-600"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>

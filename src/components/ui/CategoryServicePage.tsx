@@ -28,9 +28,7 @@ export default function CategoryServicePage({
   const [loadingProfessionals, setLoadingProfessionals] = useState(true);
   const [totalProfessionals, setTotalProfessionals] = useState(0);
   // Filtros
-  const [filterModalidad, setFilterModalidad] = useState<string>("");
-  const [filterUbicacion, setFilterUbicacion] = useState<string>("");
-  const [filterHorario, setFilterHorario] = useState<string>("");
+  const [filterModalidad, setFilterModalidad] = useState<string>("Online");
 
   // Intentar usar datos del backend primero, sino usar datos hardcodeados como fallback
   const categoryData = categoriesData[categorySlug];
@@ -264,85 +262,15 @@ export default function CategoryServicePage({
   const totalPages = Math.ceil(totalProfessionals / professionalsPerPage);
   // Aplicar filtros en cliente
   const currentProfessionals = professionals.filter((prof) => {
-    // Modalidad: 'Presencial' | 'Online' | 'Híbrida' | 'A domicilio'
-    if (filterModalidad) {
-      const modalidad = filterModalidad.toLowerCase();
-      const modalidades = (prof.modalidadesSesiones || []).map((m) =>
-        m.toLowerCase()
-      );
-      const matchesModalidad =
-        modalidad === "todas" ||
-        modalidades.includes(modalidad) ||
-        // Soporte de alias
-        (modalidad === "online" &&
-          (modalidades.includes("en linea") ||
-            modalidades.includes("en línea"))) ||
-        (modalidad === "híbrida" &&
-          modalidades.includes("presencial") &&
-          (modalidades.includes("en linea") ||
-            modalidades.includes("en línea")));
-      if (!matchesModalidad) return false;
-    }
-
-    // Ubicación: match por ciudad o direccion; 'Online' filtra a quienes tienen modalidad en línea
-    if (filterUbicacion) {
-      const ubi = filterUbicacion.toLowerCase();
-      if (ubi === "todas") {
-        // no-op
-      } else if (ubi === "online") {
-        const modalidades = (prof.modalidadesSesiones || []).map((m) =>
-          m.toLowerCase()
-        );
-        if (
-          !(
-            modalidades.includes("en linea") || modalidades.includes("en línea")
-          )
-        )
-          return false;
-      } else {
-        const city = (prof.city || "").toLowerCase();
-        const address = (prof.direccion || "").toLowerCase();
-        if (!city.includes(ubi) && !address.includes(ubi)) return false;
-      }
-    }
-
-    // Horario: usar disponibilidad.horario si existe
-    if (filterHorario) {
-      const f = filterHorario.toLowerCase();
-      if (f === "todos") {
-        // no-op
-      } else {
-        const availability: any = prof.availability || {};
-        const horario = availability?.horario;
-        const dias = availability?.dias || [];
-        let matches = false;
-
-        if (f === "fines de semana") {
-          matches = dias.some((d: string) =>
-            ["sabado", "sábado", "domingo"].includes((d || "").toLowerCase())
-          );
-        } else if (horario?.desde && horario?.hasta) {
-          // Parse horas HH:MM or HH:MM:SS
-          const parseHour = (s: string) => {
-            const parts = s.split(":");
-            const h = parseInt(parts[0] || "0", 10);
-            return isNaN(h) ? 0 : h;
-          };
-          const hStart = parseHour(horario.desde);
-          const hEnd = parseHour(horario.hasta);
-          // Considerar rangos básicos
-          if (f === "mañana") {
-            matches = hStart < 12;
-          } else if (f === "tarde") {
-            matches = hStart >= 12 && hStart < 18;
-          } else if (f === "noche") {
-            matches = hStart >= 18 || hEnd >= 20;
-          }
-        }
-
-        if (!matches) return false;
-      }
-    }
+    // Modalidad: solo se permite Online
+    const modalidad = filterModalidad.toLowerCase();
+    const modalidades = (prof.modalidadesSesiones || []).map((m) =>
+      m.toLowerCase()
+    );
+    const matchesModalidad =
+      modalidad === "online" &&
+      (modalidades.includes("en linea") || modalidades.includes("en línea"));
+    if (!matchesModalidad) return false;
 
     return true;
   });
@@ -390,169 +318,7 @@ export default function CategoryServicePage({
                 value={filterModalidad}
                 onChange={(e) => setFilterModalidad(e.target.value)}
               >
-                <option value="" disabled>
-                  Modalidad
-                </option>
-                <option value="Todas">Todas</option>
-                <option value="Presencial">Presencial</option>
                 <option value="Online">Online</option>
-                <option value="Híbrida">Híbrida</option>
-                <option value="A domicilio">A domicilio</option>
-              </select>
-              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                <svg
-                  className="w-4 h-4 text-purple-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </div>
-            </div>
-
-            <div className="relative w-full sm:w-auto">
-              <select
-                className="w-full appearance-none px-3 sm:px-4 py-2 pr-8 border border-gray-300 rounded-lg bg-white text-gray-600 text-sm sm:text-base focus:ring-2 focus:ring-purple-500 focus:border-transparent min-w-[140px]"
-                value={filterUbicacion}
-                onChange={(e) => setFilterUbicacion(e.target.value)}
-              >
-                <option value="" disabled>
-                  Ubicación
-                </option>
-                <option value="Todas">Todas</option>
-                <option value="Online">Online</option>
-                <option>A Coruña</option>
-                <option>Álava</option>
-                <option>Albacete</option>
-                <option>Alcalá de Henares</option>
-                <option>Alcobendas</option>
-                <option>Alcorcón</option>
-                <option>Algeciras</option>
-                <option>Almería</option>
-                <option>Alzira</option>
-                <option>Antequera</option>
-                <option>Arrecife</option>
-                <option>Ávila</option>
-                <option>Badajoz</option>
-                <option>Badalona</option>
-                <option>Baeza</option>
-                <option>Barcelona</option>
-                <option>Barakaldo</option>
-                <option>Bilbao</option>
-                <option>Burgos</option>
-                <option>Cáceres</option>
-                <option>Cádiz</option>
-                <option>Cartagena</option>
-                <option>Castellón de la Plana</option>
-                <option>Ceuta</option>
-                <option>Ciudad Real</option>
-                <option>Córdoba</option>
-                <option>Cuenca</option>
-                <option>Donostia-San Sebastián</option>
-                <option>Dos Hermanas</option>
-                <option>Elche</option>
-                <option>Ferrol</option>
-                <option>Fuenlabrada</option>
-                <option>Gandía</option>
-                <option>Getafe</option>
-                <option>Gijón</option>
-                <option>Girona</option>
-                <option>Granada</option>
-                <option>Guadalajara</option>
-                <option>Huelva</option>
-                <option>Huesca</option>
-                <option>Ibiza</option>
-                <option>Jaén</option>
-                <option>Jerez de la Frontera</option>
-                <option>Las Palmas de Gran Canaria</option>
-                <option>Leganés</option>
-                <option>León</option>
-                <option>Lérida</option>
-                <option>Linares</option>
-                <option>Logroño</option>
-                <option>Lorca</option>
-                <option>Lugo</option>
-                <option>Madrid</option>
-                <option>Málaga</option>
-                <option>Marbella</option>
-                <option>Mataró</option>
-                <option>Melilla</option>
-                <option>Mérida</option>
-                <option>Mijas</option>
-                <option>Móstoles</option>
-                <option>Murcia</option>
-                <option>Ourense</option>
-                <option>Oviedo</option>
-                <option>Palencia</option>
-                <option>Palma de Mallorca</option>
-                <option>Pamplona</option>
-                <option>Parla</option>
-                <option>Pontevedra</option>
-                <option>Pozuelo de Alarcón</option>
-                <option>Reus</option>
-                <option>Sabadell</option>
-                <option>Salamanca</option>
-                <option>San Cristóbal de La Laguna</option>
-                <option>San Fernando</option>
-                <option>San Sebastián de los Reyes</option>
-                <option>Santa Coloma de Gramenet</option>
-                <option>Santa Cruz de Tenerife</option>
-                <option>Santander</option>
-                <option>Santiago de Compostela</option>
-                <option>Segovia</option>
-                <option>Sevilla</option>
-                <option>Soria</option>
-                <option>Tarragona</option>
-                <option>Telde</option>
-                <option>Teruel</option>
-                <option>Toledo</option>
-                <option>Torrelavega</option>
-                <option>Torrevieja</option>
-                <option>Valencia</option>
-                <option>Valladolid</option>
-                <option>Vélez-Málaga</option>
-                <option>Vigo</option>
-                <option>Vitoria-Gasteiz</option>
-                <option>Zamora</option>
-                <option>Zaragoza</option>
-              </select>
-              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                <svg
-                  className="w-4 h-4 text-purple-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </div>
-            </div>
-
-            <div className="relative w-full sm:w-auto">
-              <select
-                className="w-full appearance-none px-3 sm:px-4 py-2 pr-8 border border-gray-300 rounded-lg bg-white text-gray-600 text-sm sm:text-base focus:ring-2 focus:ring-purple-500 focus:border-transparent min-w-[140px]"
-                value={filterHorario}
-                onChange={(e) => setFilterHorario(e.target.value)}
-              >
-                <option value="" disabled>
-                  Horario
-                </option>
-                <option value="Todos">Todos</option>
-                <option value="Mañana">Mañana</option>
-                <option value="Tarde">Tarde</option>
-                <option value="Noche">Noche</option>
-                <option value="Fines de semana">Fines de semana</option>
               </select>
               <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                 <svg

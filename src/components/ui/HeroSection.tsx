@@ -29,7 +29,7 @@ export default function HeroSection() {
   }, []);
 
   return (
-    <div className="relative w-full min-h-screen flex items-center justify-center overflow-hidden">
+    <div className="relative w-full min-h-screen flex items-center justify-center overflow-visible">
       {/* Video de fondo */}
       <video
         autoPlay
