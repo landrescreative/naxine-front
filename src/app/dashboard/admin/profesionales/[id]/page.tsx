@@ -593,6 +593,7 @@ export default function AdminProfessionalEditPage() {
         tarifa_por_hora?: number;
         experiencia_años?: number;
         numero_colegiado?: string;
+        video_presentacion?: string;
       } = {};
 
       // Incluir todos los campos modificables que tienen valor

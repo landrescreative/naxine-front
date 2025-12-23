@@ -18,6 +18,7 @@ export interface AdminProfessional {
   lastActive: string;
   profileImage?: string;
   bio: string;
+  videoUrl?: string;
   education: string[];
   certifications: string[];
   languages: string[];
