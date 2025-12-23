@@ -355,8 +355,14 @@ export default function PerfilPage() {
         refresh_url: refreshUrl,
       });
 
-      // El API devuelve { success: true, data: { onboarding_url: ... } }
-      const onboardingUrl = response.data?.onboarding_url;
+      // El API puede devolver diferentes estructuras:
+      // - { success: true, data: { onboarding_url: ... } }
+      // - { success: true, data: { data: { onboarding_url: ... } } }
+      const rawData = response.data as any;
+      const onboardingUrl =
+        rawData?.data?.onboarding_url ||
+        rawData?.onboarding_url ||
+        null;
 
       if (response.success && onboardingUrl) {
         // Redirigir al profesional al onboarding de Stripe
