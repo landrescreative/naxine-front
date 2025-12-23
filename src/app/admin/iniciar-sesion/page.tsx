@@ -18,12 +18,18 @@ export default function AdminLoginPage() {
 
     try {
       // Llamar a la API real con las credenciales
-      const success = await login({
+      const result = await login({
         email: email.trim().toLowerCase(),
         password,
       });
 
-      if (success) {
+      // Verificar si el resultado contiene un error
+      if (result && typeof result === "object" && "error" in result) {
+        setError(result.error);
+        return;
+      }
+
+      if (result === true) {
         // Verificar que el usuario sea admin antes de redirigir
         const userData = localStorage.getItem("user");
         if (userData) {

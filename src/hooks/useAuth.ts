@@ -86,7 +86,7 @@ const mapBackendResponseToAuthUser = (backendData: any): AuthUser => {
  */
 
 // Tipo de retorno para login que puede indicar necesidad de verificación
-type LoginResult = 
+export type LoginResult = 
   | true 
   | false 
   | { needsVerification: true; email: string }

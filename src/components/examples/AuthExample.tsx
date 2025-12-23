@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth, type LoginResult } from "@/hooks/useAuth";
 import { validateEmail, validatePassword } from "@/services/utils/api-helpers";
 
 export const AuthExample = () => {
@@ -45,7 +45,7 @@ export const AuthExample = () => {
     }
 
     try {
-      let success: boolean | { needsVerification: true; email: string } | { success: boolean; email: string | null } = false;
+      let success: LoginResult | { success: boolean; email: string | null } = false;
 
       if (isLogin) {
         success = await login({
