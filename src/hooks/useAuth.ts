@@ -45,24 +45,6 @@ const mapBackendResponseToAuthUser = (backendData: any): AuthUser => {
     backendData.data?.data?.user || 
     null;
 
-  logger.debug("Backend data recibido", { 
-    hasToken: !!token,
-    tokenLocation: token ? (
-      backendData.token ? "direct" : 
-      backendData.data?.token ? "data.token" : 
-      "data.data.token"
-    ) : "none",
-    hasUsuario: !!usuario,
-    usuarioLocation: usuario ? (
-      backendData.usuario ? "direct" : 
-      backendData.user ? "user" : 
-      backendData.data?.usuario ? "data.usuario" : 
-      "data.data.usuario"
-    ) : "none",
-    backendDataKeys: Object.keys(backendData || {}),
-    dataKeys: backendData?.data ? Object.keys(backendData.data) : []
-  }, "mapBackendResponseToAuthUser");
-
   const mapped = {
     id: String(usuario?.id_usuario || usuario?.id || ""),
     email: usuario?.email || "",
@@ -71,14 +53,6 @@ const mapBackendResponseToAuthUser = (backendData: any): AuthUser => {
     token: token,
     refreshToken: backendData.refreshToken || backendData.data?.refreshToken || backendData.data?.data?.refreshToken,
   };
-
-  logger.debug("Resultado mapeado", { 
-    id: mapped.id, 
-    email: mapped.email, 
-    role: mapped.role,
-    hasToken: !!mapped.token,
-    tokenLength: mapped.token?.length || 0
-  }, "mapBackendResponseToAuthUser");
 
   return mapped;
 };
@@ -115,7 +89,8 @@ const mapBackendResponseToAuthUser = (backendData: any): AuthUser => {
 type LoginResult = 
   | true 
   | false 
-  | { needsVerification: true; email: string };
+  | { needsVerification: true; email: string }
+  | { error: string };
 
 /**
  * Hook para gestionar la autenticación del usuario
@@ -260,17 +235,6 @@ export const useAuth = () => {
         // El backend devuelve { success: true, message: '...', data: { usuario: {...}, token: "..." } }
         const actualData = response.data;
         
-        // Log detallado de la estructura de respuesta
-        logger.debug("Login exitoso - Estructura de respuesta", { 
-          responseKeys: Object.keys(response),
-          dataKeys: actualData ? Object.keys(actualData) : [],
-          hasToken: !!(actualData as any).token,
-          hasDataToken: !!(actualData as any).data?.token,
-          hasUsuario: !!(actualData as any).usuario,
-          hasDataUsuario: !!(actualData as any).data?.usuario,
-          actualDataStructure: JSON.stringify(actualData, null, 2).substring(0, 500) // Primeros 500 caracteres
-        }, "useAuth");
-        
         // Verificar si es un profesional no verificado o pendiente de aprobación
         const actualDataAny = actualData as any;
         if (actualDataAny.profesional) {
@@ -299,11 +263,6 @@ export const useAuth = () => {
         // Guardar en localStorage
         try {
           localStorage.setItem("user", JSON.stringify(userData));
-          logger.debug("Usuario guardado en localStorage", { 
-            userId: userData.id,
-            email: userData.email,
-            hasToken: !!userData.token 
-          }, "useAuth");
         } catch (error) {
           logger.error("Error guardando usuario en localStorage", error, "useAuth");
           setError("Error al guardar la sesión. Por favor, intenta nuevamente.");
@@ -313,19 +272,17 @@ export const useAuth = () => {
         // Guardar token en cookies para que el middleware pueda acceder
         if (userData.token) {
           setCookie("auth-token", userData.token);
-          logger.debug("Token guardado en cookie", undefined, "useAuth");
         }
         
         setUser(userData);
         window.dispatchEvent(new CustomEvent("userLogin"));
-        logger.info("Login exitoso", { userId: userData.id, email: userData.email }, "useAuth");
         return true;
       } else {
         // Verificar si el error es de cuenta no verificada
         const errorMessage = response.error || "";
         const errorDetails = response.errorDetails;
         
-        // Obtener el mensaje completo del error (puede estar en errorMessage o errorDetails.message)
+        // Obtener el mensaje completo del error (priorizar errorDetails.message que viene del backend)
         const fullErrorMessage = (
           errorDetails?.message || 
           errorMessage || 
@@ -350,18 +307,51 @@ export const useAuth = () => {
           };
         }
 
-        // Verificar si el error contiene información sobre profesional pendiente
+        // Verificar si el error es sobre profesional pendiente de aprobación
+        // El mensaje puede venir directamente en errorMessage o en errorDetails.message
+        const pendingApprovalKeywords = [
+          "pendiente de aprobación",
+          "pendiente de aprobacion",
+          "cuenta está pendiente",
+          "cuenta esta pendiente",
+          "estado_aprobacion",
+        ];
+        
+        const isPendingApproval = 
+          pendingApprovalKeywords.some(keyword => fullErrorMessage.includes(keyword)) ||
+          errorDetails?.data?.estado_aprobacion === "pendiente" ||
+          errorDetails?.estado_aprobacion === "pendiente";
+
+        if (isPendingApproval) {
+          // Usar el mensaje del backend si está disponible, sino usar uno por defecto
+          const errorMsg = 
+            errorDetails?.message || 
+            errorMessage || 
+            "Tu cuenta está pendiente de aprobación por un administrador. Te notificaremos cuando tu cuenta sea aprobada.";
+          
+          setError(errorMsg);
+          // Retornar el mensaje de error para que el componente lo pueda usar inmediatamente
+          return { error: errorMsg };
+        }
+
+        // Verificar si el error contiene información sobre profesional pendiente en errorDetails
         if (errorDetails) {
           const errorData = errorDetails;
           if (errorData.profesional && (errorData.profesional.estado_aprobacion === "pendiente" || !errorData.profesional.usuario_verificado)) {
             const errorMsg = errorData.message || errorData.profesional.mensaje || 
               "Tu cuenta está pendiente de aprobación por un administrador. Te notificaremos por email cuando tu cuenta sea aprobada.";
             setError(errorMsg);
-            return false;
+            // Retornar el mensaje de error para que el componente lo pueda usar inmediatamente
+            return { error: errorMsg };
           }
         }
-        setError(errorMessage || "Login failed");
-        return false;
+        
+        // Usar el mensaje del error (que ya viene del backend a través del apiClient)
+        // Si no hay mensaje, usar uno genérico
+        const finalErrorMessage = errorMessage || "Email o contraseña incorrectos";
+        setError(finalErrorMessage);
+        // Retornar el mensaje de error para que el componente lo pueda usar inmediatamente
+        return { error: finalErrorMessage };
       }
     } catch (error) {
       const errorMessage = getErrorMessage(error);
@@ -404,14 +394,8 @@ export const useAuth = () => {
       // Intentar hacer logout en el servidor
       // Si el token no existe o ya fue invalidado, el servidor puede devolver un error
       // pero eso está bien, continuamos con el logout local de todas formas
-      logger.debug("Iniciando logout", undefined, "useAuth");
       try {
-        const response = await authService.logout();
-        if (!response.success) {
-          logger.warn("Logout en servidor falló, pero continuando con logout local", response.error, "useAuth");
-        } else {
-          logger.debug("Logout exitoso en servidor", undefined, "useAuth");
-        }
+        await authService.logout();
       } catch (error) {
         logger.warn("Error durante logout en servidor (continuando con logout local)", error, "useAuth");
       }

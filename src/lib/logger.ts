@@ -65,7 +65,13 @@ class Logger {
         console.warn(`[WARN] ${formattedMessage}`, data || "");
         break;
       case "error":
-        console.error(`[ERROR] ${formattedMessage}`, data || "");
+        // Solo mostrar data si no está vacío o es un string/array con contenido
+        const shouldShowData = data && (
+          typeof data === "string" ||
+          Array.isArray(data) ||
+          (typeof data === "object" && Object.keys(data).length > 0)
+        );
+        console.error(`[ERROR] ${formattedMessage}`, shouldShowData ? data : "");
         // En producción, podrías enviar errores a un servicio de logging
         if (!this.isDevelopment) {
           // Aquí podrías integrar con un servicio como Sentry, LogRocket, etc.

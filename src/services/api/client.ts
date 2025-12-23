@@ -218,27 +218,13 @@ class ApiClient {
             // Verificar si el objeto está vacío
             const isEmpty = !errorData || Object.keys(errorData).length === 0;
 
-            // Log detallado del error
-            if (isEmpty) {
+            // Solo loguear errores de validación si existen y el objeto no está vacío
+            if (!isEmpty && errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
               logger.error(
-                "Error response vacío",
-                {
-                  status: response.status,
-                  statusText: response.statusText,
-                  url: url,
-                  method: options.method || "GET",
-                },
+                "Errores de validación",
+                errorData.errors,
                 "ApiClient"
               );
-            } else {
-              logger.error("Error response", errorData, "ApiClient");
-              if (errorData.errors && Array.isArray(errorData.errors)) {
-                logger.error(
-                  "Errores de validación",
-                  errorData.errors,
-                  "ApiClient"
-                );
-              }
             }
 
             if (!isEmpty) {
@@ -303,20 +289,48 @@ class ApiClient {
 
         // Manejo centralizado de autenticación: 401/403
         if (response.status === 401 || response.status === 403) {
-          // Normalizar mensaje para el frontend y cerrar sesión
-          const authMessage = "Token inválido. Sesión cerrada.";
-          try {
-            if (typeof window !== "undefined") {
-              localStorage.removeItem("user");
-              window.dispatchEvent(new CustomEvent("userLogout"));
+          // Extraer el mensaje del backend - puede estar en errorDetails.message o errorMessage
+          // El backend devuelve: { success: false, message: "...", data: {...} }
+          const backendMessage = 
+            errorDetails?.message || 
+            errorMessage || 
+            "";
+          
+          // Solo sobrescribir el mensaje si es realmente un error de token inválido
+          // (no cuando es un error de aprobación pendiente u otro error específico)
+          // Para 403, si hay un mensaje del backend, usarlo (probablemente es aprobación pendiente)
+          const isTokenError = 
+            response.status === 401 && 
+            (!backendMessage || 
+             backendMessage.includes("Token inválido") ||
+             backendMessage.includes("token") ||
+             backendMessage.startsWith("HTTP 401"));
+          
+          const finalMessage = isTokenError 
+            ? "Token inválido. Sesión cerrada."
+            : (backendMessage || "Error de autenticación");
+          
+          // Solo cerrar sesión si es realmente un error de token (401 sin mensaje específico)
+          if (isTokenError) {
+            try {
+              if (typeof window !== "undefined") {
+                localStorage.removeItem("user");
+                window.dispatchEvent(new CustomEvent("userLogout"));
+              }
+            } catch {
+              // Ignorar errores al limpiar sesión
             }
-          } catch {
-            // Ignorar errores al limpiar sesión
           }
+          
+          // Asegurarse de que errorDetails contenga toda la información del backend
+          const finalErrorDetails = errorDetails 
+            ? { ...errorDetails, status: response.status }
+            : { status: response.status, message: backendMessage };
+          
           return {
             success: false,
-            error: authMessage,
-            errorDetails: errorDetails || { status: response.status },
+            error: finalMessage,
+            errorDetails: finalErrorDetails,
           };
         }
 

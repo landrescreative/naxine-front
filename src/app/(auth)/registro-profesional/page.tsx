@@ -31,8 +31,6 @@ export default function RegisterProfessionalPage() {
     zonasDomicilio: "",
     accesibleMovilidad: "",
     horarios: "",
-    calendario: [] as string[],
-    servicios: "",
     tarifas: "",
     observaciones: "",
     experiencia_años: "",
@@ -43,19 +41,25 @@ export default function RegisterProfessionalPage() {
     aceptaTerminos: false,
     // Nuevos campos para horarios y precios
     horariosEnLinea: null as {
-      dias: string[];
-      desde: string;
-      hasta: string;
+      dias: Array<{
+        dia: string;
+        desde: string;
+        hasta: string;
+      }>;
     } | null,
     horariosPresencial: null as {
-      dias: string[];
-      desde: string;
-      hasta: string;
+      dias: Array<{
+        dia: string;
+        desde: string;
+        hasta: string;
+      }>;
     } | null,
     horariosADomicilio: null as {
-      dias: string[];
-      desde: string;
-      hasta: string;
+      dias: Array<{
+        dia: string;
+        desde: string;
+        hasta: string;
+      }>;
     } | null,
     precios: {
       primeraSesion: {
@@ -151,14 +155,6 @@ export default function RegisterProfessionalPage() {
             ? [...prev.modalidades, modalidadValue]
             : prev.modalidades.filter((m) => m !== modalidadValue),
         }));
-      } else if (checkboxName === "calendario") {
-        const calendarioValue = (e.target as HTMLInputElement).value;
-        setFormData((prev) => ({
-          ...prev,
-          calendario: checked
-            ? [...prev.calendario, calendarioValue]
-            : prev.calendario.filter((c) => c !== calendarioValue),
-        }));
       } else if (checkboxName === "aceptaTerminos") {
         setFormData((prev) => ({
           ...prev,
@@ -214,26 +210,39 @@ export default function RegisterProfessionalPage() {
 
     const horariosActuales = formData[horarioKey] || {
       dias: [],
-      desde: "",
-      hasta: "",
     };
-    const isSelected = horariosActuales.dias.includes(dia);
-    const newDias = isSelected
-      ? horariosActuales.dias.filter((d) => d !== dia)
-      : [...horariosActuales.dias, dia];
+
+    const diaIndex = horariosActuales.dias.findIndex((d) => d.dia === dia);
+    const isSelected = diaIndex !== -1;
+
+    let newDias: Array<{ dia: string; desde: string; hasta: string }>;
+    if (isSelected) {
+      // Remover el día
+      newDias = horariosActuales.dias.filter((d) => d.dia !== dia);
+    } else {
+      // Agregar el día con horas por defecto vacías
+      newDias = [
+        ...horariosActuales.dias,
+        {
+          dia: dia,
+          desde: "",
+          hasta: "",
+        },
+      ];
+    }
 
     setFormData((prev) => ({
       ...prev,
       [horarioKey]: {
-        ...horariosActuales,
         dias: newDias,
       },
     }));
   };
 
-  // Función para actualizar horas de horarios por modalidad
+  // Función para actualizar horas de horarios por modalidad y día específico
   const updateHorarioTime = (
     modalidad: "online" | "presencial" | "domicilio",
+    dia: string,
     campo: "desde" | "hasta",
     time24: string
   ) => {
@@ -246,8 +255,6 @@ export default function RegisterProfessionalPage() {
 
     const horariosActuales = formData[horarioKey] || {
       dias: [],
-      desde: "",
-      hasta: "",
     };
 
     // Convertir formato 24h a formato 12h AM/PM
@@ -261,11 +268,20 @@ export default function RegisterProfessionalPage() {
       time12 = `${hh}:${mm} ${period}`;
     }
 
+    // Actualizar el día específico
+    const newDias = horariosActuales.dias.map((d) =>
+      d.dia === dia
+        ? {
+            ...d,
+            [campo]: time12,
+          }
+        : d
+    );
+
     setFormData((prev) => ({
       ...prev,
       [horarioKey]: {
-        ...horariosActuales,
-        [campo]: time12,
+        dias: newDias,
       },
     }));
   };
@@ -438,12 +454,15 @@ export default function RegisterProfessionalPage() {
       ) {
         newErrors.horariosEnLinea =
           "Debes seleccionar al menos un día para atención en línea";
-      } else if (
-        !formData.horariosEnLinea.desde ||
-        !formData.horariosEnLinea.hasta
-      ) {
-        newErrors.horariosEnLinea =
-          "Debes especificar las horas de inicio y fin para atención en línea";
+      } else {
+        // Validar que cada día tenga horas de inicio y fin
+        const diasIncompletos = formData.horariosEnLinea.dias.filter(
+          (d) => !d.desde || !d.hasta
+        );
+        if (diasIncompletos.length > 0) {
+          newErrors.horariosEnLinea =
+            "Debes especificar las horas de inicio y fin para todos los días seleccionados en atención en línea";
+        }
       }
     }
     if (formData.modalidades.includes("presencial")) {
@@ -454,12 +473,15 @@ export default function RegisterProfessionalPage() {
       ) {
         newErrors.horariosPresencial =
           "Debes seleccionar al menos un día para atención presencial";
-      } else if (
-        !formData.horariosPresencial.desde ||
-        !formData.horariosPresencial.hasta
-      ) {
-        newErrors.horariosPresencial =
-          "Debes especificar las horas de inicio y fin para atención presencial";
+      } else {
+        // Validar que cada día tenga horas de inicio y fin
+        const diasIncompletos = formData.horariosPresencial.dias.filter(
+          (d) => !d.desde || !d.hasta
+        );
+        if (diasIncompletos.length > 0) {
+          newErrors.horariosPresencial =
+            "Debes especificar las horas de inicio y fin para todos los días seleccionados en atención presencial";
+        }
       }
     }
     if (formData.modalidades.includes("domicilio")) {
@@ -470,21 +492,16 @@ export default function RegisterProfessionalPage() {
       ) {
         newErrors.horariosADomicilio =
           "Debes seleccionar al menos un día para atención a domicilio";
-      } else if (
-        !formData.horariosADomicilio.desde ||
-        !formData.horariosADomicilio.hasta
-      ) {
-        newErrors.horariosADomicilio =
-          "Debes especificar las horas de inicio y fin para atención a domicilio";
+      } else {
+        // Validar que cada día tenga horas de inicio y fin
+        const diasIncompletos = formData.horariosADomicilio.dias.filter(
+          (d) => !d.desde || !d.hasta
+        );
+        if (diasIncompletos.length > 0) {
+          newErrors.horariosADomicilio =
+            "Debes especificar las horas de inicio y fin para todos los días seleccionados en atención a domicilio";
+        }
       }
-    }
-
-    if (formData.calendario.length === 0) {
-      newErrors.calendario = "Debes seleccionar al menos un calendario";
-    }
-
-    if (!formData.servicios.trim()) {
-      newErrors.servicios = "Los servicios ofrecidos son requeridos";
     }
 
     // Validar que al menos un precio esté configurado
@@ -624,9 +641,6 @@ export default function RegisterProfessionalPage() {
       if (formData.descripcion.trim()) {
         formDataToSend.append("biografia", formData.descripcion.trim());
       }
-      if (formData.servicios.trim()) {
-        formDataToSend.append("servicios", formData.servicios.trim());
-      }
       if (formData.tarifas.trim()) {
         formDataToSend.append("tarifas", formData.tarifas.trim());
       }
@@ -640,12 +654,6 @@ export default function RegisterProfessionalPage() {
         formDataToSend.append(
           "modalidades",
           JSON.stringify(formData.modalidades)
-        );
-      }
-      if (formData.calendario.length > 0) {
-        formDataToSend.append(
-          "calendario",
-          JSON.stringify(formData.calendario)
         );
       }
       if (formData.experiencia_años) {
@@ -778,8 +786,6 @@ export default function RegisterProfessionalPage() {
           zonasDomicilio: "",
           accesibleMovilidad: "",
           horarios: "",
-          calendario: [],
-          servicios: "",
           tarifas: "",
           observaciones: "",
           experiencia_años: "",
@@ -1653,8 +1659,8 @@ export default function RegisterProfessionalPage() {
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Días disponibles
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      Selecciona los días disponibles
                     </label>
                     <div className="flex flex-wrap gap-2">
                       {[
@@ -1668,22 +1674,25 @@ export default function RegisterProfessionalPage() {
                       ].map((dia) => {
                         const diasEnLinea =
                           formData.horariosEnLinea?.dias || [];
-                        const isSelected = diasEnLinea.includes(dia);
+                        const isSelected = diasEnLinea.some(
+                          (d) => d.dia === dia
+                        );
                         return (
-                          <div
+                          <button
                             key={dia}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm border cursor-pointer transition-colors ${
+                            type="button"
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
                               isSelected
-                                ? "bg-green-100 border-green-300 text-green-700"
-                                : "bg-white border-gray-300 text-gray-600 hover:border-gray-400"
+                                ? "bg-primary text-white border-primary shadow-sm"
+                                : "bg-white border-gray-300 text-gray-700 hover:border-primary hover:text-primary"
                             }`}
                             onClick={() => {
                               if (!successMsg) toggleDiaHorario("online", dia);
                             }}
                           >
                             <span>{dia}</span>
-                            {isSelected && <X className="h-3 w-3" />}
-                          </div>
+                            {isSelected && <X className="h-4 w-4" />}
+                          </button>
                         );
                       })}
                     </div>
@@ -1693,40 +1702,84 @@ export default function RegisterProfessionalPage() {
                       </p>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Hora de inicio
-                      </label>
-                      <input
-                        type="time"
-                        value={getTime24From12(
-                          formData.horariosEnLinea?.desde || ""
-                        )}
-                        onChange={(e) =>
-                          updateHorarioTime("online", "desde", e.target.value)
-                        }
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400 bg-white"
-                        disabled={!!successMsg}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Hora de fin
-                      </label>
-                      <input
-                        type="time"
-                        value={getTime24From12(
-                          formData.horariosEnLinea?.hasta || ""
-                        )}
-                        onChange={(e) =>
-                          updateHorarioTime("online", "hasta", e.target.value)
-                        }
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400 bg-white"
-                        disabled={!!successMsg}
-                      />
-                    </div>
-                  </div>
+
+                  {/* Horarios individuales por día */}
+                  {formData.horariosEnLinea?.dias &&
+                    formData.horariosEnLinea.dias.length > 0 && (
+                      <div className="mt-6 space-y-4">
+                        <h4 className="text-sm font-semibold text-gray-700 mb-3">
+                          Configura las horas para cada día:
+                        </h4>
+                        {formData.horariosEnLinea.dias.map((diaHorario) => (
+                          <div
+                            key={diaHorario.dia}
+                            className="bg-white rounded-lg border border-gray-200 p-4"
+                          >
+                            <div className="flex items-center justify-between mb-3">
+                              <h5 className="text-sm font-semibold text-gray-900">
+                                {diaHorario.dia}
+                              </h5>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (!successMsg)
+                                    toggleDiaHorario("online", diaHorario.dia);
+                                }}
+                                className="text-red-600 hover:text-red-800 text-xs font-medium"
+                              >
+                                Quitar
+                              </button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-xs text-gray-600 mb-1.5">
+                                  Hora de inicio
+                                </label>
+                                <input
+                                  type="time"
+                                  value={getTime24From12(
+                                    diaHorario.desde || ""
+                                  )}
+                                  onChange={(e) =>
+                                    updateHorarioTime(
+                                      "online",
+                                      diaHorario.dia,
+                                      "desde",
+                                      e.target.value
+                                    )
+                                  }
+                                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+                                  disabled={!!successMsg}
+                                  required
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs text-gray-600 mb-1.5">
+                                  Hora de fin
+                                </label>
+                                <input
+                                  type="time"
+                                  value={getTime24From12(
+                                    diaHorario.hasta || ""
+                                  )}
+                                  onChange={(e) =>
+                                    updateHorarioTime(
+                                      "online",
+                                      diaHorario.dia,
+                                      "hasta",
+                                      e.target.value
+                                    )
+                                  }
+                                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+                                  disabled={!!successMsg}
+                                  required
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                 </div>
               </div>
             )}
@@ -1740,8 +1793,8 @@ export default function RegisterProfessionalPage() {
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Días disponibles
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      Selecciona los días disponibles
                     </label>
                     <div className="flex flex-wrap gap-2">
                       {[
@@ -1755,14 +1808,17 @@ export default function RegisterProfessionalPage() {
                       ].map((dia) => {
                         const diasPresencial =
                           formData.horariosPresencial?.dias || [];
-                        const isSelected = diasPresencial.includes(dia);
+                        const isSelected = diasPresencial.some(
+                          (d) => d.dia === dia
+                        );
                         return (
-                          <div
+                          <button
                             key={dia}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm border cursor-pointer transition-colors ${
+                            type="button"
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
                               isSelected
-                                ? "bg-green-100 border-green-300 text-green-700"
-                                : "bg-white border-gray-300 text-gray-600 hover:border-gray-400"
+                                ? "bg-primary text-white border-primary shadow-sm"
+                                : "bg-white border-gray-300 text-gray-700 hover:border-primary hover:text-primary"
                             }`}
                             onClick={() => {
                               if (!successMsg)
@@ -1770,8 +1826,8 @@ export default function RegisterProfessionalPage() {
                             }}
                           >
                             <span>{dia}</span>
-                            {isSelected && <X className="h-3 w-3" />}
-                          </div>
+                            {isSelected && <X className="h-4 w-4" />}
+                          </button>
                         );
                       })}
                     </div>
@@ -1781,48 +1837,87 @@ export default function RegisterProfessionalPage() {
                       </p>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Hora de inicio
-                      </label>
-                      <input
-                        type="time"
-                        value={getTime24From12(
-                          formData.horariosPresencial?.desde || ""
-                        )}
-                        onChange={(e) =>
-                          updateHorarioTime(
-                            "presencial",
-                            "desde",
-                            e.target.value
-                          )
-                        }
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400 bg-white"
-                        disabled={!!successMsg}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Hora de fin
-                      </label>
-                      <input
-                        type="time"
-                        value={getTime24From12(
-                          formData.horariosPresencial?.hasta || ""
-                        )}
-                        onChange={(e) =>
-                          updateHorarioTime(
-                            "presencial",
-                            "hasta",
-                            e.target.value
-                          )
-                        }
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400 bg-white"
-                        disabled={!!successMsg}
-                      />
-                    </div>
-                  </div>
+
+                  {/* Horarios individuales por día */}
+                  {formData.horariosPresencial?.dias &&
+                    formData.horariosPresencial.dias.length > 0 && (
+                      <div className="mt-6 space-y-4">
+                        <h4 className="text-sm font-semibold text-gray-700 mb-3">
+                          Configura las horas para cada día:
+                        </h4>
+                        {formData.horariosPresencial.dias.map((diaHorario) => (
+                          <div
+                            key={diaHorario.dia}
+                            className="bg-white rounded-lg border border-gray-200 p-4"
+                          >
+                            <div className="flex items-center justify-between mb-3">
+                              <h5 className="text-sm font-semibold text-gray-900">
+                                {diaHorario.dia}
+                              </h5>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (!successMsg)
+                                    toggleDiaHorario(
+                                      "presencial",
+                                      diaHorario.dia
+                                    );
+                                }}
+                                className="text-red-600 hover:text-red-800 text-xs font-medium"
+                              >
+                                Quitar
+                              </button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-xs text-gray-600 mb-1.5">
+                                  Hora de inicio
+                                </label>
+                                <input
+                                  type="time"
+                                  value={getTime24From12(
+                                    diaHorario.desde || ""
+                                  )}
+                                  onChange={(e) =>
+                                    updateHorarioTime(
+                                      "presencial",
+                                      diaHorario.dia,
+                                      "desde",
+                                      e.target.value
+                                    )
+                                  }
+                                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+                                  disabled={!!successMsg}
+                                  required
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs text-gray-600 mb-1.5">
+                                  Hora de fin
+                                </label>
+                                <input
+                                  type="time"
+                                  value={getTime24From12(
+                                    diaHorario.hasta || ""
+                                  )}
+                                  onChange={(e) =>
+                                    updateHorarioTime(
+                                      "presencial",
+                                      diaHorario.dia,
+                                      "hasta",
+                                      e.target.value
+                                    )
+                                  }
+                                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+                                  disabled={!!successMsg}
+                                  required
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                 </div>
               </div>
             )}
@@ -1836,8 +1931,8 @@ export default function RegisterProfessionalPage() {
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Días disponibles
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      Selecciona los días disponibles
                     </label>
                     <div className="flex flex-wrap gap-2">
                       {[
@@ -1851,14 +1946,17 @@ export default function RegisterProfessionalPage() {
                       ].map((dia) => {
                         const diasDomicilio =
                           formData.horariosADomicilio?.dias || [];
-                        const isSelected = diasDomicilio.includes(dia);
+                        const isSelected = diasDomicilio.some(
+                          (d) => d.dia === dia
+                        );
                         return (
-                          <div
+                          <button
                             key={dia}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm border cursor-pointer transition-colors ${
+                            type="button"
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
                               isSelected
-                                ? "bg-green-100 border-green-300 text-green-700"
-                                : "bg-white border-gray-300 text-gray-600 hover:border-gray-400"
+                                ? "bg-primary text-white border-primary shadow-sm"
+                                : "bg-white border-gray-300 text-gray-700 hover:border-primary hover:text-primary"
                             }`}
                             onClick={() => {
                               if (!successMsg)
@@ -1866,8 +1964,8 @@ export default function RegisterProfessionalPage() {
                             }}
                           >
                             <span>{dia}</span>
-                            {isSelected && <X className="h-3 w-3" />}
-                          </div>
+                            {isSelected && <X className="h-4 w-4" />}
+                          </button>
                         );
                       })}
                     </div>
@@ -1877,110 +1975,92 @@ export default function RegisterProfessionalPage() {
                       </p>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Hora de inicio
-                      </label>
-                      <input
-                        type="time"
-                        value={getTime24From12(
-                          formData.horariosADomicilio?.desde || ""
-                        )}
-                        onChange={(e) =>
-                          updateHorarioTime(
-                            "domicilio",
-                            "desde",
-                            e.target.value
-                          )
-                        }
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400 bg-white"
-                        disabled={!!successMsg}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Hora de fin
-                      </label>
-                      <input
-                        type="time"
-                        value={getTime24From12(
-                          formData.horariosADomicilio?.hasta || ""
-                        )}
-                        onChange={(e) =>
-                          updateHorarioTime(
-                            "domicilio",
-                            "hasta",
-                            e.target.value
-                          )
-                        }
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400 bg-white"
-                        disabled={!!successMsg}
-                      />
-                    </div>
-                  </div>
+
+                  {/* Horarios individuales por día */}
+                  {formData.horariosADomicilio?.dias &&
+                    formData.horariosADomicilio.dias.length > 0 && (
+                      <div className="mt-6 space-y-4">
+                        <h4 className="text-sm font-semibold text-gray-700 mb-3">
+                          Configura las horas para cada día:
+                        </h4>
+                        {formData.horariosADomicilio.dias.map((diaHorario) => (
+                          <div
+                            key={diaHorario.dia}
+                            className="bg-white rounded-lg border border-gray-200 p-4"
+                          >
+                            <div className="flex items-center justify-between mb-3">
+                              <h5 className="text-sm font-semibold text-gray-900">
+                                {diaHorario.dia}
+                              </h5>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (!successMsg)
+                                    toggleDiaHorario(
+                                      "domicilio",
+                                      diaHorario.dia
+                                    );
+                                }}
+                                className="text-red-600 hover:text-red-800 text-xs font-medium"
+                              >
+                                Quitar
+                              </button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-xs text-gray-600 mb-1.5">
+                                  Hora de inicio
+                                </label>
+                                <input
+                                  type="time"
+                                  value={getTime24From12(
+                                    diaHorario.desde || ""
+                                  )}
+                                  onChange={(e) =>
+                                    updateHorarioTime(
+                                      "domicilio",
+                                      diaHorario.dia,
+                                      "desde",
+                                      e.target.value
+                                    )
+                                  }
+                                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+                                  disabled={!!successMsg}
+                                  required
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs text-gray-600 mb-1.5">
+                                  Hora de fin
+                                </label>
+                                <input
+                                  type="time"
+                                  value={getTime24From12(
+                                    diaHorario.hasta || ""
+                                  )}
+                                  onChange={(e) =>
+                                    updateHorarioTime(
+                                      "domicilio",
+                                      diaHorario.dia,
+                                      "hasta",
+                                      e.target.value
+                                    )
+                                  }
+                                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+                                  disabled={!!successMsg}
+                                  required
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                 </div>
               </div>
             )}
 
-            {/* 19. Calendario utilizado */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                ¿Qué calendario utilizas habitualmente?{" "}
-                <span className="text-red-500">*</span>
-              </label>
-              <div className="space-y-2">
-                {["Google Calendar", "Outlook"].map((calendario) => (
-                  <label
-                    key={calendario}
-                    className="flex items-center gap-3 cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      name="calendario"
-                      value={calendario}
-                      checked={formData.calendario.includes(calendario)}
-                      onChange={handleInputChange}
-                      className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
-                      disabled={!!successMsg}
-                    />
-                    <span className="text-sm text-gray-700">{calendario}</span>
-                  </label>
-                ))}
-              </div>
-              {errors.calendario && (
-                <p className="mt-1 text-sm text-red-600">{errors.calendario}</p>
-              )}
-            </div>
-
-            {/* 20. Servicios ofrecidos */}
-            <div>
-              <label
-                htmlFor="servicios"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Servicios ofrecidos <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                id="servicios"
-                name="servicios"
-                value={formData.servicios}
-                onChange={handleInputChange}
-                required
-                rows={4}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none ${
-                  errors.servicios ? "border-red-300" : "border-gray-300"
-                }`}
-                placeholder="Describe los servicios que ofreces..."
-                disabled={!!successMsg}
-                aria-invalid={Boolean(errors.servicios)}
-              />
-              {errors.servicios && (
-                <p className="mt-1 text-sm text-red-600">{errors.servicios}</p>
-              )}
-            </div>
-
-            {/* 21. Precios */}
+            {/* 19. Precios */}
             <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Precios <span className="text-red-500">*</span>

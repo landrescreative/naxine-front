@@ -52,6 +52,17 @@ function LoginForm() {
         return;
       }
 
+      // Verificar si el resultado contiene un mensaje de error
+      if (
+        result &&
+        typeof result === "object" &&
+        "error" in result
+      ) {
+        // Usar el mensaje de error retornado directamente
+        setError(result.error);
+        return;
+      }
+
       if (result === true) {
         // Esperar un momento para asegurar que el token se haya guardado en localStorage
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -79,6 +90,8 @@ function LoginForm() {
         router.push(redirectTo);
       } else {
         // El error ya está manejado por el hook useAuth
+        // Priorizar el mensaje del hook que puede contener información específica del backend
+        // También verificar si authError se actualizó (puede haber un pequeño delay)
         setError(authError || "Email o contraseña incorrectos");
       }
     } catch (err) {
