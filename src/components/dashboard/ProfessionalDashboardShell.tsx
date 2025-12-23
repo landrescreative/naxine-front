@@ -59,6 +59,8 @@ export default function ProfessionalDashboardShell({
       setActiveItem("perfil");
     } else if (pathname.includes("/soporte")) {
       setActiveItem("soporte");
+    } else if (pathname.includes("/centro-ayuda")) {
+      setActiveItem("centro-ayuda");
     } else {
       setActiveItem("inicio");
     }
@@ -83,6 +85,9 @@ export default function ProfessionalDashboardShell({
         break;
       case "soporte":
         router.push("/dashboard/profesional/soporte");
+        break;
+      case "centro-ayuda":
+        router.push("/dashboard/profesional/centro-ayuda");
         break;
       default:
         break;

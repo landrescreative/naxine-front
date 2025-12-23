@@ -1,24 +1,84 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { X } from "lucide-react";
 import { authService } from "@/services/api/auth";
 import { validateEmail, validatePassword } from "@/services/utils/api-helpers";
+import { SpecialtiesService } from "@/services/api/specialties";
+
+const specialtiesService = new SpecialtiesService();
 
 export default function RegisterProfessionalPage() {
   const [formData, setFormData] = useState({
-    nombre: "",
-    apellidos: "",
-    email: "",
+    nombreCompleto: "",
+    correoElectronico: "",
     password: "",
     confirmPassword: "",
     telefono: "",
     numeroColegiado: "",
+    titulacion: "",
+    correoProfesionalPublico: "",
     especialidad: "",
-    mensaje: "",
+    especialidadSeleccionada: "",
+    id_especialidad: undefined as number | undefined,
+    descripcion: "",
+    videoPresentacion: "",
+    modalidades: [] as string[],
+    direccionConsulta: "",
+    zonasDomicilio: "",
+    accesibleMovilidad: "",
+    horarios: "",
+    calendario: [] as string[],
+    servicios: "",
+    tarifas: "",
+    observaciones: "",
+    experiencia_años: "",
+    tarifa_por_hora: "",
+    direccion: "",
+    ciudad: "",
+    consentimiento: false,
+    aceptaTerminos: false,
+    // Nuevos campos para horarios y precios
+    horariosEnLinea: null as {
+      dias: string[];
+      desde: string;
+      hasta: string;
+    } | null,
+    horariosPresencial: null as {
+      dias: string[];
+      desde: string;
+      hasta: string;
+    } | null,
+    horariosADomicilio: null as {
+      dias: string[];
+      desde: string;
+      hasta: string;
+    } | null,
+    precios: {
+      primeraSesion: {
+        precio: "",
+        nombre: "",
+        duracion: "",
+      },
+      seguimiento: {
+        precio: "",
+        nombre: "",
+        duracion: "",
+      },
+      pack3: {
+        precio: "",
+        nombre: "",
+        duracion: "",
+      },
+    },
   });
+
+  const [foto, setFoto] = useState<File | null>(null);
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -27,15 +87,92 @@ export default function RegisterProfessionalPage() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const router = useRouter();
 
+  // Estados para especialidades
+  const [especialidades, setEspecialidades] = useState<
+    Array<{ id: number; nombre: string }>
+  >([]);
+  const [loadingEspecialidades, setLoadingEspecialidades] = useState(false);
+
+  // Opciones de duración para precios
+  const durationOptions = useMemo(() => {
+    const options: string[] = [];
+    for (let minutes = 10; minutes <= 180; minutes += 10) {
+      options.push(`${minutes} min`);
+    }
+    return options;
+  }, []);
+
+  // Cargar especialidades desde API pública
+  const fetchEspecialidades = useCallback(async () => {
+    setLoadingEspecialidades(true);
+    try {
+      const response = await specialtiesService.getPublicSpecialties();
+
+      if (response.success && response.data) {
+        const mappedSpecialties = response.data.map((spec: any) => ({
+          id: spec.id_especialidad || spec.id,
+          nombre: spec.nombre || spec.name,
+        }));
+        setEspecialidades(mappedSpecialties);
+      } else {
+        console.error("Error al cargar especialidades:", response.error);
+      }
+    } catch (err: any) {
+      console.error("Error al cargar especialidades:", err);
+    } finally {
+      setLoadingEspecialidades(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchEspecialidades();
+  }, [fetchEspecialidades]);
+
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
   ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    // Limpiar error del campo cuando el usuario empieza a escribir
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
+
+    if (type === "checkbox") {
+      const checkboxName = name;
+      if (checkboxName === "consentimiento") {
+        setFormData((prev) => ({
+          ...prev,
+          consentimiento: checked,
+        }));
+      } else if (checkboxName === "modalidad") {
+        const modalidadValue = (e.target as HTMLInputElement).value;
+        setFormData((prev) => ({
+          ...prev,
+          modalidades: checked
+            ? [...prev.modalidades, modalidadValue]
+            : prev.modalidades.filter((m) => m !== modalidadValue),
+        }));
+      } else if (checkboxName === "calendario") {
+        const calendarioValue = (e.target as HTMLInputElement).value;
+        setFormData((prev) => ({
+          ...prev,
+          calendario: checked
+            ? [...prev.calendario, calendarioValue]
+            : prev.calendario.filter((c) => c !== calendarioValue),
+        }));
+      } else if (checkboxName === "aceptaTerminos") {
+        setFormData((prev) => ({
+          ...prev,
+          aceptaTerminos: checked,
+        }));
+      }
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
+
+    // Limpiar error cuando el usuario empieza a escribir
     if (errors[name]) {
       setErrors((prev) => {
         const newErrors = { ...prev };
@@ -45,26 +182,176 @@ export default function RegisterProfessionalPage() {
     }
   };
 
+  // Función para actualizar precios
+  const updatePrecios = (
+    tipo: keyof typeof formData.precios,
+    campo: string,
+    value: string
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      precios: {
+        ...prev.precios,
+        [tipo]: {
+          ...prev.precios[tipo],
+          [campo]: value,
+        },
+      },
+    }));
+  };
+
+  // Función para manejar días de horarios por modalidad
+  const toggleDiaHorario = (
+    modalidad: "online" | "presencial" | "domicilio",
+    dia: string
+  ) => {
+    const horarioKey =
+      modalidad === "online"
+        ? "horariosEnLinea"
+        : modalidad === "presencial"
+        ? "horariosPresencial"
+        : "horariosADomicilio";
+
+    const horariosActuales = formData[horarioKey] || {
+      dias: [],
+      desde: "",
+      hasta: "",
+    };
+    const isSelected = horariosActuales.dias.includes(dia);
+    const newDias = isSelected
+      ? horariosActuales.dias.filter((d) => d !== dia)
+      : [...horariosActuales.dias, dia];
+
+    setFormData((prev) => ({
+      ...prev,
+      [horarioKey]: {
+        ...horariosActuales,
+        dias: newDias,
+      },
+    }));
+  };
+
+  // Función para actualizar horas de horarios por modalidad
+  const updateHorarioTime = (
+    modalidad: "online" | "presencial" | "domicilio",
+    campo: "desde" | "hasta",
+    time24: string
+  ) => {
+    const horarioKey =
+      modalidad === "online"
+        ? "horariosEnLinea"
+        : modalidad === "presencial"
+        ? "horariosPresencial"
+        : "horariosADomicilio";
+
+    const horariosActuales = formData[horarioKey] || {
+      dias: [],
+      desde: "",
+      hasta: "",
+    };
+
+    // Convertir formato 24h a formato 12h AM/PM
+    let time12 = "";
+    if (time24) {
+      const [hhStr, mm] = time24.split(":");
+      let hh = parseInt(hhStr, 10);
+      const period = hh >= 12 ? "PM" : "AM";
+      if (hh === 0) hh = 12;
+      else if (hh > 12) hh -= 12;
+      time12 = `${hh}:${mm} ${period}`;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      [horarioKey]: {
+        ...horariosActuales,
+        [campo]: time12,
+      },
+    }));
+  };
+
+  // Función para obtener tiempo en formato 24h desde formato 12h
+  const getTime24From12 = (time12: string): string => {
+    if (!time12) return "";
+    const match = time12.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+    if (!match) return time12;
+    let hh = parseInt(match[1], 10);
+    const mm = match[2];
+    const per = match[3].toUpperCase();
+    if (per === "PM" && hh !== 12) hh += 12;
+    if (per === "AM" && hh === 12) hh = 0;
+    return `${hh.toString().padStart(2, "0")}:${mm}`;
+  };
+
+  const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validar tipo de archivo
+      if (!file.type.startsWith("image/")) {
+        setErrors((prev) => ({
+          ...prev,
+          foto: "Por favor, selecciona un archivo de imagen válido",
+        }));
+        return;
+      }
+
+      // Validar tamaño (máx. 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setErrors((prev) => ({
+          ...prev,
+          foto: "La imagen no debe superar los 5MB",
+        }));
+        return;
+      }
+
+      setFoto(file);
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.foto;
+        return newErrors;
+      });
+
+      // Crear preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFotoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeFoto = () => {
+    setFoto(null);
+    setFotoPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const validateVideoUrl = (url: string): boolean => {
+    if (!url) return true; // Opcional
+    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/;
+    const vimeoRegex = /^(https?:\/\/)?(www\.)?vimeo\.com\/.+$/;
+    return youtubeRegex.test(url) || vimeoRegex.test(url);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("🚀 [REGISTRO] Iniciando envío del formulario...");
     setErrors({});
     setLoading(true);
 
     // Validaciones
     const newErrors: Record<string, string> = {};
 
-    if (!formData.nombre.trim()) {
-      newErrors.nombre = "El nombre es requerido";
+    if (!formData.nombreCompleto.trim()) {
+      newErrors.nombreCompleto = "El nombre completo es requerido";
     }
 
-    if (!formData.apellidos.trim()) {
-      newErrors.apellidos = "Los apellidos son requeridos";
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = "El email es requerido";
-    } else if (!validateEmail(formData.email)) {
-      newErrors.email = "El email no es válido";
+    if (!formData.correoElectronico.trim()) {
+      newErrors.correoElectronico = "El correo es requerido";
+    } else if (!validateEmail(formData.correoElectronico)) {
+      newErrors.correoElectronico = "El formato del correo no es válido";
     }
 
     if (!formData.password) {
@@ -86,64 +373,450 @@ export default function RegisterProfessionalPage() {
       newErrors.telefono = "El teléfono es requerido";
     }
 
-    if (!formData.numeroColegiado.trim()) {
-      newErrors.numeroColegiado = "El número de colegiado es requerido";
+    if (!formData.consentimiento) {
+      newErrors.consentimiento =
+        "Debes aceptar el consentimiento de tratamiento de datos";
     }
 
-    if (!formData.especialidad.trim()) {
-      newErrors.especialidad = "La especialidad es requerida";
+    if (!formData.aceptaTerminos) {
+      newErrors.aceptaTerminos =
+        "Debes aceptar los términos y condiciones para profesionales";
+    }
+
+    if (!formData.titulacion.trim()) {
+      newErrors.titulacion = "La titulación profesional es requerida";
+    }
+
+    if (!formData.numeroColegiado.trim()) {
+      newErrors.numeroColegiado = "El número de colegiado/a es requerido";
+    }
+
+    if (!formData.correoProfesionalPublico.trim()) {
+      newErrors.correoProfesionalPublico =
+        "El correo electrónico profesional es requerido";
+    } else if (!validateEmail(formData.correoProfesionalPublico)) {
+      newErrors.correoProfesionalPublico =
+        "El formato del correo electrónico profesional no es válido";
+    }
+
+    if (!formData.descripcion.trim()) {
+      newErrors.descripcion =
+        "La descripción general del perfil profesional es requerida";
+    } else if (formData.descripcion.length > 1500) {
+      newErrors.descripcion =
+        "La descripción no debe superar los 1.500 caracteres";
+    }
+
+    if (!foto) {
+      newErrors.foto = "La foto del perfil profesional es requerida";
+    }
+
+    if (formData.modalidades.length === 0) {
+      newErrors.modalidades =
+        "Debes seleccionar al menos una modalidad de atención";
+    }
+
+    if (
+      formData.modalidades.includes("presencial") &&
+      !formData.direccionConsulta.trim()
+    ) {
+      newErrors.direccionConsulta =
+        "La dirección de consulta es requerida si ofreces atención presencial";
+    }
+
+    if (!formData.accesibleMovilidad) {
+      newErrors.accesibleMovilidad =
+        "Debes indicar si tu consulta es accesible para personas con movilidad reducida";
+    }
+
+    // Validar horarios según las modalidades seleccionadas
+    if (formData.modalidades.includes("online")) {
+      if (
+        !formData.horariosEnLinea ||
+        !formData.horariosEnLinea.dias ||
+        formData.horariosEnLinea.dias.length === 0
+      ) {
+        newErrors.horariosEnLinea =
+          "Debes seleccionar al menos un día para atención en línea";
+      } else if (
+        !formData.horariosEnLinea.desde ||
+        !formData.horariosEnLinea.hasta
+      ) {
+        newErrors.horariosEnLinea =
+          "Debes especificar las horas de inicio y fin para atención en línea";
+      }
+    }
+    if (formData.modalidades.includes("presencial")) {
+      if (
+        !formData.horariosPresencial ||
+        !formData.horariosPresencial.dias ||
+        formData.horariosPresencial.dias.length === 0
+      ) {
+        newErrors.horariosPresencial =
+          "Debes seleccionar al menos un día para atención presencial";
+      } else if (
+        !formData.horariosPresencial.desde ||
+        !formData.horariosPresencial.hasta
+      ) {
+        newErrors.horariosPresencial =
+          "Debes especificar las horas de inicio y fin para atención presencial";
+      }
+    }
+    if (formData.modalidades.includes("domicilio")) {
+      if (
+        !formData.horariosADomicilio ||
+        !formData.horariosADomicilio.dias ||
+        formData.horariosADomicilio.dias.length === 0
+      ) {
+        newErrors.horariosADomicilio =
+          "Debes seleccionar al menos un día para atención a domicilio";
+      } else if (
+        !formData.horariosADomicilio.desde ||
+        !formData.horariosADomicilio.hasta
+      ) {
+        newErrors.horariosADomicilio =
+          "Debes especificar las horas de inicio y fin para atención a domicilio";
+      }
+    }
+
+    if (formData.calendario.length === 0) {
+      newErrors.calendario = "Debes seleccionar al menos un calendario";
+    }
+
+    if (!formData.servicios.trim()) {
+      newErrors.servicios = "Los servicios ofrecidos son requeridos";
+    }
+
+    // Validar que al menos un precio esté configurado
+    const tienePrecios =
+      (formData.precios.primeraSesion.precio &&
+        formData.precios.primeraSesion.precio.trim() !== "") ||
+      (formData.precios.seguimiento.precio &&
+        formData.precios.seguimiento.precio.trim() !== "") ||
+      (formData.precios.pack3.precio &&
+        formData.precios.pack3.precio.trim() !== "");
+
+    if (!tienePrecios) {
+      newErrors.precios =
+        "Debes configurar al menos un precio (Primera Sesión, Seguimiento o Pack x3)";
+    } else {
+      // Validar que los precios configurados tengan nombre y duración
+      if (
+        formData.precios.primeraSesion.precio &&
+        formData.precios.primeraSesion.precio.trim() !== ""
+      ) {
+        if (!formData.precios.primeraSesion.nombre.trim()) {
+          newErrors.preciosPrimeraSesion =
+            "El nombre del paquete de Primera Sesión es requerido";
+        }
+        if (!formData.precios.primeraSesion.duracion.trim()) {
+          newErrors.preciosPrimeraSesion =
+            "La duración de Primera Sesión es requerida";
+        }
+      }
+      if (
+        formData.precios.seguimiento.precio &&
+        formData.precios.seguimiento.precio.trim() !== ""
+      ) {
+        if (!formData.precios.seguimiento.nombre.trim()) {
+          newErrors.preciosSeguimiento =
+            "El nombre del paquete de Seguimiento es requerido";
+        }
+        if (!formData.precios.seguimiento.duracion.trim()) {
+          newErrors.preciosSeguimiento =
+            "La duración de Seguimiento es requerida";
+        }
+      }
+      if (
+        formData.precios.pack3.precio &&
+        formData.precios.pack3.precio.trim() !== ""
+      ) {
+        if (!formData.precios.pack3.nombre.trim()) {
+          newErrors.preciosPack3 = "El nombre del paquete Pack x3 es requerido";
+        }
+        if (!formData.precios.pack3.duracion.trim()) {
+          newErrors.preciosPack3 = "La duración del Pack x3 es requerida";
+        }
+      }
+    }
+
+    // Validar URL de video si se proporciona
+    if (
+      formData.videoPresentacion &&
+      !validateVideoUrl(formData.videoPresentacion)
+    ) {
+      newErrors.videoPresentacion =
+        "El enlace al vídeo debe ser de YouTube o Vimeo";
     }
 
     if (Object.keys(newErrors).length > 0) {
+      console.error(
+        "❌ [REGISTRO] Errores de validación encontrados:",
+        newErrors
+      );
       setErrors(newErrors);
       setLoading(false);
+      // Scroll al primer error
+      const firstErrorField = Object.keys(newErrors)[0];
+      const errorElement = document.querySelector(
+        `[name="${firstErrorField}"], #${firstErrorField}`
+      );
+      if (errorElement) {
+        errorElement.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
       return;
     }
 
-    try {
-      // Combinar código de país con teléfono
-      const telefonoCompleto = formData.telefono.trim();
+    console.log(
+      "✅ [REGISTRO] Validaciones pasadas, preparando datos para envío..."
+    );
 
-      const response = await authService.registerProfessional({
-        nombre: formData.nombre.trim(),
-        apellidos: formData.apellidos.trim(),
-        email: formData.email.trim().toLowerCase(),
-        password: formData.password,
-        telefono: telefonoCompleto,
-        numero_colegiado: formData.numeroColegiado.trim(),
-        especialidad: formData.especialidad.trim(),
-        descripcion: formData.mensaje.trim() || "",
+    try {
+      // Crear FormData para enviar archivo y datos
+      const formDataToSend = new FormData();
+      console.log("📦 [REGISTRO] Construyendo FormData...");
+
+      // Agregar campos de texto
+      formDataToSend.append("nombreCompleto", formData.nombreCompleto.trim());
+      formDataToSend.append(
+        "correoElectronico",
+        formData.correoElectronico.trim().toLowerCase()
+      );
+      formDataToSend.append("password", formData.password);
+      formDataToSend.append("telefono", formData.telefono.trim());
+      formDataToSend.append("numeroColegiado", formData.numeroColegiado.trim());
+      formDataToSend.append(
+        "aceptaTerminos",
+        formData.aceptaTerminos.toString()
+      );
+
+      if (formData.especialidad.trim()) {
+        formDataToSend.append("especialidad", formData.especialidad.trim());
+      }
+      if (formData.especialidadSeleccionada.trim()) {
+        formDataToSend.append(
+          "especialidadSeleccionada",
+          formData.especialidadSeleccionada.trim()
+        );
+      }
+      if (formData.id_especialidad) {
+        formDataToSend.append(
+          "id_especialidad",
+          formData.id_especialidad.toString()
+        );
+      }
+      // Campos requeridos adicionales
+      if (formData.titulacion.trim()) {
+        formDataToSend.append("titulacion", formData.titulacion.trim());
+      }
+      if (formData.correoProfesionalPublico.trim()) {
+        formDataToSend.append(
+          "correoProfesionalPublico",
+          formData.correoProfesionalPublico.trim().toLowerCase()
+        );
+      }
+      if (formData.direccionConsulta.trim()) {
+        formDataToSend.append("direccion", formData.direccionConsulta.trim());
+      }
+      if (formData.ciudad.trim()) {
+        formDataToSend.append("ciudad", formData.ciudad.trim());
+      }
+      if (formData.descripcion.trim()) {
+        formDataToSend.append("biografia", formData.descripcion.trim());
+      }
+      if (formData.servicios.trim()) {
+        formDataToSend.append("servicios", formData.servicios.trim());
+      }
+      if (formData.tarifas.trim()) {
+        formDataToSend.append("tarifas", formData.tarifas.trim());
+      }
+      if (formData.accesibleMovilidad) {
+        formDataToSend.append(
+          "accesibleMovilidad",
+          formData.accesibleMovilidad
+        );
+      }
+      if (formData.modalidades.length > 0) {
+        formDataToSend.append(
+          "modalidades",
+          JSON.stringify(formData.modalidades)
+        );
+      }
+      if (formData.calendario.length > 0) {
+        formDataToSend.append(
+          "calendario",
+          JSON.stringify(formData.calendario)
+        );
+      }
+      if (formData.experiencia_años) {
+        formDataToSend.append("experiencia_años", formData.experiencia_años);
+      }
+      if (formData.tarifa_por_hora) {
+        formDataToSend.append("tarifa_por_hora", formData.tarifa_por_hora);
+      }
+      if (formData.videoPresentacion.trim()) {
+        formDataToSend.append(
+          "videoPresentacion",
+          formData.videoPresentacion.trim()
+        );
+      }
+
+      // Agregar horarios por modalidad si están configurados
+      if (formData.horariosEnLinea) {
+        formDataToSend.append(
+          "horariosEnLinea",
+          JSON.stringify(formData.horariosEnLinea)
+        );
+      }
+      if (formData.horariosPresencial) {
+        formDataToSend.append(
+          "horariosPresencial",
+          JSON.stringify(formData.horariosPresencial)
+        );
+      }
+      if (formData.horariosADomicilio) {
+        formDataToSend.append(
+          "horariosADomicilio",
+          JSON.stringify(formData.horariosADomicilio)
+        );
+      }
+
+      // Agregar precios si están configurados
+      if (
+        formData.precios.primeraSesion.precio ||
+        formData.precios.seguimiento.precio ||
+        formData.precios.pack3.precio
+      ) {
+        formDataToSend.append("precios", JSON.stringify(formData.precios));
+      }
+
+      // Agregar foto si existe
+      if (foto) {
+        console.log(
+          "📷 [REGISTRO] Agregando foto:",
+          foto.name,
+          `(${Math.round(foto.size / 1024)} KB)`
+        );
+        formDataToSend.append("foto", foto);
+      } else {
+        console.warn("⚠️ [REGISTRO] No se encontró foto para enviar");
+      }
+
+      // Log de datos que se enviarán (sin datos sensibles)
+      console.log("📤 [REGISTRO] Enviando datos al servidor...");
+      console.log("   - Nombre:", formData.nombreCompleto);
+      console.log("   - Email:", formData.correoElectronico);
+      console.log("   - Modalidades:", formData.modalidades);
+      console.log("   - Horarios configurados:", {
+        enLinea: !!formData.horariosEnLinea,
+        presencial: !!formData.horariosPresencial,
+        domicilio: !!formData.horariosADomicilio,
+      });
+      console.log("   - Precios configurados:", {
+        primeraSesion: {
+          precio: formData.precios.primeraSesion.precio,
+          nombre: formData.precios.primeraSesion.nombre,
+          duracion: formData.precios.primeraSesion.duracion,
+        },
+        seguimiento: {
+          precio: formData.precios.seguimiento.precio,
+          nombre: formData.precios.seguimiento.nombre,
+          duracion: formData.precios.seguimiento.duracion,
+        },
+        pack3: {
+          precio: formData.precios.pack3.precio,
+          nombre: formData.precios.pack3.nombre,
+          duracion: formData.precios.pack3.duracion,
+        },
+      });
+      console.log("   - Campo tarifas (legacy):", formData.tarifas);
+
+      const response = await authService.registerProfessional(formDataToSend);
+      console.log("📥 [REGISTRO] Respuesta recibida:", {
+        success: response.success,
+        message: response.message,
+        error: response.error,
       });
 
       if (response.success) {
-        // Para profesionales: no redirigir a verificación por código
+        console.log("✅ [REGISTRO] Registro exitoso!");
+        // Si el registro es exitoso y hay email en la respuesta, redirigir a verificación
+        // (igual que hacen los clientes)
+        const email =
+          (response.data as any)?.email ||
+          formData.correoElectronico.trim().toLowerCase();
+
+        if (email) {
+          console.log("🔄 [REGISTRO] Redirigiendo a verificación de código...");
+          // Redirigir a la página de verificación de código con el email
+          router.push(`/verificar-codigo?email=${encodeURIComponent(email)}`);
+          return; // Salir temprano para evitar mostrar el mensaje de éxito
+        }
+
+        // Si no hay email en la respuesta, mostrar mensaje de éxito (fallback)
         setSuccessMsg(
           response.message ||
-            "Tu solicitud de registro ha sido enviada al administrador. Te notificaremos por email cuando sea revisada."
+            "Registro exitoso. Revisa tu email para el código de 6 dígitos."
         );
+        // Resetear formulario
+        setFormData({
+          nombreCompleto: "",
+          correoElectronico: "",
+          password: "",
+          confirmPassword: "",
+          telefono: "",
+          numeroColegiado: "",
+          titulacion: "",
+          correoProfesionalPublico: "",
+          especialidad: "",
+          especialidadSeleccionada: "",
+          id_especialidad: undefined,
+          descripcion: "",
+          videoPresentacion: "",
+          modalidades: [],
+          direccionConsulta: "",
+          zonasDomicilio: "",
+          accesibleMovilidad: "",
+          horarios: "",
+          calendario: [],
+          servicios: "",
+          tarifas: "",
+          observaciones: "",
+          experiencia_años: "",
+          tarifa_por_hora: "",
+          direccion: "",
+          ciudad: "",
+          consentimiento: false,
+          aceptaTerminos: false,
+          horariosEnLinea: null,
+          horariosPresencial: null,
+          horariosADomicilio: null,
+          precios: {
+            primeraSesion: {
+              precio: "",
+              nombre: "",
+              duracion: "",
+            },
+            seguimiento: {
+              precio: "",
+              nombre: "",
+              duracion: "",
+            },
+            pack3: {
+              precio: "",
+              nombre: "",
+              duracion: "",
+            },
+          },
+        });
+        setFoto(null);
+        setFotoPreview(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
       } else {
-        // Mostrar el mensaje de error específico del backend
         const errorMessage =
           response.error || "Error al registrar. Por favor, intenta de nuevo.";
-
-        // Solo loggear si hay información útil
-        if (process.env.NODE_ENV === "development") {
-          if (
-            response.errorDetails &&
-            Object.keys(response.errorDetails).length > 0
-          ) {
-            console.error(
-              "[Registro Profesional] Error del backend:",
-              response
-            );
-            console.error(
-              "[Registro Profesional] Error details:",
-              response.errorDetails
-            );
-          } else if (response.error) {
-            console.error("[Registro Profesional] Error:", response.error);
-          }
-        }
 
         // Mapear errores de validación a campos específicos si están disponibles
         const fieldErrors: Record<string, string> = {};
@@ -153,7 +826,6 @@ export default function RegisterProfessionalPage() {
           Array.isArray(response.errorDetails.errors)
         ) {
           response.errorDetails.errors.forEach((err: any) => {
-            // El error puede venir en diferentes formatos
             let fieldName = "";
             let errorMsg = "";
 
@@ -171,24 +843,33 @@ export default function RegisterProfessionalPage() {
 
             // Mapear nombres de campos del backend a los del frontend
             const fieldMap: Record<string, string> = {
-              nombre: "nombre",
-              apellidos: "apellidos",
-              email: "email",
+              nombreCompleto: "nombreCompleto",
+              correoElectronico: "correoElectronico",
               password: "password",
               telefono: "telefono",
-              numero_colegiado: "numeroColegiado",
+              numeroColegiado: "numeroColegiado",
               especialidad: "especialidad",
-              descripcion: "mensaje",
+              biografia: "descripcion",
+              tarifas: "precios", // Mapear tarifas (legacy) a precios
             };
 
+            // Si el error es sobre tarifas, convertirlo a error de precios
+            if (
+              fieldName === "tarifas" ||
+              errorMsg.toLowerCase().includes("tarifas")
+            ) {
+              fieldName = "precios";
+              errorMsg =
+                "Debes configurar al menos un precio (Primera Sesión, Seguimiento o Pack x3)";
+            }
+
             const frontendField = fieldName
-              ? fieldMap[fieldName.toLowerCase()] || fieldName
+              ? fieldMap[fieldName] || fieldName
               : "";
 
             if (frontendField && errorMsg) {
               fieldErrors[frontendField] = errorMsg;
             } else if (errorMsg && !frontendField) {
-              // Si no hay campo específico, agregar al error general
               if (!fieldErrors.submit) {
                 fieldErrors.submit = errorMsg;
               } else {
@@ -198,7 +879,6 @@ export default function RegisterProfessionalPage() {
           });
         }
 
-        // Si hay errores de campos específicos, usarlos; si no, usar el mensaje general
         if (Object.keys(fieldErrors).length > 0) {
           setErrors(fieldErrors);
         } else {
@@ -206,152 +886,168 @@ export default function RegisterProfessionalPage() {
         }
       }
     } catch (err: any) {
-      // Capturar y mostrar el error detallado
       const errorMessage =
         err?.message ||
         err?.error ||
         "Ocurrió un error al registrar. Por favor, intenta de nuevo.";
-      console.error("Error en registro profesional:", err);
+      console.error("❌ [REGISTRO] Error en registro profesional:", err);
+      console.error("   - Detalles:", {
+        message: err?.message,
+        error: err?.error,
+        stack: err?.stack,
+      });
       setErrors({
         submit: errorMessage,
       });
+      // Scroll al mensaje de error
+      setTimeout(() => {
+        const errorElement = document.querySelector('[role="alert"]');
+        if (errorElement) {
+          errorElement.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 100);
     } finally {
+      console.log("🏁 [REGISTRO] Finalizando proceso de registro");
       setLoading(false);
     }
   };
 
   const statusMessageId = "professional-register-status";
   const successMessageId = `${statusMessageId}-success`;
+  const caracteresRestantes = 1500 - formData.descripcion.length;
   const describedByIds =
-    [
-      errors.submit ? statusMessageId : "",
-      successMsg ? successMessageId : "",
-    ]
+    [errors.submit ? statusMessageId : "", successMsg ? successMessageId : ""]
       .filter(Boolean)
       .join(" ") || undefined;
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-white">
       {/* Left Side - Registration Form */}
-      <div className="flex-1 flex items-center justify-center bg-white px-8 py-12">
-        <div className="w-full max-w-md">
+      <div className="flex-1 flex items-center justify-center px-8 py-12 overflow-y-auto">
+        <div className="w-full max-w-3xl">
           {/* Header */}
-          <div className="text-left mb-8">
+          <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-800 mb-2">
               Regístrate como profesional
             </h1>
-            <p className="text-gray-600">
-              Estamos encantados de trabajar contigo.
+            <p className="text-gray-600 text-lg">
+              Completa este formulario para validar tu perfil y preparar tu
+              futura ficha pública en la plataforma.
             </p>
           </div>
 
-          {/* Registration Form */}
+          {/* Form */}
           <form
             onSubmit={handleSubmit}
-            className="space-y-4"
+            className="space-y-6"
             aria-describedby={describedByIds}
             aria-busy={loading}
           >
-            {/* Name and Last Name Row */}
-            <div className="grid grid-cols-2 gap-4">
-              {/* Name Field */}
-              <div>
-                <label
-                  htmlFor="nombre"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Nombre
-                </label>
-                <input
-                  type="text"
-                  id="nombre"
-                  name="nombre"
-                  value={formData.nombre}
-                  onChange={handleInputChange}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
-                    errors.nombre ? "border-red-300" : "border-gray-300"
-                  }`}
-                  placeholder="Tu nombre"
-                  required
-                  disabled={!!successMsg}
-                aria-invalid={Boolean(errors.nombre)}
-                aria-describedby={errors.nombre ? "nombre-prof-error" : undefined}
-                />
-                {errors.nombre && (
-                <p id="nombre-prof-error" className="mt-1 text-sm text-red-600">
-                  {errors.nombre}
-                </p>
-                )}
+            {/* Success Message */}
+            {successMsg && (
+              <div
+                className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg"
+                role="status"
+                aria-live="polite"
+                id={successMessageId}
+              >
+                {successMsg}
               </div>
+            )}
 
-              {/* Last Name Field */}
-              <div>
-                <label
-                  htmlFor="apellidos"
-                  className="block text-sm font-medium text-gray-700 mb-2"
+            {/* Error Message */}
+            {!successMsg && errors.submit && (
+              <div
+                className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start gap-3"
+                role="alert"
+                aria-live="assertive"
+                id={statusMessageId}
+              >
+                <svg
+                  className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
                 >
-                  Apellidos
-                </label>
-                <input
-                  type="text"
-                  id="apellidos"
-                  name="apellidos"
-                  value={formData.apellidos}
-                  onChange={handleInputChange}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
-                    errors.apellidos ? "border-red-300" : "border-gray-300"
-                  }`}
-                  placeholder="Tus apellidos"
-                  required
-                  disabled={!!successMsg}
-                aria-invalid={Boolean(errors.apellidos)}
-                aria-describedby={errors.apellidos ? "apellidos-prof-error" : undefined}
-                />
-                {errors.apellidos && (
-                <p id="apellidos-prof-error" className="mt-1 text-sm text-red-600">
-                    {errors.apellidos}
-                  </p>
-                )}
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <div className="flex-1">
+                  <p className="font-medium">Error al enviar el formulario</p>
+                  <p className="text-sm mt-1">{errors.submit}</p>
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Email Field */}
+            {/* 1. Nombre completo */}
             <div>
               <label
-                htmlFor="email"
+                htmlFor="nombreCompleto"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                Correo Electrónico
+                Nombre y apellidos <span className="text-red-500">*</span>
               </label>
               <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
+                type="text"
+                id="nombreCompleto"
+                name="nombreCompleto"
+                value={formData.nombreCompleto}
                 onChange={handleInputChange}
                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
-                  errors.email ? "border-red-300" : "border-gray-300"
+                  errors.nombreCompleto ? "border-red-300" : "border-gray-300"
                 }`}
-                placeholder="tu@email.com"
-                  required
-                  disabled={!!successMsg}
-                aria-invalid={Boolean(errors.email)}
-                aria-describedby={errors.email ? "email-prof-error" : undefined}
+                placeholder="Nombre y apellidos completos"
+                required
+                disabled={!!successMsg}
+                aria-invalid={Boolean(errors.nombreCompleto)}
               />
-              {errors.email && (
-                <p id="email-prof-error" className="mt-1 text-sm text-red-600">
-                  {errors.email}
+              {errors.nombreCompleto && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.nombreCompleto}
                 </p>
               )}
             </div>
 
-            {/* Password Field */}
+            {/* 2. Correo electrónico */}
+            <div>
+              <label
+                htmlFor="correoElectronico"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Correo <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                id="correoElectronico"
+                name="correoElectronico"
+                value={formData.correoElectronico}
+                onChange={handleInputChange}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
+                  errors.correoElectronico
+                    ? "border-red-300"
+                    : "border-gray-300"
+                }`}
+                placeholder="tu@email.com"
+                required
+                disabled={!!successMsg}
+                aria-invalid={Boolean(errors.correoElectronico)}
+              />
+              {errors.correoElectronico && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.correoElectronico}
+                </p>
+              )}
+            </div>
+
+            {/* 3. Contraseña */}
             <div>
               <label
                 htmlFor="password"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                Contraseña
+                Contraseña <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <input
@@ -366,67 +1062,31 @@ export default function RegisterProfessionalPage() {
                   placeholder="Mínimo 6 caracteres"
                   required
                   disabled={!!successMsg}
-                aria-invalid={Boolean(errors.password)}
-                aria-describedby={errors.password ? "password-prof-error" : undefined}
+                  aria-invalid={Boolean(errors.password)}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                aria-pressed={showPassword}
+                  aria-label={
+                    showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                  }
                 >
-                  {showPassword ? (
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"
-                      />
-                    </svg>
-                  ) : (
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                      />
-                    </svg>
-                  )}
+                  {showPassword ? "👁️" : "👁️‍🗨️"}
                 </button>
               </div>
               {errors.password && (
-                <p id="password-prof-error" className="mt-1 text-sm text-red-600">
-                  {errors.password}
-                </p>
+                <p className="mt-1 text-sm text-red-600">{errors.password}</p>
               )}
             </div>
 
-            {/* Confirm Password Field */}
+            {/* 4. Confirmar contraseña */}
             <div>
               <label
                 htmlFor="confirmPassword"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                Confirmar Contraseña
+                Confirmar Contraseña <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <input
@@ -443,76 +1103,35 @@ export default function RegisterProfessionalPage() {
                   placeholder="Confirma tu contraseña"
                   required
                   disabled={!!successMsg}
-                aria-invalid={Boolean(errors.confirmPassword)}
-                aria-describedby={
-                  errors.confirmPassword ? "confirm-password-prof-error" : undefined
-                }
+                  aria-invalid={Boolean(errors.confirmPassword)}
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                aria-label={
-                  showConfirmPassword
-                    ? "Ocultar confirmación de contraseña"
-                    : "Mostrar confirmación de contraseña"
-                }
-                aria-pressed={showConfirmPassword}
+                  aria-label={
+                    showConfirmPassword
+                      ? "Ocultar confirmación de contraseña"
+                      : "Mostrar confirmación de contraseña"
+                  }
                 >
-                  {showConfirmPassword ? (
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"
-                      />
-                    </svg>
-                  ) : (
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                      />
-                    </svg>
-                  )}
+                  {showConfirmPassword ? "👁️" : "👁️‍🗨️"}
                 </button>
               </div>
               {errors.confirmPassword && (
-                <p
-                  id="confirm-password-prof-error"
-                  className="mt-1 text-sm text-red-600"
-                >
+                <p className="mt-1 text-sm text-red-600">
                   {errors.confirmPassword}
                 </p>
               )}
             </div>
 
-            {/* Phone Field */}
+            {/* 5. Teléfono */}
             <div>
               <label
                 htmlFor="telefono"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                Teléfono
+                Teléfono <span className="text-red-500">*</span>
               </label>
               <input
                 type="tel"
@@ -524,25 +1143,113 @@ export default function RegisterProfessionalPage() {
                   errors.telefono ? "border-red-300" : "border-gray-300"
                 }`}
                 placeholder="+34 600 123 456"
-                  required
-                  disabled={!!successMsg}
+                required
+                disabled={!!successMsg}
                 aria-invalid={Boolean(errors.telefono)}
-                aria-describedby={errors.telefono ? "telefono-prof-error" : undefined}
               />
               {errors.telefono && (
-                <p id="telefono-prof-error" className="mt-1 text-sm text-red-600">
-                  {errors.telefono}
+                <p className="mt-1 text-sm text-red-600">{errors.telefono}</p>
+              )}
+            </div>
+
+            {/* 6. Consentimiento */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="consentimiento"
+                  checked={formData.consentimiento}
+                  onChange={handleInputChange}
+                  required
+                  className="mt-1 w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                  disabled={!!successMsg}
+                />
+                <span className="text-sm text-gray-700">
+                  Declaro haber leído la información anterior y consiento el
+                  tratamiento de mis datos personales para la finalidad de
+                  validación profesional y gestión de mi solicitud de alta en
+                  NAXINE. <span className="text-red-500">*</span>
+                </span>
+              </label>
+              {errors.consentimiento && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.consentimiento}
                 </p>
               )}
             </div>
 
-            {/* Membership Number Field */}
+            {/* 6.1. Términos y Condiciones para Profesionales */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="aceptaTerminos"
+                  checked={formData.aceptaTerminos}
+                  onChange={handleInputChange}
+                  required
+                  className="mt-1 w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                  disabled={!!successMsg}
+                />
+                <span className="text-sm text-gray-700">
+                  He leído y acepto los{" "}
+                  <Link
+                    href="/terminos-condiciones"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:text-primary/80 underline"
+                  >
+                    términos y condiciones para profesionales
+                  </Link>
+                  . <span className="text-red-500">*</span>
+                </span>
+              </label>
+              {errors.aceptaTerminos && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.aceptaTerminos}
+                </p>
+              )}
+            </div>
+
+            {/* 7. Titulación profesional */}
+            <div>
+              <label
+                htmlFor="titulacion"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Titulación profesional <span className="text-red-500">*</span>
+                <span className="text-xs text-gray-500 ml-2">
+                  (Será visible en tu futura ficha pública)
+                </span>
+              </label>
+              <input
+                type="text"
+                id="titulacion"
+                name="titulacion"
+                value={formData.titulacion}
+                onChange={handleInputChange}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
+                  errors.titulacion ? "border-red-300" : "border-gray-300"
+                }`}
+                placeholder="Ej: Grado en Psicología"
+                required
+                disabled={!!successMsg}
+                aria-invalid={Boolean(errors.titulacion)}
+              />
+              {errors.titulacion && (
+                <p className="mt-1 text-sm text-red-600">{errors.titulacion}</p>
+              )}
+            </div>
+
+            {/* 8. Número de colegiado/a */}
             <div>
               <label
                 htmlFor="numeroColegiado"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                Número de colegiado
+                Número de colegiado/a <span className="text-red-500">*</span>
+                <span className="text-xs text-gray-500 ml-2">
+                  (Será visible en tu futura ficha pública)
+                </span>
               </label>
               <input
                 type="text"
@@ -553,102 +1260,1034 @@ export default function RegisterProfessionalPage() {
                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
                   errors.numeroColegiado ? "border-red-300" : "border-gray-300"
                 }`}
-                placeholder="Número de colegiado"
-                  required
-                  disabled={!!successMsg}
+                placeholder="Número de colegiado/a"
+                required
+                disabled={!!successMsg}
                 aria-invalid={Boolean(errors.numeroColegiado)}
-                aria-describedby={
-                  errors.numeroColegiado ? "colegiado-prof-error" : undefined
-                }
               />
               {errors.numeroColegiado && (
-                <p id="colegiado-prof-error" className="mt-1 text-sm text-red-600">
+                <p className="mt-1 text-sm text-red-600">
                   {errors.numeroColegiado}
                 </p>
               )}
             </div>
 
-            {/* Specialty Field */}
+            {/* 9. Correo electrónico profesional */}
             <div>
               <label
-                htmlFor="especialidad"
+                htmlFor="correoProfesionalPublico"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                Especialidad o área profesional
+                Correo electrónico profesional{" "}
+                <span className="text-red-500">*</span>
+                <span className="text-xs text-gray-500 ml-2">
+                  (Será visible en tu futura ficha pública)
+                </span>
               </label>
               <input
-                type="text"
-                id="especialidad"
-                name="especialidad"
-                value={formData.especialidad}
+                type="email"
+                id="correoProfesionalPublico"
+                name="correoProfesionalPublico"
+                value={formData.correoProfesionalPublico}
                 onChange={handleInputChange}
                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
-                  errors.especialidad ? "border-red-300" : "border-gray-300"
+                  errors.correoProfesionalPublico
+                    ? "border-red-300"
+                    : "border-gray-300"
                 }`}
-                placeholder="Tu especialidad profesional"
-                  required
-                  disabled={!!successMsg}
-                aria-invalid={Boolean(errors.especialidad)}
-                aria-describedby={
-                  errors.especialidad ? "especialidad-prof-error" : undefined
-                }
+                placeholder="profesional@email.com"
+                required
+                disabled={!!successMsg}
+                aria-invalid={Boolean(errors.correoProfesionalPublico)}
               />
+              {errors.correoProfesionalPublico && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.correoProfesionalPublico}
+                </p>
+              )}
+            </div>
+
+            {/* 10. Especialidad */}
+            <div>
+              <label
+                htmlFor="id_especialidad"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Especialidad o área profesional{" "}
+                <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <select
+                  id="id_especialidad"
+                  name="id_especialidad"
+                  value={formData.id_especialidad || ""}
+                  onChange={(e) => {
+                    const selectedId = e.target.value;
+                    if (!selectedId) {
+                      setFormData((prev) => ({
+                        ...prev,
+                        id_especialidad: undefined,
+                        especialidadSeleccionada: "",
+                        especialidad: "",
+                      }));
+                      return;
+                    }
+                    const selectedEspecialidad = especialidades.find(
+                      (esp) => String(esp.id) === selectedId
+                    );
+                    if (selectedEspecialidad) {
+                      setFormData((prev) => ({
+                        ...prev,
+                        id_especialidad: selectedEspecialidad.id,
+                        especialidadSeleccionada: selectedEspecialidad.nombre,
+                        especialidad: selectedEspecialidad.nombre,
+                      }));
+                    }
+                  }}
+                  disabled={!!successMsg || loadingEspecialidades}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all appearance-none bg-white ${
+                    errors.especialidad ? "border-red-300" : "border-gray-300"
+                  } ${loadingEspecialidades ? "opacity-50" : ""}`}
+                  required
+                  aria-invalid={Boolean(errors.especialidad)}
+                >
+                  {loadingEspecialidades ? (
+                    <option value="">Cargando especialidades...</option>
+                  ) : especialidades.length === 0 ? (
+                    <option value="">No hay especialidades disponibles</option>
+                  ) : (
+                    <>
+                      <option value="">Selecciona una especialidad</option>
+                      {especialidades.map((especialidad) => (
+                        <option key={especialidad.id} value={especialidad.id}>
+                          {especialidad.nombre}
+                        </option>
+                      ))}
+                    </>
+                  )}
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  {loadingEspecialidades ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
+                  ) : (
+                    <svg
+                      className="h-4 w-4 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  )}
+                </div>
+              </div>
               {errors.especialidad && (
-                <p id="especialidad-prof-error" className="mt-1 text-sm text-red-600">
+                <p className="mt-1 text-sm text-red-600">
                   {errors.especialidad}
                 </p>
               )}
             </div>
 
-            {/* Message Field */}
+            {/* 11. Descripción general del perfil profesional */}
             <div>
               <label
-                htmlFor="mensaje"
+                htmlFor="descripcion"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                Mensaje
+                Descripción general del perfil profesional{" "}
+                <span className="text-red-500">*</span>
+                <span className="text-xs text-gray-500 ml-2">
+                  (Máximo 1.500 caracteres. Será visible en tu futura ficha
+                  pública)
+                </span>
               </label>
               <textarea
-                id="mensaje"
-                name="mensaje"
-                value={formData.mensaje}
+                id="descripcion"
+                name="descripcion"
+                value={formData.descripcion}
                 onChange={handleInputChange}
-                rows={4}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none"
-                placeholder="Cuéntanos sobre ti y tu experiencia profesional..."
-                  disabled={!!successMsg}
+                required
+                maxLength={1500}
+                rows={6}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none ${
+                  errors.descripcion ? "border-red-300" : "border-gray-300"
+                }`}
+                placeholder="Describe tu perfil profesional, experiencia y especialidades..."
+                disabled={!!successMsg}
+                aria-invalid={Boolean(errors.descripcion)}
               />
+              <p className="text-xs text-gray-500 mt-1">
+                {caracteresRestantes} caracteres restantes
+              </p>
+              {errors.descripcion && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.descripcion}
+                </p>
+              )}
             </div>
 
-            {/* Success / Error Messages */}
-            {successMsg && (
-              <div
-                className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg"
-                role="status"
-                aria-live="polite"
-                id={successMessageId}
+            {/* 12. Foto del perfil profesional */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Foto del perfil profesional{" "}
+                <span className="text-red-500">*</span>
+                <span className="text-xs text-gray-500 ml-2">
+                  (Será visible en tu futura ficha pública)
+                </span>
+              </label>
+              {fotoPreview ? (
+                <div className="relative">
+                  <div className="w-48 h-48 border-2 border-gray-300 rounded-lg overflow-hidden">
+                    <img
+                      src={fotoPreview}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={removeFoto}
+                    className="mt-2 text-sm text-red-600 hover:text-red-800"
+                    disabled={!!successMsg}
+                  >
+                    Eliminar foto
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFotoChange}
+                    required
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
+                      errors.foto ? "border-red-300" : "border-gray-300"
+                    }`}
+                    disabled={!!successMsg}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Formatos aceptados: JPG, PNG, GIF. Tamaño máximo: 5MB
+                  </p>
+                </div>
+              )}
+              {errors.foto && (
+                <p className="mt-1 text-sm text-red-600">{errors.foto}</p>
+              )}
+            </div>
+
+            {/* 13. Enlace al vídeo de presentación */}
+            <div>
+              <label
+                htmlFor="videoPresentacion"
+                className="block text-sm font-medium text-gray-700 mb-2"
               >
-                {successMsg}
+                Enlace al vídeo de presentación
+                <span className="text-xs text-gray-500 ml-2">
+                  (Opcional, solo YouTube o Vimeo. Será visible en tu futura
+                  ficha pública)
+                </span>
+              </label>
+              <input
+                type="url"
+                id="videoPresentacion"
+                name="videoPresentacion"
+                value={formData.videoPresentacion}
+                onChange={handleInputChange}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
+                  errors.videoPresentacion
+                    ? "border-red-300"
+                    : "border-gray-300"
+                }`}
+                placeholder="https://www.youtube.com/watch?v=... o https://vimeo.com/..."
+                disabled={!!successMsg}
+                aria-invalid={Boolean(errors.videoPresentacion)}
+              />
+              {errors.videoPresentacion && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.videoPresentacion}
+                </p>
+              )}
+            </div>
+
+            {/* 14. Modalidades de atención */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Modalidades de atención que ofreces{" "}
+                <span className="text-red-500">*</span>
+              </label>
+              <div className="space-y-2">
+                {["online", "presencial", "domicilio"].map((modalidad) => (
+                  <label
+                    key={modalidad}
+                    className="flex items-center gap-3 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      name="modalidad"
+                      value={modalidad}
+                      checked={formData.modalidades.includes(modalidad)}
+                      onChange={handleInputChange}
+                      className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                      disabled={!!successMsg}
+                    />
+                    <span className="text-sm text-gray-700 capitalize">
+                      {modalidad === "domicilio" ? "A domicilio" : modalidad}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              {errors.modalidades && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.modalidades}
+                </p>
+              )}
+            </div>
+
+            {/* 15. Dirección de consulta */}
+            {formData.modalidades.includes("presencial") && (
+              <div>
+                <label
+                  htmlFor="direccionConsulta"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Dirección de consulta <span className="text-red-500">*</span>
+                  <span className="text-xs text-gray-500 ml-2">
+                    (Solo si ofreces atención presencial)
+                  </span>
+                </label>
+                <textarea
+                  id="direccionConsulta"
+                  name="direccionConsulta"
+                  value={formData.direccionConsulta}
+                  onChange={handleInputChange}
+                  required={formData.modalidades.includes("presencial")}
+                  rows={3}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none ${
+                    errors.direccionConsulta
+                      ? "border-red-300"
+                      : "border-gray-300"
+                  }`}
+                  placeholder="Dirección completa de la consulta"
+                  disabled={!!successMsg}
+                  aria-invalid={Boolean(errors.direccionConsulta)}
+                />
+                {errors.direccionConsulta && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.direccionConsulta}
+                  </p>
+                )}
               </div>
             )}
-            {!successMsg && errors.submit && (
-              <div
-                className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg"
-                role="alert"
-                aria-live="assertive"
-                id={statusMessageId}
-              >
-                {errors.submit}
+
+            {/* 16. Zonas donde atiendes a domicilio */}
+            {formData.modalidades.includes("domicilio") && (
+              <div>
+                <label
+                  htmlFor="zonasDomicilio"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Zonas donde atiendes a domicilio
+                  <span className="text-xs text-gray-500 ml-2">
+                    (Si aplica)
+                  </span>
+                </label>
+                <textarea
+                  id="zonasDomicilio"
+                  name="zonasDomicilio"
+                  value={formData.zonasDomicilio}
+                  onChange={handleInputChange}
+                  rows={3}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none"
+                  placeholder="Indica las zonas donde ofreces atención a domicilio"
+                  disabled={!!successMsg}
+                />
               </div>
             )}
+
+            {/* 17. Accesible para movilidad reducida */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                ¿Tu consulta es accesible para personas con movilidad reducida?{" "}
+                <span className="text-red-500">*</span>
+              </label>
+              <div className="space-y-2">
+                {["Sí", "No"].map((opcion) => (
+                  <label
+                    key={opcion}
+                    className="flex items-center gap-3 cursor-pointer"
+                  >
+                    <input
+                      type="radio"
+                      name="accesibleMovilidad"
+                      value={opcion}
+                      checked={formData.accesibleMovilidad === opcion}
+                      onChange={handleInputChange}
+                      required
+                      className="w-4 h-4 text-primary border-gray-300 focus:ring-primary"
+                      disabled={!!successMsg}
+                    />
+                    <span className="text-sm text-gray-700">{opcion}</span>
+                  </label>
+                ))}
+              </div>
+              {errors.accesibleMovilidad && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.accesibleMovilidad}
+                </p>
+              )}
+            </div>
+
+            {/* 18. Horarios por Modalidad */}
+            {/* Horarios En Línea */}
+            {formData.modalidades.includes("online") && (
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Horario En Línea <span className="text-red-500">*</span>
+                </h3>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Días disponibles
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        "Lunes",
+                        "Martes",
+                        "Miércoles",
+                        "Jueves",
+                        "Viernes",
+                        "Sábado",
+                        "Domingo",
+                      ].map((dia) => {
+                        const diasEnLinea =
+                          formData.horariosEnLinea?.dias || [];
+                        const isSelected = diasEnLinea.includes(dia);
+                        return (
+                          <div
+                            key={dia}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm border cursor-pointer transition-colors ${
+                              isSelected
+                                ? "bg-green-100 border-green-300 text-green-700"
+                                : "bg-white border-gray-300 text-gray-600 hover:border-gray-400"
+                            }`}
+                            onClick={() => {
+                              if (!successMsg) toggleDiaHorario("online", dia);
+                            }}
+                          >
+                            <span>{dia}</span>
+                            {isSelected && <X className="h-3 w-3" />}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {errors.horariosEnLinea && (
+                      <p className="mt-2 text-sm text-red-600">
+                        {errors.horariosEnLinea}
+                      </p>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Hora de inicio
+                      </label>
+                      <input
+                        type="time"
+                        value={getTime24From12(
+                          formData.horariosEnLinea?.desde || ""
+                        )}
+                        onChange={(e) =>
+                          updateHorarioTime("online", "desde", e.target.value)
+                        }
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400 bg-white"
+                        disabled={!!successMsg}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Hora de fin
+                      </label>
+                      <input
+                        type="time"
+                        value={getTime24From12(
+                          formData.horariosEnLinea?.hasta || ""
+                        )}
+                        onChange={(e) =>
+                          updateHorarioTime("online", "hasta", e.target.value)
+                        }
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400 bg-white"
+                        disabled={!!successMsg}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Horarios Presencial */}
+            {formData.modalidades.includes("presencial") && (
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Horario Presencial <span className="text-red-500">*</span>
+                </h3>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Días disponibles
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        "Lunes",
+                        "Martes",
+                        "Miércoles",
+                        "Jueves",
+                        "Viernes",
+                        "Sábado",
+                        "Domingo",
+                      ].map((dia) => {
+                        const diasPresencial =
+                          formData.horariosPresencial?.dias || [];
+                        const isSelected = diasPresencial.includes(dia);
+                        return (
+                          <div
+                            key={dia}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm border cursor-pointer transition-colors ${
+                              isSelected
+                                ? "bg-green-100 border-green-300 text-green-700"
+                                : "bg-white border-gray-300 text-gray-600 hover:border-gray-400"
+                            }`}
+                            onClick={() => {
+                              if (!successMsg)
+                                toggleDiaHorario("presencial", dia);
+                            }}
+                          >
+                            <span>{dia}</span>
+                            {isSelected && <X className="h-3 w-3" />}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {errors.horariosPresencial && (
+                      <p className="mt-2 text-sm text-red-600">
+                        {errors.horariosPresencial}
+                      </p>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Hora de inicio
+                      </label>
+                      <input
+                        type="time"
+                        value={getTime24From12(
+                          formData.horariosPresencial?.desde || ""
+                        )}
+                        onChange={(e) =>
+                          updateHorarioTime(
+                            "presencial",
+                            "desde",
+                            e.target.value
+                          )
+                        }
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400 bg-white"
+                        disabled={!!successMsg}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Hora de fin
+                      </label>
+                      <input
+                        type="time"
+                        value={getTime24From12(
+                          formData.horariosPresencial?.hasta || ""
+                        )}
+                        onChange={(e) =>
+                          updateHorarioTime(
+                            "presencial",
+                            "hasta",
+                            e.target.value
+                          )
+                        }
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400 bg-white"
+                        disabled={!!successMsg}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Horarios A Domicilio */}
+            {formData.modalidades.includes("domicilio") && (
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Horario A Domicilio <span className="text-red-500">*</span>
+                </h3>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Días disponibles
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        "Lunes",
+                        "Martes",
+                        "Miércoles",
+                        "Jueves",
+                        "Viernes",
+                        "Sábado",
+                        "Domingo",
+                      ].map((dia) => {
+                        const diasDomicilio =
+                          formData.horariosADomicilio?.dias || [];
+                        const isSelected = diasDomicilio.includes(dia);
+                        return (
+                          <div
+                            key={dia}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm border cursor-pointer transition-colors ${
+                              isSelected
+                                ? "bg-green-100 border-green-300 text-green-700"
+                                : "bg-white border-gray-300 text-gray-600 hover:border-gray-400"
+                            }`}
+                            onClick={() => {
+                              if (!successMsg)
+                                toggleDiaHorario("domicilio", dia);
+                            }}
+                          >
+                            <span>{dia}</span>
+                            {isSelected && <X className="h-3 w-3" />}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {errors.horariosADomicilio && (
+                      <p className="mt-2 text-sm text-red-600">
+                        {errors.horariosADomicilio}
+                      </p>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Hora de inicio
+                      </label>
+                      <input
+                        type="time"
+                        value={getTime24From12(
+                          formData.horariosADomicilio?.desde || ""
+                        )}
+                        onChange={(e) =>
+                          updateHorarioTime(
+                            "domicilio",
+                            "desde",
+                            e.target.value
+                          )
+                        }
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400 bg-white"
+                        disabled={!!successMsg}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Hora de fin
+                      </label>
+                      <input
+                        type="time"
+                        value={getTime24From12(
+                          formData.horariosADomicilio?.hasta || ""
+                        )}
+                        onChange={(e) =>
+                          updateHorarioTime(
+                            "domicilio",
+                            "hasta",
+                            e.target.value
+                          )
+                        }
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400 bg-white"
+                        disabled={!!successMsg}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 19. Calendario utilizado */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                ¿Qué calendario utilizas habitualmente?{" "}
+                <span className="text-red-500">*</span>
+              </label>
+              <div className="space-y-2">
+                {["Google Calendar", "Outlook"].map((calendario) => (
+                  <label
+                    key={calendario}
+                    className="flex items-center gap-3 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      name="calendario"
+                      value={calendario}
+                      checked={formData.calendario.includes(calendario)}
+                      onChange={handleInputChange}
+                      className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                      disabled={!!successMsg}
+                    />
+                    <span className="text-sm text-gray-700">{calendario}</span>
+                  </label>
+                ))}
+              </div>
+              {errors.calendario && (
+                <p className="mt-1 text-sm text-red-600">{errors.calendario}</p>
+              )}
+            </div>
+
+            {/* 20. Servicios ofrecidos */}
+            <div>
+              <label
+                htmlFor="servicios"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Servicios ofrecidos <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                id="servicios"
+                name="servicios"
+                value={formData.servicios}
+                onChange={handleInputChange}
+                required
+                rows={4}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none ${
+                  errors.servicios ? "border-red-300" : "border-gray-300"
+                }`}
+                placeholder="Describe los servicios que ofreces..."
+                disabled={!!successMsg}
+                aria-invalid={Boolean(errors.servicios)}
+              />
+              {errors.servicios && (
+                <p className="mt-1 text-sm text-red-600">{errors.servicios}</p>
+              )}
+            </div>
+
+            {/* 21. Precios */}
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Precios <span className="text-red-500">*</span>
+              </h3>
+              {errors.precios && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-600">{errors.precios}</p>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                {/* Primera Sesión */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">
+                      Precio
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                        $
+                      </span>
+                      <input
+                        type="text"
+                        value={formData.precios.primeraSesion.precio}
+                        onChange={(e) =>
+                          updatePrecios(
+                            "primeraSesion",
+                            "precio",
+                            e.target.value
+                          )
+                        }
+                        placeholder="Ej: 50"
+                        className="w-full pl-6 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                        disabled={!!successMsg}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">
+                      Nombre del paquete
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.precios.primeraSesion.nombre}
+                      onChange={(e) =>
+                        updatePrecios("primeraSesion", "nombre", e.target.value)
+                      }
+                      placeholder="Ej: Primera sesión"
+                      className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary ${
+                        errors.preciosPrimeraSesion
+                          ? "border-red-300"
+                          : "border-gray-300"
+                      }`}
+                      disabled={!!successMsg}
+                    />
+                    {errors.preciosPrimeraSesion && (
+                      <p className="mt-1 text-xs text-red-600">
+                        {errors.preciosPrimeraSesion}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">
+                      Duración
+                    </label>
+                    <select
+                      value={formData.precios.primeraSesion.duracion}
+                      onChange={(e) =>
+                        updatePrecios(
+                          "primeraSesion",
+                          "duracion",
+                          e.target.value
+                        )
+                      }
+                      className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
+                        errors.preciosPrimeraSesion
+                          ? "border-red-300"
+                          : "border-gray-300"
+                      }`}
+                      disabled={!!successMsg}
+                    >
+                      <option value="">Selecciona duración</option>
+                      {durationOptions.map((opt) => (
+                        <option key={`dur-primera-${opt}`} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Sesión de Seguimiento */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">
+                      Precio
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                        $
+                      </span>
+                      <input
+                        type="text"
+                        value={formData.precios.seguimiento.precio}
+                        onChange={(e) =>
+                          updatePrecios("seguimiento", "precio", e.target.value)
+                        }
+                        placeholder="Ej: 40"
+                        className="w-full pl-6 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                        disabled={!!successMsg}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">
+                      Nombre del paquete
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.precios.seguimiento.nombre}
+                      onChange={(e) =>
+                        updatePrecios("seguimiento", "nombre", e.target.value)
+                      }
+                      placeholder="Ej: Sesión de seguimiento"
+                      className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary ${
+                        errors.preciosSeguimiento
+                          ? "border-red-300"
+                          : "border-gray-300"
+                      }`}
+                      disabled={!!successMsg}
+                    />
+                    {errors.preciosSeguimiento && (
+                      <p className="mt-1 text-xs text-red-600">
+                        {errors.preciosSeguimiento}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">
+                      Duración
+                    </label>
+                    <select
+                      value={formData.precios.seguimiento.duracion}
+                      onChange={(e) =>
+                        updatePrecios("seguimiento", "duracion", e.target.value)
+                      }
+                      className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
+                        errors.preciosSeguimiento
+                          ? "border-red-300"
+                          : "border-gray-300"
+                      }`}
+                      disabled={!!successMsg}
+                    >
+                      <option value="">Selecciona duración</option>
+                      {durationOptions.map((opt) => (
+                        <option key={`dur-seg-${opt}`} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Pack x3 */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">
+                      Precio
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                        $
+                      </span>
+                      <input
+                        type="text"
+                        value={formData.precios.pack3.precio}
+                        onChange={(e) =>
+                          updatePrecios("pack3", "precio", e.target.value)
+                        }
+                        placeholder="Ej: 100"
+                        className="w-full pl-6 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                        disabled={!!successMsg}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">
+                      Nombre del paquete
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.precios.pack3.nombre}
+                      onChange={(e) =>
+                        updatePrecios("pack3", "nombre", e.target.value)
+                      }
+                      placeholder="Ej: Pack 3 sesiones"
+                      className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary ${
+                        errors.preciosPack3
+                          ? "border-red-300"
+                          : "border-gray-300"
+                      }`}
+                      disabled={!!successMsg}
+                    />
+                    {errors.preciosPack3 && (
+                      <p className="mt-1 text-xs text-red-600">
+                        {errors.preciosPack3}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">
+                      Duración
+                    </label>
+                    <select
+                      value={formData.precios.pack3.duracion}
+                      onChange={(e) =>
+                        updatePrecios("pack3", "duracion", e.target.value)
+                      }
+                      className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
+                        errors.preciosPack3
+                          ? "border-red-300"
+                          : "border-gray-300"
+                      }`}
+                      disabled={!!successMsg}
+                    >
+                      <option value="">Selecciona duración</option>
+                      {durationOptions.map((opt) => (
+                        <option key={`dur-pack3-${opt}`} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 22. Observaciones */}
+            <div>
+              <label
+                htmlFor="observaciones"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Observaciones
+              </label>
+              <textarea
+                id="observaciones"
+                name="observaciones"
+                value={formData.observaciones}
+                onChange={handleInputChange}
+                rows={4}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none"
+                placeholder="Cualquier información adicional que consideres relevante..."
+                disabled={!!successMsg}
+              />
+            </div>
 
             {/* Submit Button */}
             <button
               type="submit"
               disabled={loading || !!successMsg}
-              className="w-full bg-primary hover:bg-primary/90 disabled:bg-primary/50 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 mt-6"
+              className="w-full bg-primary hover:bg-primary/90 disabled:bg-primary/50 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
             >
-              {loading ? "Registrando..." : successMsg ? "Enviado" : "Enviar"}
+              {loading ? (
+                <>
+                  <svg
+                    className="animate-spin h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  <span>Enviando solicitud...</span>
+                </>
+              ) : successMsg ? (
+                <>
+                  <svg
+                    className="h-5 w-5 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  <span>Enviado</span>
+                </>
+              ) : (
+                "Enviar solicitud"
+              )}
             </button>
 
             {/* Login Link */}

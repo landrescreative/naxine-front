@@ -64,6 +64,8 @@ export default function AdminProfessionalEditPage() {
   );
   const [changingStatus, setChangingStatus] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
+  const [approving, setApproving] = useState(false);
+  const [approvalError, setApprovalError] = useState<string | null>(null);
   // Balance y transacciones
   const [balance, setBalance] = useState<any | null>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -78,12 +80,6 @@ export default function AdminProfessionalEditPage() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
-  // Modal de video
-  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
-  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
-  const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [uploadingVideo, setUploadingVideo] = useState(false);
-  const [videoError, setVideoError] = useState<string | null>(null);
   // Modal de horarios
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [loadingSchedule, setLoadingSchedule] = useState(false);
@@ -143,6 +139,7 @@ export default function AdminProfessionalEditPage() {
     numeroLicencia: "",
     experiencia: "",
     biografia: "",
+    videoPresentacion: "",
     educacion: "",
     certificaciones: "",
     idiomas: "",
@@ -172,72 +169,6 @@ export default function AdminProfessionalEditPage() {
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
 
-  // Funciones de video
-  const openVideoModal = () => {
-    setVideoError(null);
-    setIsVideoModalOpen(true);
-    setVideoPreviewUrl(null);
-    setVideoFile(null);
-  };
-  const closeVideoModal = () => {
-    setIsVideoModalOpen(false);
-    if (videoPreviewUrl) URL.revokeObjectURL(videoPreviewUrl);
-    setVideoPreviewUrl(null);
-    setVideoFile(null);
-    setVideoError(null);
-  };
-  const onPickVideo = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
-    if (file) {
-      if (videoPreviewUrl) URL.revokeObjectURL(videoPreviewUrl);
-      setVideoFile(file);
-      setVideoPreviewUrl(URL.createObjectURL(file));
-    }
-  };
-  const confirmUploadVideo = async () => {
-    if (!videoFile || !professionalIdProfesional) {
-      setVideoError("Selecciona un video para subir.");
-      return;
-    }
-    try {
-      setUploadingVideo(true);
-      setVideoError(null);
-      const adminToken =
-        typeof window !== "undefined"
-          ? JSON.parse(window.localStorage.getItem("user") || "{}").token
-          : null;
-      if (!adminToken) {
-        setVideoError("Token de administrador no disponible.");
-        return;
-      }
-      const apiBase = (
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
-      ).replace(/\/$/, "");
-      const formData = new FormData();
-      formData.append("video", videoFile);
-      const res = await fetch(
-        `${apiBase}/profesionales/admin/${professionalIdProfesional}/video-presentacion`,
-        {
-          method: "POST",
-          headers: { Authorization: `Bearer ${adminToken}` } as any,
-          body: formData,
-        }
-      );
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setVideoError(
-          data?.message || data?.error || "Error al subir el video"
-        );
-        return;
-      }
-      // No hay campo de video en AdminProfessional; cerrar modal tras éxito
-      closeVideoModal();
-    } catch (err: any) {
-      setVideoError(err?.message || "Error al subir el video");
-    } finally {
-      setUploadingVideo(false);
-    }
-  };
 
   // Función para mapear los datos del backend al formato AdminProfessional
   const mapBackendProfessionalToAdminProfessional = (
@@ -332,6 +263,10 @@ export default function AdminProfessionalEditPage() {
       profileImage:
         backendProfessional.imagen_perfil || backendProfessional.profileImage,
       bio: backendProfessional.descripcion || backendProfessional.bio || "",
+      videoUrl:
+        backendProfessional.video_presentacion ||
+        backendProfessional.videoUrl ||
+        undefined,
       education:
         backendProfessional.educacion || backendProfessional.education || [],
       certifications:
@@ -537,6 +472,7 @@ export default function AdminProfessionalEditPage() {
         numeroLicencia: professional.licenseNumber,
         experiencia: professional.experience.toString(),
         biografia: professional.bio,
+        videoPresentacion: (professional as any).videoUrl || "",
         educacion: Array.isArray(professional.education)
           ? professional.education.join("\n")
           : "",
@@ -690,6 +626,9 @@ export default function AdminProfessionalEditPage() {
       }
       if (form.biografia !== undefined) {
         updateData.descripcion = form.biografia.trim() || null;
+      }
+      if (form.videoPresentacion !== undefined) {
+        updateData.video_presentacion = form.videoPresentacion.trim() || null;
       }
 
       // Usar el id_profesional guardado
@@ -854,15 +793,103 @@ export default function AdminProfessionalEditPage() {
   };
 
   const handleSaveEdit = (field: string) => {
-    // Update the form with the new value
-    update(field as keyof typeof form, editValue);
-    setEditingField(null);
-    setEditValue("");
-  };
+      // Update the form with the new value
+      if (field === "videoPresentacion") {
+        // Guardar inmediatamente el video de presentación
+        const adminToken =
+          typeof window !== "undefined"
+            ? JSON.parse(window.localStorage.getItem("user") || "{}")?.token
+            : null;
+        if (adminToken && professionalIdProfesional) {
+          const apiBase = (
+            process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
+          ).replace(/\/$/, "");
+          fetch(
+            `${apiBase}/profesionales/${professionalIdProfesional}`,
+            {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${adminToken}`,
+              },
+              body: JSON.stringify({
+                video_presentacion: editValue.trim() || null,
+              }),
+            }
+          ).catch((err) => {
+            console.error("Error al guardar video de presentación:", err);
+          });
+        }
+      }
+      update(field as keyof typeof form, editValue);
+      setEditingField(null);
+      setEditValue("");
+    };
 
   const handleCancelEdit = () => {
     setEditingField(null);
     setEditValue("");
+  };
+
+  const handleApprove = async () => {
+    if (!professional || !professionalIdProfesional) return;
+
+    setApproving(true);
+    setApprovalError(null);
+
+    try {
+      const adminToken =
+        typeof window !== "undefined"
+          ? JSON.parse(window.localStorage.getItem("user") || "{}")?.token
+          : null;
+      if (!adminToken) {
+        setApprovalError("Token de administrador no disponible.");
+        setApproving(false);
+        return;
+      }
+
+      const apiBase = (
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
+      ).replace(/\/$/, "");
+
+      const response = await fetch(
+        `${apiBase}/profesionales/admin/${professionalIdProfesional}/aprobar`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setApprovalError(
+          data?.message || data?.error || "Error al aprobar el profesional"
+        );
+        setApproving(false);
+        return;
+      }
+
+      // Actualizar el estado del profesional localmente
+      setProfessional((prev) =>
+        prev ? { ...prev, status: "activo" } : prev
+      );
+
+      // Recargar la página para reflejar los cambios
+      router.push("/dashboard/admin/profesionales");
+    } catch (err: any) {
+      const errorMessage =
+        err?.message ||
+        err?.error ||
+        "Ocurrió un error al aprobar el profesional. Por favor, intenta de nuevo.";
+      setApprovalError(errorMessage);
+      console.error("Error al aprobar profesional:", err);
+    } finally {
+      setApproving(false);
+    }
   };
 
   const publicProfileId = professionalIdProfesional || professional?.id;
@@ -1205,13 +1232,15 @@ export default function AdminProfessionalEditPage() {
             >
               Editar horarios
             </button>
-            <button
-              onClick={openVideoModal}
-              className="inline-flex items-center gap-2 rounded-lg bg-purple-100 px-4 py-2 text-sm font-medium text-purple-700 hover:bg-purple-200"
-              title="Agregar/Actualizar video de presentación"
-            >
-              Video de presentación
-            </button>
+            {professional?.status === "pendiente" && (
+              <button
+                onClick={handleApprove}
+                className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+                title="Aprobar profesional para que aparezca en la plataforma pública"
+              >
+                Aprobar Profesional
+              </button>
+            )}
             <button
               onClick={handleSave}
               className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90"
@@ -1422,6 +1451,71 @@ export default function AdminProfessionalEditPage() {
                           className="h-4 w-4 text-gray-400 cursor-pointer hover:text-gray-600"
                           onClick={() =>
                             handleEditField("biografia", professional.bio || "")
+                          }
+                        />
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Video de Presentación */}
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
+                      <svg
+                        className="h-3 w-3 text-gray-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                        />
+                      </svg>
+                    </div>
+                    <span className="text-sm text-gray-600">
+                      Video de Presentación
+                    </span>
+                  </div>
+                  <div className="ml-9 flex items-center justify-between">
+                    {editingField === "videoPresentacion" ? (
+                      <div className="flex items-center space-x-2 flex-1">
+                        <input
+                          type="url"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          className="text-sm font-medium border border-gray-300 rounded px-2 py-1 flex-1"
+                          placeholder="https://www.youtube.com/watch?v=... o https://vimeo.com/..."
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => handleSaveEdit("videoPresentacion")}
+                          className="text-green-600 hover:text-green-800"
+                        >
+                          <Save className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={handleCancelEdit}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="text-sm font-medium">
+                          {form.videoPresentacion || "Sin video de presentación"}
+                        </span>
+                        <Edit
+                          className="h-4 w-4 text-gray-400 cursor-pointer hover:text-gray-600"
+                          onClick={() =>
+                            handleEditField(
+                              "videoPresentacion",
+                              form.videoPresentacion || ""
+                            )
                           }
                         />
                       </>
@@ -2643,88 +2737,21 @@ export default function AdminProfessionalEditPage() {
         </div>
       )}
 
-      {/* Video Modal */}
-      {isVideoModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Video de presentación
-              </h2>
-              <button
-                onClick={closeVideoModal}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              {videoPreviewUrl && (
-                <div className="flex flex-col items-center gap-3 w-full">
-                  <video
-                    src={videoPreviewUrl}
-                    controls
-                    className="w-full max-w-xl rounded-lg border border-purple-200"
-                  />
-                  {videoFile && (
-                    <p className="text-xs text-gray-600 max-w-full truncate">
-                      {videoFile.name} ({Math.round(videoFile.size / 1024)} KB)
-                    </p>
-                  )}
-                </div>
-              )}
-              <div className="flex items-center gap-3">
-                <label
-                  htmlFor="admin-video-upload"
-                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90 cursor-pointer"
-                >
-                  Seleccionar video
-                  <input
-                    id="admin-video-upload"
-                    type="file"
-                    accept="video/*"
-                    className="hidden"
-                    onChange={onPickVideo}
-                  />
-                </label>
-                {videoPreviewUrl && (
-                  <button
-                    className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                    onClick={() => {
-                      if (videoPreviewUrl) URL.revokeObjectURL(videoPreviewUrl);
-                      setVideoPreviewUrl(null);
-                      setVideoFile(null);
-                    }}
-                  >
-                    Quitar selección
-                  </button>
-                )}
-              </div>
-              {videoError && (
-                <div className="text-sm text-red-600 border border-red-200 bg-red-50 rounded-md p-2">
-                  {videoError}
-                </div>
-              )}
-            </div>
-            <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
-              <button
-                onClick={closeVideoModal}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-                disabled={uploadingVideo}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={confirmUploadVideo}
-                className="px-6 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:opacity-90 disabled:opacity-50"
-                disabled={uploadingVideo || !videoFile}
-              >
-                {uploadingVideo ? "Subiendo..." : "Guardar"}
-              </button>
-            </div>
+      {/* Approval Error Message */}
+      {approvalError && (
+        <div className="fixed top-4 right-4 z-50 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg shadow-lg">
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-sm">{approvalError}</p>
+            <button
+              onClick={() => setApprovalError(null)}
+              className="text-red-500 hover:text-red-700"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
         </div>
       )}
+
 
       {/* Error message */}
       {saveError && (
