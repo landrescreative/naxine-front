@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { X } from "lucide-react";
+import { X, HelpCircle } from "lucide-react";
 import { authService } from "@/services/api/auth";
 import { validateEmail, validatePassword } from "@/services/utils/api-helpers";
 import { SpecialtiesService } from "@/services/api/specialties";
@@ -29,6 +29,8 @@ export default function RegisterProfessionalPage() {
     modalidades: [] as string[],
     direccionConsulta: "",
     zonasDomicilio: "",
+    codigosPostalesDomicilio: "",
+    serviciosOfrecidos: "",
     accesibleMovilidad: "",
     horarios: "",
     tarifas: "",
@@ -74,7 +76,24 @@ export default function RegisterProfessionalPage() {
       },
       pack3: {
         precio: "",
+        nombre: "Pack 3 sesiones",
+        duracion: "",
+      },
+    },
+    preciosDomicilio: {
+      primeraSesion: {
+        precio: "",
         nombre: "",
+        duracion: "",
+      },
+      seguimiento: {
+        precio: "",
+        nombre: "",
+        duracion: "",
+      },
+      pack3: {
+        precio: "",
+        nombre: "Pack 3 sesiones",
         duracion: "",
       },
     },
@@ -100,7 +119,7 @@ export default function RegisterProfessionalPage() {
   // Opciones de duración para precios
   const durationOptions = useMemo(() => {
     const options: string[] = [];
-    for (let minutes = 10; minutes <= 180; minutes += 10) {
+    for (let minutes = 30; minutes <= 90; minutes += 10) {
       options.push(`${minutes} min`);
     }
     return options;
@@ -190,6 +209,24 @@ export default function RegisterProfessionalPage() {
         ...prev.precios,
         [tipo]: {
           ...prev.precios[tipo],
+          [campo]: value,
+        },
+      },
+    }));
+  };
+
+  // Función para actualizar precios de domicilio
+  const updatePreciosDomicilio = (
+    tipo: keyof typeof formData.preciosDomicilio,
+    campo: string,
+    value: string
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      preciosDomicilio: {
+        ...prev.preciosDomicilio,
+        [tipo]: {
+          ...prev.preciosDomicilio[tipo],
           [campo]: value,
         },
       },
@@ -423,6 +460,10 @@ export default function RegisterProfessionalPage() {
         "La descripción no debe superar los 1.500 caracteres";
     }
 
+    if (!formData.serviciosOfrecidos.trim()) {
+      newErrors.serviciosOfrecidos = "Los servicios ofrecidos son requeridos";
+    }
+
     if (!foto) {
       newErrors.foto = "La foto del perfil profesional es requerida";
     }
@@ -502,6 +543,61 @@ export default function RegisterProfessionalPage() {
             "Debes especificar las horas de inicio y fin para todos los días seleccionados en atención a domicilio";
         }
       }
+      // Validar códigos postales si ofrece atención a domicilio
+      if (!formData.codigosPostalesDomicilio.trim()) {
+        newErrors.codigosPostalesDomicilio =
+          "Los códigos postales son requeridos si ofreces atención a domicilio";
+      }
+      // Validar que al menos un precio de domicilio esté configurado
+      const tienePreciosDomicilio =
+        (formData.preciosDomicilio.primeraSesion.precio &&
+          formData.preciosDomicilio.primeraSesion.precio.trim() !== "") ||
+        (formData.preciosDomicilio.seguimiento.precio &&
+          formData.preciosDomicilio.seguimiento.precio.trim() !== "") ||
+        (formData.preciosDomicilio.pack3.precio &&
+          formData.preciosDomicilio.pack3.precio.trim() !== "");
+
+      if (!tienePreciosDomicilio) {
+        newErrors.preciosDomicilio =
+          "Debes configurar al menos un precio para atención a domicilio (Primera Sesión, Seguimiento o Pack x3)";
+      } else {
+        // Validar que los precios de domicilio configurados tengan nombre y duración
+        if (
+          formData.preciosDomicilio.primeraSesion.precio &&
+          formData.preciosDomicilio.primeraSesion.precio.trim() !== ""
+        ) {
+          if (!formData.preciosDomicilio.primeraSesion.nombre.trim()) {
+            newErrors.preciosDomicilioPrimeraSesion =
+              "El nombre del paquete de Primera Sesión (domicilio) es requerido";
+          }
+          if (!formData.preciosDomicilio.primeraSesion.duracion.trim()) {
+            newErrors.preciosDomicilioPrimeraSesion =
+              "La duración de Primera Sesión (domicilio) es requerida";
+          }
+        }
+        if (
+          formData.preciosDomicilio.seguimiento.precio &&
+          formData.preciosDomicilio.seguimiento.precio.trim() !== ""
+        ) {
+          if (!formData.preciosDomicilio.seguimiento.nombre.trim()) {
+            newErrors.preciosDomicilioSeguimiento =
+              "El nombre del paquete de Seguimiento (domicilio) es requerido";
+          }
+          if (!formData.preciosDomicilio.seguimiento.duracion.trim()) {
+            newErrors.preciosDomicilioSeguimiento =
+              "La duración de Seguimiento (domicilio) es requerida";
+          }
+        }
+        if (
+          formData.preciosDomicilio.pack3.precio &&
+          formData.preciosDomicilio.pack3.precio.trim() !== ""
+        ) {
+          if (!formData.preciosDomicilio.pack3.nombre.trim()) {
+            newErrors.preciosDomicilioPack3 =
+              "El nombre del paquete Pack x3 (domicilio) es requerido";
+          }
+        }
+      }
     }
 
     // Validar que al menos un precio esté configurado
@@ -550,9 +646,6 @@ export default function RegisterProfessionalPage() {
       ) {
         if (!formData.precios.pack3.nombre.trim()) {
           newErrors.preciosPack3 = "El nombre del paquete Pack x3 es requerido";
-        }
-        if (!formData.precios.pack3.duracion.trim()) {
-          newErrors.preciosPack3 = "La duración del Pack x3 es requerida";
         }
       }
     }
@@ -633,13 +726,28 @@ export default function RegisterProfessionalPage() {
         );
       }
       if (formData.direccionConsulta.trim()) {
-        formDataToSend.append("direccion", formData.direccionConsulta.trim());
+        formDataToSend.append(
+          "domicilio_consultorio",
+          formData.direccionConsulta.trim()
+        );
       }
       if (formData.ciudad.trim()) {
         formDataToSend.append("ciudad", formData.ciudad.trim());
       }
       if (formData.descripcion.trim()) {
         formDataToSend.append("biografia", formData.descripcion.trim());
+      }
+      if (formData.serviciosOfrecidos.trim()) {
+        formDataToSend.append(
+          "serviciosOfrecidos",
+          formData.serviciosOfrecidos.trim()
+        );
+      }
+      if (formData.codigosPostalesDomicilio.trim()) {
+        formDataToSend.append(
+          "codigosPostalesDomicilio",
+          formData.codigosPostalesDomicilio.trim()
+        );
       }
       if (formData.tarifas.trim()) {
         formDataToSend.append("tarifas", formData.tarifas.trim());
@@ -696,6 +804,19 @@ export default function RegisterProfessionalPage() {
         formData.precios.pack3.precio
       ) {
         formDataToSend.append("precios", JSON.stringify(formData.precios));
+      }
+
+      // Agregar precios de domicilio si están configurados y se selecciona modalidad domicilio
+      if (
+        formData.modalidades.includes("domicilio") &&
+        (formData.preciosDomicilio.primeraSesion.precio ||
+          formData.preciosDomicilio.seguimiento.precio ||
+          formData.preciosDomicilio.pack3.precio)
+      ) {
+        formDataToSend.append(
+          "preciosDomicilio",
+          JSON.stringify(formData.preciosDomicilio)
+        );
       }
 
       // Agregar foto si existe
@@ -784,6 +905,8 @@ export default function RegisterProfessionalPage() {
           modalidades: [],
           direccionConsulta: "",
           zonasDomicilio: "",
+          codigosPostalesDomicilio: "",
+          serviciosOfrecidos: "",
           accesibleMovilidad: "",
           horarios: "",
           tarifas: "",
@@ -810,7 +933,24 @@ export default function RegisterProfessionalPage() {
             },
             pack3: {
               precio: "",
+              nombre: "Pack 3 sesiones",
+              duracion: "",
+            },
+          },
+          preciosDomicilio: {
+            primeraSesion: {
+              precio: "",
               nombre: "",
+              duracion: "",
+            },
+            seguimiento: {
+              precio: "",
+              nombre: "",
+              duracion: "",
+            },
+            pack3: {
+              precio: "",
+              nombre: "Pack 3 sesiones",
               duracion: "",
             },
           },
@@ -927,16 +1067,16 @@ export default function RegisterProfessionalPage() {
       .join(" ") || undefined;
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-white">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-white max-w-7xl mx-auto">
       {/* Left Side - Registration Form */}
-      <div className="flex-1 flex items-center justify-center px-8 py-12 overflow-y-auto">
-        <div className="w-full max-w-3xl">
+      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-8 lg:py-12 overflow-y-auto">
+        <div className="w-full">
           {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">
+          <div className="text-center mb-6 lg:mb-8">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-2">
               Regístrate como profesional
             </h1>
-            <p className="text-gray-600 text-lg">
+            <p className="text-gray-600 text-base sm:text-lg">
               Completa este formulario para validar tu perfil y preparar tu
               futura ficha pública en la plataforma.
             </p>
@@ -945,7 +1085,7 @@ export default function RegisterProfessionalPage() {
           {/* Form */}
           <form
             onSubmit={handleSubmit}
-            className="space-y-6"
+            className="space-y-4 sm:space-y-6"
             aria-describedby={describedByIds}
             aria-busy={loading}
           >
@@ -1155,64 +1295,6 @@ export default function RegisterProfessionalPage() {
               />
               {errors.telefono && (
                 <p className="mt-1 text-sm text-red-600">{errors.telefono}</p>
-              )}
-            </div>
-
-            {/* 6. Consentimiento */}
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  name="consentimiento"
-                  checked={formData.consentimiento}
-                  onChange={handleInputChange}
-                  required
-                  className="mt-1 w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
-                  disabled={!!successMsg}
-                />
-                <span className="text-sm text-gray-700">
-                  Declaro haber leído la información anterior y consiento el
-                  tratamiento de mis datos personales para la finalidad de
-                  validación profesional y gestión de mi solicitud de alta en
-                  NAXINE. <span className="text-red-500">*</span>
-                </span>
-              </label>
-              {errors.consentimiento && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.consentimiento}
-                </p>
-              )}
-            </div>
-
-            {/* 6.1. Términos y Condiciones para Profesionales */}
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  name="aceptaTerminos"
-                  checked={formData.aceptaTerminos}
-                  onChange={handleInputChange}
-                  required
-                  className="mt-1 w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
-                  disabled={!!successMsg}
-                />
-                <span className="text-sm text-gray-700">
-                  He leído y acepto los{" "}
-                  <Link
-                    href="/terminos-condiciones"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:text-primary/80 underline"
-                  >
-                    términos y condiciones para profesionales
-                  </Link>
-                  . <span className="text-red-500">*</span>
-                </span>
-              </label>
-              {errors.aceptaTerminos && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.aceptaTerminos}
-                </p>
               )}
             </div>
 
@@ -1437,6 +1519,43 @@ export default function RegisterProfessionalPage() {
               )}
             </div>
 
+            {/* 11.1. Servicios ofrecidos */}
+            <div>
+              <label
+                htmlFor="serviciosOfrecidos"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Servicios ofrecidos <span className="text-red-500">*</span>
+                <span className="text-xs text-gray-500 ml-2">
+                  (Lista los servicios que ofreces)
+                </span>
+              </label>
+              <textarea
+                id="serviciosOfrecidos"
+                name="serviciosOfrecidos"
+                value={formData.serviciosOfrecidos}
+                onChange={handleInputChange}
+                required
+                rows={4}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none ${
+                  errors.serviciosOfrecidos
+                    ? "border-red-300"
+                    : "border-gray-300"
+                }`}
+                placeholder="Ej: Terapia individual, Terapia de pareja, Terapia familiar, Evaluación psicológica..."
+                disabled={!!successMsg}
+                aria-invalid={Boolean(errors.serviciosOfrecidos)}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Separa cada servicio con comas o en líneas diferentes
+              </p>
+              {errors.serviciosOfrecidos && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.serviciosOfrecidos}
+                </p>
+              )}
+            </div>
+
             {/* 12. Foto del perfil profesional */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1595,24 +1714,40 @@ export default function RegisterProfessionalPage() {
             {formData.modalidades.includes("domicilio") && (
               <div>
                 <label
-                  htmlFor="zonasDomicilio"
+                  htmlFor="codigosPostalesDomicilio"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
-                  Zonas donde atiendes a domicilio
+                  Códigos postales donde ofreces atención a domicilio{" "}
+                  <span className="text-red-500">*</span>
                   <span className="text-xs text-gray-500 ml-2">
-                    (Si aplica)
+                    (Solo si ofreces atención a domicilio)
                   </span>
                 </label>
                 <textarea
-                  id="zonasDomicilio"
-                  name="zonasDomicilio"
-                  value={formData.zonasDomicilio}
+                  id="codigosPostalesDomicilio"
+                  name="codigosPostalesDomicilio"
+                  value={formData.codigosPostalesDomicilio}
                   onChange={handleInputChange}
+                  required={formData.modalidades.includes("domicilio")}
                   rows={3}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none"
-                  placeholder="Indica las zonas donde ofreces atención a domicilio"
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none ${
+                    errors.codigosPostalesDomicilio
+                      ? "border-red-300"
+                      : "border-gray-300"
+                  }`}
+                  placeholder="Ej: 28001, 28002, 28003, 28004 (separados por comas)"
                   disabled={!!successMsg}
+                  aria-invalid={Boolean(errors.codigosPostalesDomicilio)}
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Indica los códigos postales separados por comas. Ej: 28001,
+                  28002, 28003
+                </p>
+                {errors.codigosPostalesDomicilio && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.codigosPostalesDomicilio}
+                  </p>
+                )}
               </div>
             )}
 
@@ -2080,7 +2215,7 @@ export default function RegisterProfessionalPage() {
                     </label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
-                        $
+                        €
                       </span>
                       <input
                         type="text"
@@ -2100,7 +2235,7 @@ export default function RegisterProfessionalPage() {
                   </div>
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">
-                      Nombre del paquete
+                      Nombre y descripción del paquete
                     </label>
                     <input
                       type="text"
@@ -2160,7 +2295,7 @@ export default function RegisterProfessionalPage() {
                     </label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
-                        $
+                        €
                       </span>
                       <input
                         type="text"
@@ -2176,7 +2311,7 @@ export default function RegisterProfessionalPage() {
                   </div>
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">
-                      Nombre del paquete
+                      Nombre y descripción del paquete
                     </label>
                     <input
                       type="text"
@@ -2225,14 +2360,14 @@ export default function RegisterProfessionalPage() {
                 </div>
 
                 {/* Pack x3 */}
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">
                       Precio
                     </label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
-                        $
+                        €
                       </span>
                       <input
                         type="text"
@@ -2248,16 +2383,13 @@ export default function RegisterProfessionalPage() {
                   </div>
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">
-                      Nombre del paquete
+                      Nombre y descripción del paquete
                     </label>
                     <input
                       type="text"
                       value={formData.precios.pack3.nombre}
-                      onChange={(e) =>
-                        updatePrecios("pack3", "nombre", e.target.value)
-                      }
-                      placeholder="Ej: Pack 3 sesiones"
-                      className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary ${
+                      readOnly
+                      className={`w-full px-3 py-2 text-sm border rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed ${
                         errors.preciosPack3
                           ? "border-red-300"
                           : "border-gray-300"
@@ -2270,33 +2402,245 @@ export default function RegisterProfessionalPage() {
                       </p>
                     )}
                   </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">
-                      Duración
-                    </label>
-                    <select
-                      value={formData.precios.pack3.duracion}
-                      onChange={(e) =>
-                        updatePrecios("pack3", "duracion", e.target.value)
-                      }
-                      className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
-                        errors.preciosPack3
-                          ? "border-red-300"
-                          : "border-gray-300"
-                      }`}
-                      disabled={!!successMsg}
-                    >
-                      <option value="">Selecciona duración</option>
-                      {durationOptions.map((opt) => (
-                        <option key={`dur-pack3-${opt}`} value={opt}>
-                          {opt}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
                 </div>
               </div>
             </div>
+
+            {/* 19.1. Precios para atención a domicilio */}
+            {formData.modalidades.includes("domicilio") && (
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Precios para atención a domicilio{" "}
+                  <span className="text-red-500">*</span>
+                </h3>
+                {errors.preciosDomicilio && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-600">
+                      {errors.preciosDomicilio}
+                    </p>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  {/* Primera Sesión Domicilio */}
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        Precio
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                          €
+                        </span>
+                        <input
+                          type="text"
+                          value={formData.preciosDomicilio.primeraSesion.precio}
+                          onChange={(e) =>
+                            updatePreciosDomicilio(
+                              "primeraSesion",
+                              "precio",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Ej: 60"
+                          className="w-full pl-6 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                          disabled={!!successMsg}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        Nombre y descripción del paquete
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.preciosDomicilio.primeraSesion.nombre}
+                        onChange={(e) =>
+                          updatePreciosDomicilio(
+                            "primeraSesion",
+                            "nombre",
+                            e.target.value
+                          )
+                        }
+                        placeholder="Ej: Primera sesión a domicilio"
+                        className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary ${
+                          errors.preciosDomicilioPrimeraSesion
+                            ? "border-red-300"
+                            : "border-gray-300"
+                        }`}
+                        disabled={!!successMsg}
+                      />
+                      {errors.preciosDomicilioPrimeraSesion && (
+                        <p className="mt-1 text-xs text-red-600">
+                          {errors.preciosDomicilioPrimeraSesion}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        Duración
+                      </label>
+                      <select
+                        value={formData.preciosDomicilio.primeraSesion.duracion}
+                        onChange={(e) =>
+                          updatePreciosDomicilio(
+                            "primeraSesion",
+                            "duracion",
+                            e.target.value
+                          )
+                        }
+                        className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
+                          errors.preciosDomicilioPrimeraSesion
+                            ? "border-red-300"
+                            : "border-gray-300"
+                        }`}
+                        disabled={!!successMsg}
+                      >
+                        <option value="">Selecciona duración</option>
+                        {durationOptions.map((opt) => (
+                          <option key={`dur-dom-primera-${opt}`} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Seguimiento Domicilio */}
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        Precio
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                          €
+                        </span>
+                        <input
+                          type="text"
+                          value={formData.preciosDomicilio.seguimiento.precio}
+                          onChange={(e) =>
+                            updatePreciosDomicilio(
+                              "seguimiento",
+                              "precio",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Ej: 50"
+                          className="w-full pl-6 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                          disabled={!!successMsg}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        Nombre y descripción del paquete
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.preciosDomicilio.seguimiento.nombre}
+                        onChange={(e) =>
+                          updatePreciosDomicilio(
+                            "seguimiento",
+                            "nombre",
+                            e.target.value
+                          )
+                        }
+                        placeholder="Ej: Sesión de seguimiento a domicilio"
+                        className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary ${
+                          errors.preciosDomicilioSeguimiento
+                            ? "border-red-300"
+                            : "border-gray-300"
+                        }`}
+                        disabled={!!successMsg}
+                      />
+                      {errors.preciosDomicilioSeguimiento && (
+                        <p className="mt-1 text-xs text-red-600">
+                          {errors.preciosDomicilioSeguimiento}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        Duración
+                      </label>
+                      <select
+                        value={formData.preciosDomicilio.seguimiento.duracion}
+                        onChange={(e) =>
+                          updatePreciosDomicilio(
+                            "seguimiento",
+                            "duracion",
+                            e.target.value
+                          )
+                        }
+                        className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
+                          errors.preciosDomicilioSeguimiento
+                            ? "border-red-300"
+                            : "border-gray-300"
+                        }`}
+                        disabled={!!successMsg}
+                      >
+                        <option value="">Selecciona duración</option>
+                        {durationOptions.map((opt) => (
+                          <option key={`dur-dom-seg-${opt}`} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Pack x3 Domicilio */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        Precio
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                          €
+                        </span>
+                        <input
+                          type="text"
+                          value={formData.preciosDomicilio.pack3.precio}
+                          onChange={(e) =>
+                            updatePreciosDomicilio(
+                              "pack3",
+                              "precio",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Ej: 120"
+                          className="w-full pl-6 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                          disabled={!!successMsg}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        Nombre y descripción del paquete
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.preciosDomicilio.pack3.nombre}
+                        readOnly
+                        className={`w-full px-3 py-2 text-sm border rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed ${
+                          errors.preciosDomicilioPack3
+                            ? "border-red-300"
+                            : "border-gray-300"
+                        }`}
+                        disabled={!!successMsg}
+                      />
+                      {errors.preciosDomicilioPack3 && (
+                        <p className="mt-1 text-xs text-red-600">
+                          {errors.preciosDomicilioPack3}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* 22. Observaciones */}
             <div>
@@ -2316,6 +2660,69 @@ export default function RegisterProfessionalPage() {
                 placeholder="Cualquier información adicional que consideres relevante..."
                 disabled={!!successMsg}
               />
+            </div>
+
+            {/* Consentimiento y Términos y Condiciones */}
+            <div className="space-y-4">
+              {/* Consentimiento */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="consentimiento"
+                    checked={formData.consentimiento}
+                    onChange={handleInputChange}
+                    required
+                    className="mt-1 w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                    disabled={!!successMsg}
+                  />
+                  <span className="text-sm text-gray-700">
+                    Declaro haber leído la información anterior y consiento el
+                    tratamiento de mis datos personales para la finalidad de
+                    validación profesional y gestión de mi solicitud de alta en
+                    NAXINE. <span className="text-red-500">*</span>
+                  </span>
+                </label>
+                {errors.consentimiento && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.consentimiento}
+                  </p>
+                )}
+              </div>
+
+              {/* Términos y Condiciones para Profesionales */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="aceptaTerminos"
+                    checked={formData.aceptaTerminos}
+                    onChange={handleInputChange}
+                    required
+                    className="mt-1 w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                    disabled={!!successMsg}
+                  />
+                  <span className="text-sm text-gray-700 flex items-start gap-2">
+                    <span>
+                      He leído y acepto los términos y condiciones para
+                      profesionales. <span className="text-red-500">*</span>
+                    </span>
+                    <span className="relative group cursor-help inline-flex items-center">
+                      <HelpCircle className="h-4 w-4 text-gray-400 hover:text-primary transition-colors flex-shrink-0 mt-0.5" />
+                      <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-in-out transform group-hover:translate-y-0 translate-y-1 pointer-events-none z-10">
+                        Podrás consultar los términos y condiciones dentro de tu
+                        panel
+                        <span className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></span>
+                      </span>
+                    </span>
+                  </span>
+                </label>
+                {errors.aceptaTerminos && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.aceptaTerminos}
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Submit Button */}
@@ -2385,10 +2792,10 @@ export default function RegisterProfessionalPage() {
       </div>
 
       {/* Right Side - Professional Image */}
-      <div className="flex flex-1 relative">
-        <div className="relative w-full h-full flex items-center lg:items-start justify-center p-2">
-          <div className="sticky top-4 w-full">
-            <div className="w-11/12 h-[400px] lg:h-[600px] relative rounded-3xl overflow-hidden">
+      <div className="hidden lg:flex flex-1 relative">
+        <div className="relative w-full h-full flex items-center lg:items-start justify-center p-4 lg:p-8">
+          <div className="sticky top-4 w-full max-w-2xl">
+            <div className="w-full h-[500px] lg:h-[600px] xl:h-[700px] relative rounded-3xl overflow-hidden">
               <Image
                 src="/smk_Snapchat-Picture.webp"
                 alt="Profesional"

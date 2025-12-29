@@ -1,79 +1,14 @@
 "use client";
-import React, { useState, useRef, useEffect } from "react";
+import React, { useRef } from "react";
 import { motion, useInView } from "framer-motion";
-import thumbnail from "@/assets/screenshot.png";
 import office from "@/assets/d000ab4e4d45c2420e8885344d33c191b167b033.png";
 
 export default function GlobalCTA() {
-  const [isPopupOpen, setIsPopupOpen] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
-  const dialogRef = useRef<HTMLDivElement>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const lastFocusedElementRef = useRef<HTMLElement | null>(null);
   const isInView = useInView(sectionRef, {
     once: true,
     margin: "-100px 0px -100px 0px",
   });
-
-  // Handle popup open
-  const handlePopupOpen = () => {
-    setIsPopupOpen(true);
-  };
-
-  // Close popup when clicking outside
-  const handlePopupClose = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      setIsPopupOpen(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!isPopupOpen) {
-      if (lastFocusedElementRef.current) {
-        lastFocusedElementRef.current.focus();
-      }
-      return;
-    }
-
-    lastFocusedElementRef.current = document.activeElement as HTMLElement;
-    closeButtonRef.current?.focus();
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsPopupOpen(false);
-        return;
-      }
-
-      if (event.key === "Tab" && dialogRef.current) {
-        const focusableElements = dialogRef.current.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
-        );
-        if (focusableElements.length === 0) {
-          event.preventDefault();
-          return;
-        }
-        const firstElement = focusableElements[0];
-        const lastElement = focusableElements[focusableElements.length - 1];
-
-        if (!event.shiftKey && document.activeElement === lastElement) {
-          event.preventDefault();
-          firstElement.focus();
-        } else if (event.shiftKey && document.activeElement === firstElement) {
-          event.preventDefault();
-          lastElement.focus();
-        }
-      }
-    };
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isPopupOpen]);
 
   return (
     <>
@@ -103,7 +38,7 @@ export default function GlobalCTA() {
           </motion.div>
         </div>
 
-        {/* Right Section - Office Image with Play Button (50% on desktop, full width on mobile) */}
+        {/* Right Section - Office Image (50% on desktop, full width on mobile) */}
         <motion.div
           className="w-full lg:w-[50%] relative h-[300px] lg:h-auto"
           initial={{ scale: 0.9, opacity: 0 }}
@@ -116,84 +51,13 @@ export default function GlobalCTA() {
             delay: 0.1, // Aparece primero
           }}
         >
-          <div
-            className="w-full h-full relative cursor-pointer group"
-            onClick={handlePopupOpen}
-          >
-            {/* Office Image */}
-            <img
-              src={office.src}
-              alt="Office workspace with man on phone"
-              className="w-full h-full object-cover"
-            />
-
-            {/* Large Circular Play Button - Responsive sizing */}
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-black rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-2xl">
-                <div className="w-0 h-0 border-l-[20px] sm:border-l-[24px] border-l-[#8B5CF6] border-t-[12px] sm:border-t-[16px] border-t-transparent border-b-[12px] sm:border-b-[16px] border-b-transparent ml-1"></div>
-              </div>
-            </div>
-          </div>
+          <img
+            src={office.src}
+            alt="Office workspace with man on phone"
+            className="w-full h-full object-cover"
+          />
         </motion.div>
       </section>
-
-      {/* Video Popup Modal */}
-      {isPopupOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4"
-          onClick={handlePopupClose}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Video explicativo: Cómo funciona"
-        >
-          <div
-            className="relative w-full max-w-4xl bg-black rounded-2xl overflow-hidden"
-            ref={dialogRef}
-          >
-            {/* Close button */}
-            <button
-              onClick={() => {
-                setIsPopupOpen(false);
-              }}
-              className="absolute top-4 right-4 z-30 w-10 h-10 bg-black bg-opacity-70 text-white rounded-full flex items-center justify-center hover:bg-opacity-90 transition-all duration-200"
-              aria-label="Cerrar video"
-              ref={closeButtonRef}
-            >
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-
-            {/* Video container */}
-            <div className="relative aspect-video bg-gray-100">
-              <video
-                className="w-full h-full object-cover rounded-2xl"
-                poster={thumbnail.src}
-                controls
-                preload="metadata"
-                playsInline
-                aria-describedby="global-cta-video-description"
-              >
-                <source src="/naxine-como-funciona.mp4" type="video/mp4" />
-                Tu navegador no soporta la reproducción de video.
-              </video>
-              <p id="global-cta-video-description" className="sr-only">
-                Video que explica el proceso para contratar profesionales en Naxine.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }
