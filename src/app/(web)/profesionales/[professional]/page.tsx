@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { professionalsService } from "@/services";
 import { lazyLoad } from "@/lib/lazy-loading";
 import { Suspense } from "react";
+import ProfessionalNotApproved from "./ProfessionalNotApproved";
 
 // Reutiliza el componente pesado que ya existe para la vista pública
 const ProfessionalPageClient = lazyLoad(
@@ -17,7 +18,9 @@ interface ProfessionalPublicPageProps {
   }>;
 }
 
-export async function generateMetadata({ params }: ProfessionalPublicPageProps) {
+export async function generateMetadata({
+  params,
+}: ProfessionalPublicPageProps) {
   const { professional: professionalId } = await params;
 
   const isValidId = /^\d+$/.test(professionalId);
@@ -32,6 +35,28 @@ export async function generateMetadata({ params }: ProfessionalPublicPageProps) 
     const response = await professionalsService.getPublicProfessionalById(
       professionalId
     );
+
+    // Si el profesional existe pero no está aprobado
+    if (!response.success && (response as any).statusCode === 403) {
+      const responseData = (response as any).data;
+      const professionalName =
+        responseData?.nombre && responseData?.apellidos
+          ? `${responseData.nombre} ${responseData.apellidos}`
+          : "Profesional";
+      const status = responseData?.estado || "pendiente";
+
+      return {
+        title:
+          status === "pendiente"
+            ? "Perfil en Revisión"
+            : "Perfil No Disponible",
+        description: `El perfil de ${professionalName} está siendo revisado por nuestro equipo.`,
+        robots: {
+          index: false,
+          follow: true,
+        },
+      };
+    }
 
     if (response.success && response.data) {
       const professionalName =
@@ -99,8 +124,28 @@ export default async function ProfessionalPublicPage({
     success: response.success,
     hasData: !!response.data,
     error: response.error,
+    statusCode: (response as any).statusCode,
+    reason: (response as any).reason,
   });
 
+  // Si el profesional existe pero no está aprobado
+  if (!response.success && (response as any).statusCode === 403) {
+    const responseData = (response as any).data;
+    const professionalName =
+      responseData?.nombre && responseData?.apellidos
+        ? `${responseData.nombre} ${responseData.apellidos}`
+        : responseData?.nombre || "Profesional";
+    const status = responseData?.estado || "pendiente";
+
+    return (
+      <ProfessionalNotApproved
+        professionalName={professionalName}
+        status={status}
+      />
+    );
+  }
+
+  // Si no se encontró o hay otro error
   if (!response.success || !response.data) {
     console.error(
       `[ProfessionalPublicPage] Failed to load professional:`,
@@ -124,5 +169,3 @@ export default async function ProfessionalPublicPage({
     </Suspense>
   );
 }
-
-

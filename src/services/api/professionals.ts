@@ -114,23 +114,36 @@ export class ProfessionalsService {
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        let errorData: any = {};
+        
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { message: errorText };
+        }
+
         if (response.status === 404) {
           return {
             success: false,
-            error: "Profesional no encontrado o no aprobado",
+            error: "Profesional no encontrado",
           };
         }
-        const errorText = await response.text();
-        let errorMessage = `HTTP ${response.status}`;
-        try {
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.message || errorData.error || errorMessage;
-        } catch {
-          errorMessage = errorText || errorMessage;
+
+        if (response.status === 403) {
+          // Profesional existe pero no está aprobado
+          return {
+            success: false,
+            error: errorData.message || "Perfil no disponible",
+            statusCode: 403,
+            reason: errorData.reason || "not_approved",
+            data: errorData.data || null,
+          } as any;
         }
+
         return {
           success: false,
-          error: errorMessage,
+          error: errorData.message || errorData.error || `HTTP ${response.status}`,
         };
       }
 

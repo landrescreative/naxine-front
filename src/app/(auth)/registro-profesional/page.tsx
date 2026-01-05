@@ -560,6 +560,8 @@ export default function RegisterProfessionalPage() {
           "La dirección de consulta es requerida si ofreces atención presencial",
       };
     }
+    if (!formData.ciudad.trim())
+      return { field: "ciudad", error: "La ciudad es requerida" };
     if (
       formData.modalidades.includes("domicilio") &&
       !formData.codigosPostalesDomicilio.trim()
@@ -808,6 +810,10 @@ export default function RegisterProfessionalPage() {
     ) {
       newErrors.direccionConsulta =
         "La dirección de consulta es requerida si ofreces atención presencial";
+    }
+
+    if (!formData.ciudad.trim()) {
+      newErrors.ciudad = "La ciudad es requerida";
     }
 
     if (!formData.accesibleMovilidad) {
@@ -2184,6 +2190,33 @@ export default function RegisterProfessionalPage() {
                 )}
               </div>
             )}
+
+            {/* 15.1. Ciudad */}
+            <div>
+              <label
+                htmlFor="ciudad"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Ciudad <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="ciudad"
+                name="ciudad"
+                value={formData.ciudad}
+                onChange={handleInputChange}
+                required
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
+                  errors.ciudad ? "border-red-300" : "border-gray-300"
+                }`}
+                placeholder="Ej: Madrid, Barcelona, Valencia..."
+                disabled={!!successMsg}
+                aria-invalid={Boolean(errors.ciudad)}
+              />
+              {errors.ciudad && (
+                <p className="mt-1 text-sm text-red-600">{errors.ciudad}</p>
+              )}
+            </div>
 
             {/* 16. Zonas donde atiendes a domicilio */}
             {formData.modalidades.includes("domicilio") && (

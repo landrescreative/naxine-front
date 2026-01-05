@@ -104,27 +104,7 @@ export default function AdminProfessionalEditPage() {
     }>
   >([]);
   const [savingSchedule, setSavingSchedule] = useState(false);
-  const [existingScheduleTypes, setExistingScheduleTypes] = useState<
-    Set<"presencial" | "en_linea" | "a_domicilio">
-  >(new Set());
-  const timeOptions = Array.from({ length: 24 * 2 }).map((_, i) => {
-    const hour = Math.floor(i / 2);
-    const minute = i % 2 === 0 ? "00" : "30";
-    const period = hour < 12 ? "AM" : "PM";
-    const hour12 = hour % 12 === 0 ? 12 : hour % 12;
-    return `${hour12}:${minute} ${period}`;
-  });
-  // Vista agrupada por tipo (máximo 3 bloques)
-  const [scheduleByType, setScheduleByType] = useState<
-    Record<
-      "presencial" | "en_linea" | "a_domicilio",
-      { enabled: boolean; dias: string[]; desde: string; hasta: string }
-    >
-  >({
-    presencial: { enabled: false, dias: [], desde: "", hasta: "" },
-    en_linea: { enabled: false, dias: [], desde: "", hasta: "" },
-    a_domicilio: { enabled: false, dias: [], desde: "", hasta: "" },
-  });
+
   const allDays = [
     "lunes",
     "martes",
@@ -155,6 +135,7 @@ export default function AdminProfessionalEditPage() {
     tituloUniversitario: "",
     servicios: "",
     modalidades: [] as string[],
+    observaciones: "",
     accesoMovilidad: false,
     tarifaPorHora: 0,
     precios: null as any,
@@ -192,7 +173,6 @@ export default function AdminProfessionalEditPage() {
   const [editingPriceData, setEditingPriceData] = useState<{
     nombre?: string;
     precio?: string;
-    descripcion?: string;
     duracion?: string;
   }>({});
 
@@ -224,162 +204,95 @@ export default function AdminProfessionalEditPage() {
       "pendiente";
     const mappedStatus = statusMap[estado.toLowerCase()] || "pendiente";
 
-    // Derivar dirección desde campos del backend
-    const derivedAddress =
-      backendProfessional.direccion ||
-      backendProfessional.domicilio_consultorio ||
-      backendProfessional.address ||
-      "";
-
-    return {
-      id: String(
-        backendProfessional.id_profesional ||
-          backendProfessional.id_usuario ||
-          backendProfessional.id ||
-          ""
-      ),
+    // El backend ahora garantiza campos con nombres consistentes
+    const mappedProfessional = {
+      id: String(backendProfessional.id_profesional || ""),
       name:
         `${backendProfessional.nombre || ""} ${
           backendProfessional.apellidos || ""
-        }`.trim() ||
-        backendProfessional.nombre_completo ||
-        backendProfessional.name ||
-        "",
+        }`.trim() || "",
       fullName:
         `${backendProfessional.nombre || ""} ${
           backendProfessional.apellidos || ""
-        }`.trim() ||
-        backendProfessional.nombre_completo ||
-        backendProfessional.fullName ||
-        "",
-      email:
-        backendProfessional.email || backendProfessional.email_usuario || "",
-      phone: backendProfessional.telefono || backendProfessional.phone || "",
+        }`.trim() || "",
+      email: backendProfessional.email || "",
+      phone: backendProfessional.telefono || "",
       username: (backendProfessional.email || "").split("@")[0] || "",
-      city:
-        backendProfessional.ciudad ||
-        backendProfessional.city ||
-        derivedAddress ||
-        "",
-      postalCode:
-        backendProfessional.codigo_postal ||
-        backendProfessional.postalCode ||
-        "",
-      specialty:
-        backendProfessional.especialidad || backendProfessional.specialty || "",
-      licenseNumber:
-        backendProfessional.numero_colegiado ||
-        backendProfessional.licenseNumber ||
-        "",
-      nifCif: backendProfessional.nif_cif || backendProfessional.nifCif || "",
-      experience:
-        backendProfessional.experiencia_años ||
-        backendProfessional.experience ||
-        0,
+      city: backendProfessional.ciudad || "",
+      postalCode: backendProfessional.codigo_postal || "",
+      specialty: backendProfessional.especialidad || "",
+      licenseNumber: backendProfessional.numero_colegiado || "",
+      nifCif: backendProfessional.nif_cif || "",
+      experience: backendProfessional.experiencia_años || 0,
       rating:
         backendProfessional.calificacion || backendProfessional.rating || 0,
-      totalSessions:
-        backendProfessional.total_sesiones ||
-        backendProfessional.totalSessions ||
-        0,
-      incomeUsd:
-        backendProfessional.ingreso || backendProfessional.incomeUsd || 0,
+      totalSessions: backendProfessional.total_sesiones || 0,
+      incomeUsd: backendProfessional.ingreso || 0,
       status: mappedStatus,
-      joinDate:
-        backendProfessional.created_at ||
-        backendProfessional.joinDate ||
-        new Date().toISOString(),
-      lastActive:
-        backendProfessional.ultimo_acceso ||
-        backendProfessional.lastActive ||
-        new Date().toISOString(),
-      profileImage:
-        backendProfessional.imagen_perfil || backendProfessional.profileImage,
-      bio: backendProfessional.descripcion || backendProfessional.bio || "",
-      videoUrl:
-        backendProfessional.video_presentacion ||
-        backendProfessional.videoUrl ||
-        undefined,
-      education:
-        backendProfessional.educacion || backendProfessional.education || [],
-      certifications:
-        backendProfessional.certificaciones ||
-        backendProfessional.certifications ||
-        [],
-      languages:
-        backendProfessional.idiomas || backendProfessional.languages || [],
-      availability: backendProfessional.disponibilidad ||
-        backendProfessional.availability || {
-          monday: [],
-          tuesday: [],
-          wednesday: [],
-          thursday: [],
-          friday: [],
-          saturday: [],
-          sunday: [],
-        },
-      titulacion:
-        backendProfessional.titulacion || backendProfessional.degreeTitle || "",
-      publicEmail:
-        backendProfessional.correo_profesional_publico ||
-        backendProfessional.publicEmail ||
-        "",
-      homeVisitPostalCodes:
-        backendProfessional.codigos_postales_domicilio ||
-        backendProfessional.homeVisitPostalCodes ||
-        "",
-      observations:
-        backendProfessional.observaciones ||
-        backendProfessional.observations ||
-        "",
-      services:
-        backendProfessional.servicios || backendProfessional.services || "",
-      modalities:
-        backendProfessional.modalidad_atencion ||
-        backendProfessional.modalities ||
-        [],
-      mobilityAccess:
-        backendProfessional.acceso_movilidad ||
-        backendProfessional.mobilityAccess ||
-        false,
-      documents: {
-        identityCard:
-          backendProfessional.documento_identidad ||
-          backendProfessional.identityCard,
-        universityDegree:
-          backendProfessional.titulo_universitario ||
-          backendProfessional.universityDegree,
-        insurance:
-          backendProfessional.seguro_rc || backendProfessional.insurance,
-        collegialCertificate:
-          backendProfessional.certificado_colegiacion ||
-          backendProfessional.collegialCertificate,
-        cv: backendProfessional.cv,
-        criminalRecord:
-          backendProfessional.certificado_delitos ||
-          backendProfessional.criminalRecord,
+      joinDate: backendProfessional.created_at || new Date().toISOString(),
+      lastActive: backendProfessional.ultimo_acceso || new Date().toISOString(),
+      profileImage: backendProfessional.foto_perfil || null,
+      foto_perfil: backendProfessional.foto_perfil || null,
+      bio: backendProfessional.descripcion || "",
+      videoUrl: backendProfessional.video_presentacion || undefined,
+      education: backendProfessional.educacion || [],
+      certifications: backendProfessional.certificaciones || [],
+      languages: backendProfessional.idiomas || [],
+      availability: backendProfessional.disponibilidad || {
+        monday: [],
+        tuesday: [],
+        wednesday: [],
+        thursday: [],
+        friday: [],
+        saturday: [],
+        sunday: [],
       },
-      prices: backendProfessional.precios || backendProfessional.prices || null,
-      estadoAprobacion:
-        backendProfessional.estado_aprobacion ||
-        backendProfessional.estadoAprobacion,
-      tieneStripe:
-        backendProfessional.tiene_stripe ||
-        backendProfessional.tieneStripe ||
-        false,
-      tieneGoogleCalendar:
-        backendProfessional.tiene_google_calendar ||
-        backendProfessional.tieneGoogleCalendar ||
-        false,
-      ultimaSesion:
-        backendProfessional.ultima_sesion ||
-        backendProfessional.ultimaSesion ||
-        null,
-      proximaCita:
-        backendProfessional.proxima_cita ||
-        backendProfessional.proximaCita ||
-        null,
+      titulacion: backendProfessional.titulacion || "",
+      publicEmail: backendProfessional.correo_profesional_publico || "",
+      homeVisitPostalCodes:
+        backendProfessional.codigos_postales_domicilio || "",
+      domicilio_consultorio: backendProfessional.domicilio_consultorio || "",
+      observations: backendProfessional.observaciones || "",
+      services: backendProfessional.servicios_ofrecidos || "",
+      modalities: (() => {
+        const modalidadesData =
+          backendProfessional.modalities || backendProfessional.modalidades;
+
+        if (Array.isArray(modalidadesData)) {
+          return modalidadesData;
+        }
+
+        if (typeof modalidadesData === "string" && modalidadesData.trim()) {
+          try {
+            const parsed = JSON.parse(modalidadesData);
+            return Array.isArray(parsed) ? parsed : [];
+          } catch (e) {
+            console.warn("Error al parsear modalidades:", e);
+            return [];
+          }
+        }
+
+        return [];
+      })(),
+      mobilityAccess: backendProfessional.accesible_movilidad || false,
+      documents: {
+        identityCard: backendProfessional.documento_identidad || null,
+        universityDegree: backendProfessional.titulo_universitario || null,
+        insurance: backendProfessional.seguro_rc || null,
+        collegialCertificate:
+          backendProfessional.certificado_colegiacion || null,
+        cv: backendProfessional.cv || null,
+        criminalRecord: backendProfessional.certificado_delitos || null,
+      },
+      prices: backendProfessional.precios || null,
+      estadoAprobacion: backendProfessional.estado_aprobacion || "pendiente",
+      tieneStripe: backendProfessional.tiene_stripe || false,
+      tieneGoogleCalendar: backendProfessional.tiene_google_calendar || false,
+      ultimaSesion: backendProfessional.ultima_sesion || null,
+      proximaCita: backendProfessional.proxima_cita || null,
     };
+
+    return mappedProfessional;
   };
 
   // Cargar profesional desde la API
@@ -602,73 +515,6 @@ export default function AdminProfessionalEditPage() {
           };
         });
         setScheduleItems(mapped);
-
-        const initial: Record<
-          "presencial" | "en_linea" | "a_domicilio",
-          {
-            enabled: boolean;
-            dias: string[];
-            desde: string;
-            hasta: string;
-          }
-        > = {
-          presencial: { enabled: false, dias: [], desde: "", hasta: "" },
-          en_linea: { enabled: false, dias: [], desde: "", hasta: "" },
-          a_domicilio: { enabled: false, dias: [], desde: "", hasta: "" },
-        };
-
-        const presentTipos = new Set<
-          "presencial" | "en_linea" | "a_domicilio"
-        >();
-
-        ["presencial", "en_linea", "a_domicilio"].forEach((tipo) => {
-          const rows = mapped.filter((r) => (r.tipo_atencion || "") === tipo);
-          if (rows.length) {
-            presentTipos.add(tipo as any);
-            initial[tipo as keyof typeof initial].enabled = true;
-            const dias = Array.from(
-              new Set(rows.map((r) => r.dia_semana).filter(Boolean))
-            );
-            initial[tipo as keyof typeof initial].dias = dias;
-            const first = rows[0];
-            const to12 = (v: string) => {
-              if (!v) return "";
-              const [hhRaw, mmRaw] = v.split(":");
-              const hh = parseInt(hhRaw, 10);
-              const mm = mmRaw || "00";
-              const per = hh < 12 ? "AM" : "PM";
-              const h12 = hh % 12 === 0 ? 12 : hh % 12;
-              return `${h12}:${mm} ${per}`;
-            };
-            initial[tipo as keyof typeof initial].desde = to12(
-              first.hora_inicio
-            );
-            initial[tipo as keyof typeof initial].hasta = to12(first.hora_fin);
-          }
-        });
-
-        if (!presentTipos.size && mapped.length) {
-          const rows = mapped;
-          const dias = Array.from(
-            new Set(rows.map((r) => r.dia_semana).filter(Boolean))
-          );
-          const to12 = (v: string) => {
-            if (!v) return "";
-            const [hhRaw, mmRaw] = v.split(":");
-            const hh = parseInt(hhRaw, 10);
-            const mm = mmRaw || "00";
-            const per = hh < 12 ? "AM" : "PM";
-            const h12 = hh % 12 === 0 ? 12 : hh % 12;
-            return `${h12}:${mm} ${per}`;
-          };
-          initial.presencial.enabled = true;
-          initial.presencial.dias = dias;
-          initial.presencial.desde = to12(rows[0].hora_inicio);
-          initial.presencial.hasta = to12(rows[0].hora_fin);
-          presentTipos.add("presencial");
-        }
-        setScheduleByType(initial);
-        setExistingScheduleTypes(presentTipos);
       } catch (e: any) {
         setScheduleError(e?.message || "Error al cargar horarios");
       } finally {
@@ -707,11 +553,18 @@ export default function AdminProfessionalEditPage() {
         idiomas: Array.isArray(professional.languages)
           ? professional.languages.join(", ")
           : "",
-        tituloUniversitario: professional.documents?.universityDegree || professional.titulacion || "",
+        tituloUniversitario:
+          professional.documents?.universityDegree ||
+          professional.titulacion ||
+          "",
         servicios: professional.services || "",
         modalidades: professional.modalities || [],
+        observaciones: professional.observations || "",
         accesoMovilidad: professional.mobilityAccess || false,
-        tarifaPorHora: (professional.prices as any)?.tarifaPorHora || (professional.prices as any)?.hourlyRate || 0,
+        tarifaPorHora:
+          (professional.prices as any)?.tarifaPorHora ||
+          (professional.prices as any)?.hourlyRate ||
+          0,
         precios: professional.prices,
       });
     }
@@ -1037,7 +890,6 @@ export default function AdminProfessionalEditPage() {
         biografia: "descripcion",
         videoPresentacion: "video_presentacion",
         especialidad: "especialidad",
-        rating: "rating", // Este campo puede no ser editable directamente
         telefono: "telefono",
         direccion: "direccion",
         ciudad: "ciudad",
@@ -1082,13 +934,6 @@ export default function AdminProfessionalEditPage() {
         updateData.correo_profesional_publico = editValue.trim() || null;
       } else if (field === "codigosPostales") {
         updateData.codigos_postales_domicilio = editValue.trim() || null;
-      } else if (field === "rating") {
-        // El rating generalmente no se edita directamente
-        // Solo actualizamos el estado local para este campo
-        update(field as keyof typeof form, editValue);
-        setEditingField(null);
-        setEditValue("");
-        return;
       } else if (field === "numeroUsuario") {
         // El número de usuario (ID) no se puede editar
         alert("El número de usuario no se puede modificar");
@@ -1131,8 +976,7 @@ export default function AdminProfessionalEditPage() {
           } else if (field === "telefono") {
             updatedProfessional.phone = editValue.trim();
           } else if (field === "direccion") {
-            // Actualizar tanto direccion como domicilio_consultorio en el estado
-            (updatedProfessional as any).direccion = editValue.trim();
+            // Actualizar domicilio_consultorio en el estado
             (updatedProfessional as any).domicilio_consultorio =
               editValue.trim();
           } else if (field === "ciudad") {
@@ -1242,7 +1086,6 @@ export default function AdminProfessionalEditPage() {
       precio: String(
         price.price || price.precio || price.monto || price.amount || "0"
       ),
-      descripcion: price.description || price.descripcion || "",
       duracion: duracionFormatted,
     });
   };
@@ -1283,9 +1126,6 @@ export default function AdminProfessionalEditPage() {
         if (!isNaN(precioValue) && precioValue >= 0) {
           updateData.precio = precioValue;
         }
-      }
-      if (editingPriceData.descripcion !== undefined) {
-        updateData.descripcion = editingPriceData.descripcion.trim() || null;
       }
       if (
         editingPriceData.duracion !== undefined &&
@@ -1343,10 +1183,6 @@ export default function AdminProfessionalEditPage() {
               : currentPrice.precio ||
                 currentPrice.monto ||
                 currentPrice.amount,
-          descripcion:
-            updateData.descripcion !== undefined
-              ? updateData.descripcion
-              : currentPrice.descripcion || currentPrice.description,
           duracion_minutos:
             updateData.duracion_minutos !== undefined
               ? updateData.duracion_minutos
@@ -1575,7 +1411,8 @@ export default function AdminProfessionalEditPage() {
                 {lastSavedField === "especialidad" &&
                   "Especialidad actualizada"}
                 {lastSavedField === "telefono" && "Teléfono actualizado"}
-                {lastSavedField === "direccion" && "Dirección actualizada"}
+                {lastSavedField === "direccion" &&
+                  "Dirección Consultorio actualizada"}
                 {lastSavedField === "ciudad" && "Ciudad actualizada"}
                 {lastSavedField === "titulacion" && "Titulación actualizada"}
                 {lastSavedField === "numeroColegiado" &&
@@ -2433,67 +2270,6 @@ export default function AdminProfessionalEditPage() {
                   )}
                 </div>
 
-                {/* Rating */}
-                <div className="group relative">
-                  <div className="flex items-center space-x-3 mb-2">
-                    <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
-                      <Star className="h-3 w-3 text-gray-500" />
-                    </div>
-                    <span className="text-sm font-medium text-gray-700">
-                      Rating
-                    </span>
-                  </div>
-                  {editingField === "rating" ? (
-                    <div className="ml-9 space-y-2">
-                      <input
-                        type="text"
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        className="w-full px-3 py-2 text-sm border-2 border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                        autoFocus
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") handleSaveEdit("rating");
-                          if (e.key === "Escape") handleCancelEdit();
-                        }}
-                      />
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleSaveEdit("rating")}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
-                        >
-                          <Save className="h-3.5 w-3.5" />
-                          Guardar
-                        </button>
-                        <button
-                          onClick={handleCancelEdit}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                          Cancelar
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="ml-9 flex items-center justify-between group-hover:bg-gray-50 -mx-2 px-2 py-1.5 rounded-lg transition-colors">
-                      <span className="text-sm font-medium text-gray-900">
-                        {professional.rating.toFixed(1)}
-                      </span>
-                      <button
-                        onClick={() =>
-                          handleEditField(
-                            "rating",
-                            professional.rating.toString()
-                          )
-                        }
-                        className="opacity-0 group-hover:opacity-100 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-all"
-                      >
-                        <Edit className="h-3.5 w-3.5" />
-                        Editar
-                      </button>
-                    </div>
-                  )}
-                </div>
-
                 {/* Phone */}
                 <div className="group relative">
                   <div className="flex items-center space-x-3 mb-2">
@@ -2559,7 +2335,7 @@ export default function AdminProfessionalEditPage() {
                       <MapPin className="h-3 w-3 text-gray-500" />
                     </div>
                     <span className="text-sm font-medium text-gray-700">
-                      Dirección
+                      Dirección Consultorio
                     </span>
                   </div>
                   {editingField === "direccion" ? (
@@ -2593,39 +2369,17 @@ export default function AdminProfessionalEditPage() {
                   ) : (
                     <div className="ml-9 flex items-start justify-between group-hover:bg-gray-50 -mx-2 px-2 py-1.5 rounded-lg transition-colors">
                       <span className="text-sm font-medium text-gray-900 flex-1 pr-2">
-                        {(() => {
-                          const dir =
-                            (professional as any)?.direccion ||
-                            (professional as any)?.address ||
-                            "";
-                          const consultorio =
-                            (professional as any)?.domicilio_consultorio ||
-                            (professional as any)?.consultorio ||
-                            "";
-                          if (dir && dir.trim().length > 0) return dir;
-                          if (consultorio && consultorio.trim().length > 0)
-                            return consultorio;
-                          return "Sin dirección";
-                        })()}
+                        {(professional as any)?.domicilio_consultorio ||
+                          (professional as any)?.consultorio ||
+                          "Sin dirección de consultorio"}
                       </span>
                       <button
                         onClick={() =>
                           handleEditField(
                             "direccion",
-                            (() => {
-                              const dir =
-                                (professional as any)?.direccion ||
-                                (professional as any)?.address ||
-                                "";
-                              const consultorio =
-                                (professional as any)?.domicilio_consultorio ||
-                                (professional as any)?.consultorio ||
-                                "";
-                              if (dir && dir.trim().length > 0) return dir;
-                              if (consultorio && consultorio.trim().length > 0)
-                                return consultorio;
-                              return "";
-                            })()
+                            (professional as any)?.domicilio_consultorio ||
+                              (professional as any)?.consultorio ||
+                              ""
                           )
                         }
                         className="opacity-0 group-hover:opacity-100 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-all flex-shrink-0"
@@ -3017,28 +2771,54 @@ export default function AdminProfessionalEditPage() {
                     Modalidades de Atención
                   </h4>
                   <div className="flex flex-wrap gap-2">
-                    {professional.modalities &&
-                    (Array.isArray(professional.modalities)
-                      ? professional.modalities.length > 0
-                      : true) ? (
-                      (Array.isArray(professional.modalities)
-                        ? professional.modalities
-                        : typeof professional.modalities === "string"
-                        ? JSON.parse(professional.modalities)
-                        : []
-                      ).map((mod: string, idx: number) => (
-                        <span
-                          key={idx}
-                          className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm capitalize"
-                        >
-                          {mod.replace(/_/g, " ")}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-gray-500 text-sm">
-                        No especificadas
-                      </span>
-                    )}
+                    {(() => {
+                      // Obtener modalidades
+                      let modalidadesList: string[] = [];
+
+                      if (professional.modalities) {
+                        if (Array.isArray(professional.modalities)) {
+                          modalidadesList = professional.modalities;
+                        } else if (
+                          typeof professional.modalities === "string"
+                        ) {
+                          try {
+                            const parsed = JSON.parse(professional.modalities);
+                            modalidadesList = Array.isArray(parsed)
+                              ? parsed
+                              : [];
+                          } catch (e) {
+                            console.warn("Error al parsear modalidades:", e);
+                            modalidadesList = [];
+                          }
+                        }
+                      }
+
+                      // Si no hay modalidades, mostrar mensaje
+                      if (modalidadesList.length === 0) {
+                        return (
+                          <span className="text-gray-500 text-sm italic">
+                            No especificadas
+                          </span>
+                        );
+                      }
+
+                      // Mapear y mostrar las modalidades
+                      return modalidadesList.map((mod: string, idx: number) => {
+                        // Normalizar el nombre de la modalidad para mostrar
+                        const modalidadNombre = mod
+                          .replace(/_/g, " ")
+                          .replace(/\b\w/g, (char) => char.toUpperCase());
+
+                        return (
+                          <span
+                            key={idx}
+                            className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-medium"
+                          >
+                            {modalidadNombre}
+                          </span>
+                        );
+                      });
+                    })()}
                   </div>
                 </div>
 
@@ -3047,26 +2827,58 @@ export default function AdminProfessionalEditPage() {
                   <h4 className="text-sm font-medium text-gray-700 mb-2">
                     Servicios Ofrecidos
                   </h4>
-                  <p className="text-sm text-gray-600 whitespace-pre-line">
-                    {professional.services
-                      ? typeof professional.services === "string" &&
-                        (professional.services.startsWith("[") ||
-                          professional.services.startsWith("{"))
-                        ? (() => {
-                            try {
-                              const parsed = JSON.parse(professional.services);
-                              return Array.isArray(parsed)
-                                ? parsed.join(", ")
-                                : typeof parsed === "object"
-                                ? Object.values(parsed).join(", ")
-                                : professional.services;
-                            } catch {
-                              return professional.services;
-                            }
-                          })()
-                        : professional.services
-                      : "No especificados"}
-                  </p>
+                  <div className="text-sm text-gray-600 whitespace-pre-line">
+                    {(() => {
+                      if (!professional.services) {
+                        return (
+                          <span className="text-gray-500 italic">
+                            No especificados
+                          </span>
+                        );
+                      }
+
+                      const servicesData = professional.services;
+
+                      // Si es un string JSON, intentar parsearlo
+                      if (
+                        typeof servicesData === "string" &&
+                        (servicesData.startsWith("[") ||
+                          servicesData.startsWith("{"))
+                      ) {
+                        try {
+                          const parsed = JSON.parse(servicesData);
+                          if (Array.isArray(parsed)) {
+                            return parsed.join(", ");
+                          }
+                          if (typeof parsed === "object") {
+                            return Object.values(parsed).join(", ");
+                          }
+                          return servicesData;
+                        } catch {
+                          return servicesData;
+                        }
+                      }
+
+                      // Si es un string normal, mostrarlo
+                      if (
+                        typeof servicesData === "string" &&
+                        servicesData.trim()
+                      ) {
+                        return servicesData;
+                      }
+
+                      // Si es un array, unirlo con comas
+                      if (Array.isArray(servicesData)) {
+                        return servicesData.join(", ");
+                      }
+
+                      return (
+                        <span className="text-gray-500 italic">
+                          No especificados
+                        </span>
+                      );
+                    })()}
+                  </div>
                 </div>
 
                 {/* Observations */}
@@ -3092,7 +2904,7 @@ export default function AdminProfessionalEditPage() {
                 )}
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {loadingSchedule ? (
                   <div className="text-gray-600">Cargando horarios...</div>
                 ) : scheduleError ? (
@@ -3100,169 +2912,212 @@ export default function AdminProfessionalEditPage() {
                     {scheduleError}
                   </div>
                 ) : (
-                  <div className="space-y-5">
-                    {(["presencial", "en_linea", "a_domicilio"] as const).map(
-                      (tipo) => (
-                        <div
-                          key={tipo}
-                          className="border border-gray-200 rounded-lg"
-                        >
-                          <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
-                            <div className="flex items-center gap-3">
-                              <span className="text-sm font-medium text-gray-900">
-                                {tipo === "presencial"
-                                  ? "Presencial"
-                                  : tipo === "en_linea"
-                                  ? "En línea"
-                                  : "A domicilio"}
-                              </span>
-                              {scheduleByType[tipo].enabled ? (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                                  Configurado
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                                  Sin configurar
-                                </span>
-                              )}
+                  <div className="space-y-6">
+                    {/* Agrupar horarios por tipo de atención */}
+                    {[
+                      {
+                        tipo: "presencial",
+                        label: "Atención Presencial",
+                        bgClass: "bg-blue-50",
+                        borderClass: "border-blue-200",
+                        textClass: "text-blue-900",
+                      },
+                      {
+                        tipo: "en_linea",
+                        label: "Atención En Línea",
+                        bgClass: "bg-green-50",
+                        borderClass: "border-green-200",
+                        textClass: "text-green-900",
+                      },
+                      {
+                        tipo: "a_domicilio",
+                        label: "Atención A Domicilio",
+                        bgClass: "bg-purple-50",
+                        borderClass: "border-purple-200",
+                        textClass: "text-purple-900",
+                      },
+                    ].map(
+                      ({ tipo, label, bgClass, borderClass, textClass }) => {
+                        const horariosPorTipo = scheduleItems.filter(
+                          (item) =>
+                            item.tipo_atencion === tipo && item.activo !== false
+                        );
+
+                        return (
+                          <div
+                            key={tipo}
+                            className="border border-gray-200 rounded-xl overflow-hidden"
+                          >
+                            <div
+                              className={`${bgClass} border-b ${borderClass} px-4 py-3`}
+                            >
+                              <h4
+                                className={`text-sm font-semibold ${textClass}`}
+                              >
+                                {label}
+                              </h4>
                             </div>
-                            {scheduleByType[tipo].enabled ? (
-                              <button
-                                className="px-3 py-1 text-xs rounded-lg border bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                                onClick={() =>
-                                  setScheduleByType((prev) => ({
-                                    ...prev,
-                                    [tipo]: {
-                                      enabled: false,
-                                      dias: [],
-                                      desde: "",
-                                      hasta: "",
-                                    },
-                                  }))
-                                }
-                              >
-                                Quitar horario
-                              </button>
-                            ) : (
-                              <button
-                                className="px-3 py-1 text-xs rounded-lg border bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-200"
-                                onClick={() =>
-                                  setScheduleByType((prev) => ({
-                                    ...prev,
-                                    [tipo]: {
-                                      enabled: true,
-                                      dias: [],
-                                      desde: "",
-                                      hasta: "",
-                                    },
-                                  }))
-                                }
-                              >
-                                Agregar horario
-                              </button>
-                            )}
+
+                            <div className="p-4">
+                              {/* Agrupar por día dentro de este tipo */}
+                              <div className="space-y-4">
+                                {allDays.map((dia) => {
+                                  const horariosDelDia = horariosPorTipo.filter(
+                                    (item) => item.dia_semana === dia
+                                  );
+
+                                  // Solo mostrar días que tienen horarios
+                                  if (horariosDelDia.length === 0) return null;
+
+                                  return (
+                                    <div
+                                      key={`${tipo}-${dia}`}
+                                      className="space-y-2"
+                                    >
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-sm font-medium text-gray-700">
+                                          {displayDay(dia)}
+                                        </span>
+                                      </div>
+
+                                      <div className="space-y-2">
+                                        {horariosDelDia.map((horario, idx) => (
+                                          <div
+                                            key={idx}
+                                            className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
+                                          >
+                                            <div className="flex-1 grid grid-cols-2 gap-3">
+                                              <div>
+                                                <span className="text-xs text-gray-600 block mb-1">
+                                                  Hora inicio
+                                                </span>
+                                                <input
+                                                  type="time"
+                                                  value={
+                                                    horario.hora_inicio?.slice(
+                                                      0,
+                                                      5
+                                                    ) || ""
+                                                  }
+                                                  onChange={(e) => {
+                                                    const updated = [
+                                                      ...scheduleItems,
+                                                    ];
+                                                    const foundIdx =
+                                                      updated.findIndex(
+                                                        (item) =>
+                                                          item === horario
+                                                      );
+                                                    if (foundIdx >= 0) {
+                                                      updated[foundIdx] = {
+                                                        ...updated[foundIdx],
+                                                        hora_inicio:
+                                                          e.target.value,
+                                                      };
+                                                      setScheduleItems(updated);
+                                                    }
+                                                  }}
+                                                  className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg bg-white"
+                                                />
+                                              </div>
+                                              <div>
+                                                <span className="text-xs text-gray-600 block mb-1">
+                                                  Hora fin
+                                                </span>
+                                                <input
+                                                  type="time"
+                                                  value={
+                                                    horario.hora_fin?.slice(
+                                                      0,
+                                                      5
+                                                    ) || ""
+                                                  }
+                                                  onChange={(e) => {
+                                                    const updated = [
+                                                      ...scheduleItems,
+                                                    ];
+                                                    const foundIdx =
+                                                      updated.findIndex(
+                                                        (item) =>
+                                                          item === horario
+                                                      );
+                                                    if (foundIdx >= 0) {
+                                                      updated[foundIdx] = {
+                                                        ...updated[foundIdx],
+                                                        hora_fin:
+                                                          e.target.value,
+                                                      };
+                                                      setScheduleItems(updated);
+                                                    }
+                                                  }}
+                                                  className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg bg-white"
+                                                />
+                                              </div>
+                                            </div>
+                                            <button
+                                              onClick={() => {
+                                                setScheduleItems(
+                                                  scheduleItems.filter(
+                                                    (item) => item !== horario
+                                                  )
+                                                );
+                                              }}
+                                              className="text-red-600 hover:text-red-700 p-2"
+                                              title="Eliminar horario"
+                                            >
+                                              <X className="h-4 w-4" />
+                                            </button>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+
+                                {/* Botón para agregar horarios de este tipo */}
+                                {horariosPorTipo.length === 0 ? (
+                                  <p className="text-sm text-gray-500 text-center py-4">
+                                    Sin horarios configurados para esta
+                                    modalidad
+                                  </p>
+                                ) : null}
+
+                                {/* Selector de día para agregar nuevo horario */}
+                                <div className="pt-4 border-t border-gray-200">
+                                  <select
+                                    onChange={(e) => {
+                                      if (e.target.value) {
+                                        setScheduleItems([
+                                          ...scheduleItems,
+                                          {
+                                            dia_semana: e.target.value,
+                                            hora_inicio: "09:00",
+                                            hora_fin: "17:00",
+                                            tipo_atencion: tipo as any,
+                                            activo: true,
+                                          },
+                                        ]);
+                                        e.target.value = ""; // Reset selector
+                                      }
+                                    }}
+                                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white"
+                                    defaultValue=""
+                                  >
+                                    <option value="" disabled>
+                                      + Agregar horario para...
+                                    </option>
+                                    {allDays.map((dia) => (
+                                      <option key={dia} value={dia}>
+                                        {displayDay(dia)}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          {scheduleByType[tipo].enabled && (
-                            <div className="p-4 space-y-3">
-                              <div>
-                                <label className="block text-xs text-gray-600 mb-1">
-                                  Días disponibles
-                                </label>
-                                <div className="flex flex-wrap gap-2">
-                                  {allDays.map((d) => {
-                                    const sel =
-                                      scheduleByType[tipo].dias.includes(d);
-                                    return (
-                                      <button
-                                        key={`${tipo}-${d}`}
-                                        className={`px-2.5 py-1 rounded-full text-xs border ${
-                                          sel
-                                            ? "bg-primary/10 border-primary text-primary"
-                                            : "bg-white border-gray-300 text-gray-700"
-                                        }`}
-                                        onClick={() =>
-                                          setScheduleByType((prev) => {
-                                            const current = prev[tipo];
-                                            const dias = sel
-                                              ? current.dias.filter(
-                                                  (x) => x !== d
-                                                )
-                                              : [...current.dias, d];
-                                            return {
-                                              ...prev,
-                                              [tipo]: { ...current, dias },
-                                            };
-                                          })
-                                        }
-                                      >
-                                        {displayDay(d)}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                              <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                  <label className="block text-xs text-gray-600 mb-1">
-                                    Desde
-                                  </label>
-                                  <select
-                                    value={scheduleByType[tipo].desde || ""}
-                                    onChange={(e) =>
-                                      setScheduleByType((prev) => ({
-                                        ...prev,
-                                        [tipo]: {
-                                          ...prev[tipo],
-                                          desde: e.target.value,
-                                        },
-                                      }))
-                                    }
-                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg bg-white"
-                                  >
-                                    <option value="">Selecciona</option>
-                                    {timeOptions.map((t) => (
-                                      <option
-                                        key={`${tipo}-desde-${t}`}
-                                        value={t}
-                                      >
-                                        {t}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                                <div>
-                                  <label className="block text-xs text-gray-600 mb-1">
-                                    Hasta
-                                  </label>
-                                  <select
-                                    value={scheduleByType[tipo].hasta || ""}
-                                    onChange={(e) =>
-                                      setScheduleByType((prev) => ({
-                                        ...prev,
-                                        [tipo]: {
-                                          ...prev[tipo],
-                                          hasta: e.target.value,
-                                        },
-                                      }))
-                                    }
-                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg bg-white"
-                                  >
-                                    <option value="">Selecciona</option>
-                                    {timeOptions.map((t) => (
-                                      <option
-                                        key={`${tipo}-hasta-${t}`}
-                                        value={t}
-                                      >
-                                        {t}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )
+                        );
+                      }
                     )}
                   </div>
                 )}
@@ -3288,41 +3143,16 @@ export default function AdminProfessionalEditPage() {
                           process.env.NEXT_PUBLIC_API_URL ||
                           "http://localhost:3000/api"
                         ).replace(/\/$/, "");
-                        const to24 = (v: string) => {
-                          const m = v.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
-                          if (!m) return v.length === 5 ? `${v}:00` : v;
-                          let hh = parseInt(m[1], 10);
-                          const mm = m[2];
-                          const per = m[3].toUpperCase();
-                          if (per === "PM" && hh !== 12) hh += 12;
-                          if (per === "AM" && hh === 12) hh = 0;
-                          return `${hh.toString().padStart(2, "0")}:${mm}:00`;
-                        };
-                        const payload: Array<any> = [];
-                        (
-                          ["presencial", "en_linea", "a_domicilio"] as const
-                        ).forEach((tipo) => {
-                          const section = scheduleByType[tipo];
-                          if (!section.enabled) return;
-                          if (
-                            !section.desde ||
-                            !section.hasta ||
-                            !section.dias.length
-                          )
-                            return;
-                          for (const dia of section.dias) {
-                            payload.push({
-                              dia_semana: dia,
-                              hora_inicio: to24(section.desde),
-                              hora_fin: to24(section.hasta),
-                              tipo_atencion: tipo,
-                              activo: 1,
-                            });
-                          }
-                        });
-                        // Allow saving empty if user wants to clear everything? Maybe not.
-                        // if (payload.length === 0) { ... }
 
+                        // Normalizar hora a formato HH:MM:SS
+                        const normalizeTime = (time: string) => {
+                          if (!time) return "00:00:00";
+                          if (time.length === 5) return `${time}:00`;
+                          if (time.length === 8) return time;
+                          return time;
+                        };
+
+                        // 1. Eliminar todos los horarios existentes
                         const currentRes = await fetch(
                           `${apiBase}/disponibilidad-horarios/profesional/${professionalIdProfesional}`,
                           { headers: { Authorization: `Bearer ${adminToken}` } }
@@ -3336,6 +3166,7 @@ export default function AdminProfessionalEditPage() {
                           currentData?.disponibilidad ||
                           currentData?.data ||
                           [];
+
                         for (const cur of currentList) {
                           const delId = cur.id_disponibilidad || cur.id || null;
                           if (!delId) continue;
@@ -3349,23 +3180,35 @@ export default function AdminProfessionalEditPage() {
                             }
                           );
                         }
-                        for (const row of payload) {
-                          const hStart = row.hora_inicio || "09:00:00";
-                          const hh = parseInt(String(hStart).split(":")[0], 10);
+
+                        // 2. Crear todos los horarios desde scheduleItems
+                        for (const item of scheduleItems) {
+                          if (
+                            !item.dia_semana ||
+                            !item.hora_inicio ||
+                            !item.hora_fin
+                          )
+                            continue;
+
+                          const hora_inicio = normalizeTime(item.hora_inicio);
+                          const hora_fin = normalizeTime(item.hora_fin);
+                          const hh = parseInt(hora_inicio.split(":")[0], 10);
                           const turno = isNaN(hh)
                             ? null
                             : hh < 14
                             ? "matutino"
                             : "vespertino";
+
                           const createBody = {
                             id_profesional: Number(professionalIdProfesional),
-                            dia_semana: row.dia_semana,
-                            hora_inicio: row.hora_inicio,
-                            hora_fin: row.hora_fin,
-                            tipo_atencion: row.tipo_atencion || null,
+                            dia_semana: item.dia_semana,
+                            hora_inicio: hora_inicio,
+                            hora_fin: hora_fin,
+                            tipo_atencion: item.tipo_atencion || "presencial",
                             turno: turno,
                             activo: 1,
                           };
+
                           await fetch(`${apiBase}/disponibilidad-horarios`, {
                             method: "POST",
                             headers: {
@@ -3375,7 +3218,7 @@ export default function AdminProfessionalEditPage() {
                             body: JSON.stringify(createBody),
                           });
                         }
-                        // Recargar para confirmar (o solo mostrar éxito)
+
                         alert("Horarios guardados correctamente");
                       } catch (e: any) {
                         setScheduleError(
@@ -3526,8 +3369,6 @@ export default function AdminProfessionalEditPage() {
                                 value.nombre_paquete ||
                                 value.nombre_servicio ||
                                 `Paquete ${localIdx + 1}`;
-                              const desc =
-                                value.description || value.descripcion || "";
                               const duracionMinutos =
                                 value.duracion_minutos || value.duracion;
                               const duracionFormatted = duracionMinutos
@@ -3615,27 +3456,6 @@ export default function AdminProfessionalEditPage() {
                                           </select>
                                         </div>
                                       </div>
-                                      {desc !== undefined && (
-                                        <div>
-                                          <label className="block text-xs text-gray-500 mb-1">
-                                            Descripción adicional (opcional)
-                                          </label>
-                                          <textarea
-                                            value={
-                                              editingPriceData.descripcion || ""
-                                            }
-                                            onChange={(e) =>
-                                              setEditingPriceData({
-                                                ...editingPriceData,
-                                                descripcion: e.target.value,
-                                              })
-                                            }
-                                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white resize-none"
-                                            rows={2}
-                                            placeholder="Descripción opcional"
-                                          />
-                                        </div>
-                                      )}
                                       <div className="flex items-center gap-2 pt-2">
                                         <button
                                           onClick={() =>
@@ -3687,16 +3507,6 @@ export default function AdminProfessionalEditPage() {
                                           </p>
                                         </div>
                                       </div>
-                                      {desc && (
-                                        <div className="mt-3">
-                                          <p className="text-xs text-gray-500 mb-1">
-                                            Descripción
-                                          </p>
-                                          <p className="text-sm text-gray-600">
-                                            {desc}
-                                          </p>
-                                        </div>
-                                      )}
                                       <button
                                         onClick={() =>
                                           handleEditPrice(originalIdx, value)
@@ -4077,176 +3887,159 @@ export default function AdminProfessionalEditPage() {
                   {scheduleError}
                 </div>
               ) : (
-                <>
-                  <div className="space-y-5 max-h-[60vh] overflow-y-auto pr-2">
-                    {(["presencial", "en_linea", "a_domicilio"] as const).map(
-                      (tipo) => (
-                        <div
-                          key={tipo}
-                          className="border border-gray-200 rounded-lg"
-                        >
-                          <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
-                            <div className="flex items-center gap-3">
-                              <span className="text-sm font-medium text-gray-900">
-                                {tipo === "presencial"
-                                  ? "Presencial"
-                                  : tipo === "en_linea"
-                                  ? "En línea"
-                                  : "A domicilio"}
-                              </span>
-                              {scheduleByType[tipo].enabled ? (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                                  Configurado
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                                  Sin configurar
-                                </span>
-                              )}
-                            </div>
-                            {/* Para tipos ya existentes, no mostrar acciones de agregar/quitar para evitar confusión */}
-                            {existingScheduleTypes.has(
-                              tipo
-                            ) ? null : scheduleByType[tipo].enabled ? (
-                              <button
-                                className="px-3 py-1 text-xs rounded-lg border bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                                onClick={() =>
-                                  setScheduleByType((prev) => ({
-                                    ...prev,
-                                    [tipo]: {
-                                      enabled: false,
-                                      dias: [],
-                                      desde: "",
-                                      hasta: "",
-                                    },
-                                  }))
-                                }
-                              >
-                                Quitar horario
-                              </button>
-                            ) : (
-                              <button
-                                className="px-3 py-1 text-xs rounded-lg border bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-200"
-                                onClick={() =>
-                                  setScheduleByType((prev) => ({
-                                    ...prev,
-                                    [tipo]: {
-                                      enabled: true,
-                                      dias: [],
-                                      desde: "",
-                                      hasta: "",
-                                    },
-                                  }))
-                                }
-                              >
-                                Agregar horario
-                              </button>
-                            )}
-                          </div>
-                          {scheduleByType[tipo].enabled && (
-                            <div className="p-4 space-y-3">
-                              <div>
-                                <label className="block text-xs text-gray-600 mb-1">
-                                  Días disponibles
-                                </label>
-                                <div className="flex flex-wrap gap-2">
-                                  {allDays.map((d) => {
-                                    const sel =
-                                      scheduleByType[tipo].dias.includes(d);
-                                    return (
-                                      <button
-                                        key={`${tipo}-${d}`}
-                                        className={`px-2.5 py-1 rounded-full text-xs border ${
-                                          sel
-                                            ? "bg-primary/10 border-primary text-primary"
-                                            : "bg-white border-gray-300 text-gray-700"
-                                        }`}
-                                        onClick={() =>
-                                          setScheduleByType((prev) => {
-                                            const current = prev[tipo];
-                                            const dias = sel
-                                              ? current.dias.filter(
-                                                  (x) => x !== d
-                                                )
-                                              : [...current.dias, d];
-                                            return {
-                                              ...prev,
-                                              [tipo]: { ...current, dias },
-                                            };
-                                          })
-                                        }
-                                      >
-                                        {displayDay(d)}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                              <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                  <label className="block text-xs text-gray-600 mb-1">
-                                    Desde
-                                  </label>
-                                  <select
-                                    value={scheduleByType[tipo].desde || ""}
-                                    onChange={(e) =>
-                                      setScheduleByType((prev) => ({
-                                        ...prev,
-                                        [tipo]: {
-                                          ...prev[tipo],
-                                          desde: e.target.value,
-                                        },
-                                      }))
-                                    }
-                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg bg-white"
-                                  >
-                                    <option value="">Selecciona</option>
-                                    {timeOptions.map((t) => (
-                                      <option
-                                        key={`${tipo}-desde-${t}`}
-                                        value={t}
-                                      >
-                                        {t}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                                <div>
-                                  <label className="block text-xs text-gray-600 mb-1">
-                                    Hasta
-                                  </label>
-                                  <select
-                                    value={scheduleByType[tipo].hasta || ""}
-                                    onChange={(e) =>
-                                      setScheduleByType((prev) => ({
-                                        ...prev,
-                                        [tipo]: {
-                                          ...prev[tipo],
-                                          hasta: e.target.value,
-                                        },
-                                      }))
-                                    }
-                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg bg-white"
-                                  >
-                                    <option value="">Selecciona</option>
-                                    {timeOptions.map((t) => (
-                                      <option
-                                        key={`${tipo}-hasta-${t}`}
-                                        value={t}
-                                      >
-                                        {t}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                              </div>
-                            </div>
-                          )}
+                <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                  {/* Mostrar horarios agrupados por día */}
+                  {allDays.map((dia) => {
+                    const horariosDelDia = scheduleItems.filter(
+                      (item) => item.dia_semana === dia && item.activo !== false
+                    );
+
+                    return (
+                      <div
+                        key={dia}
+                        className="border border-gray-200 rounded-lg overflow-hidden"
+                      >
+                        <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
+                          <span className="text-sm font-medium text-gray-900">
+                            {displayDay(dia)}
+                          </span>
                         </div>
-                      )
-                    )}
-                  </div>
-                </>
+
+                        <div className="p-4 space-y-3">
+                          {horariosDelDia.length > 0 ? (
+                            horariosDelDia.map((horario, idx) => (
+                              <div
+                                key={idx}
+                                className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
+                              >
+                                <div className="flex-1 grid grid-cols-3 gap-3">
+                                  <div>
+                                    <span className="text-xs text-gray-600 block mb-1">
+                                      Hora inicio
+                                    </span>
+                                    <input
+                                      type="time"
+                                      value={
+                                        horario.hora_inicio?.slice(0, 5) || ""
+                                      }
+                                      onChange={(e) => {
+                                        const updated = [...scheduleItems];
+                                        const foundIdx = updated.findIndex(
+                                          (item) => item === horario
+                                        );
+                                        if (foundIdx >= 0) {
+                                          updated[foundIdx] = {
+                                            ...updated[foundIdx],
+                                            hora_inicio: e.target.value,
+                                          };
+                                          setScheduleItems(updated);
+                                        }
+                                      }}
+                                      className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg bg-white"
+                                    />
+                                  </div>
+                                  <div>
+                                    <span className="text-xs text-gray-600 block mb-1">
+                                      Hora fin
+                                    </span>
+                                    <input
+                                      type="time"
+                                      value={
+                                        horario.hora_fin?.slice(0, 5) || ""
+                                      }
+                                      onChange={(e) => {
+                                        const updated = [...scheduleItems];
+                                        const foundIdx = updated.findIndex(
+                                          (item) => item === horario
+                                        );
+                                        if (foundIdx >= 0) {
+                                          updated[foundIdx] = {
+                                            ...updated[foundIdx],
+                                            hora_fin: e.target.value,
+                                          };
+                                          setScheduleItems(updated);
+                                        }
+                                      }}
+                                      className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg bg-white"
+                                    />
+                                  </div>
+                                  <div>
+                                    <span className="text-xs text-gray-600 block mb-1">
+                                      Modalidad
+                                    </span>
+                                    <select
+                                      value={
+                                        horario.tipo_atencion || "presencial"
+                                      }
+                                      onChange={(e) => {
+                                        const updated = [...scheduleItems];
+                                        const foundIdx = updated.findIndex(
+                                          (item) => item === horario
+                                        );
+                                        if (foundIdx >= 0) {
+                                          updated[foundIdx] = {
+                                            ...updated[foundIdx],
+                                            tipo_atencion: e.target
+                                              .value as any,
+                                          };
+                                          setScheduleItems(updated);
+                                        }
+                                      }}
+                                      className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg bg-white"
+                                    >
+                                      <option value="presencial">
+                                        Presencial
+                                      </option>
+                                      <option value="en_linea">En línea</option>
+                                      <option value="a_domicilio">
+                                        A domicilio
+                                      </option>
+                                    </select>
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    setScheduleItems(
+                                      scheduleItems.filter(
+                                        (item) => item !== horario
+                                      )
+                                    );
+                                  }}
+                                  className="text-red-600 hover:text-red-700 p-2"
+                                  title="Eliminar horario"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-sm text-gray-500 text-center py-2">
+                              Sin horarios configurados
+                            </p>
+                          )}
+
+                          <button
+                            onClick={() => {
+                              setScheduleItems([
+                                ...scheduleItems,
+                                {
+                                  dia_semana: dia,
+                                  hora_inicio: "09:00",
+                                  hora_fin: "17:00",
+                                  tipo_atencion: "presencial",
+                                  activo: true,
+                                },
+                              ]);
+                            }}
+                            className="w-full px-3 py-2 text-xs text-blue-700 border border-blue-200 bg-blue-50 rounded-lg hover:bg-blue-100"
+                          >
+                            + Agregar horario
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
             <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
@@ -4279,45 +4072,16 @@ export default function AdminProfessionalEditPage() {
                       process.env.NEXT_PUBLIC_API_URL ||
                       "http://localhost:3000/api"
                     ).replace(/\/$/, "");
-                    const to24 = (v: string) => {
-                      const m = v.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
-                      if (!m) return v.length === 5 ? `${v}:00` : v;
-                      let hh = parseInt(m[1], 10);
-                      const mm = m[2];
-                      const per = m[3].toUpperCase();
-                      if (per === "PM" && hh !== 12) hh += 12;
-                      if (per === "AM" && hh === 12) hh = 0;
-                      return `${hh.toString().padStart(2, "0")}:${mm}:00`;
+
+                    // Normalizar hora a formato HH:MM:SS
+                    const normalizeTime = (time: string) => {
+                      if (!time) return "00:00:00";
+                      if (time.length === 5) return `${time}:00`;
+                      if (time.length === 8) return time;
+                      return time;
                     };
-                    // Construir payload a partir de bloques por tipo (una fila por día seleccionado)
-                    const payload: Array<any> = [];
-                    (
-                      ["presencial", "en_linea", "a_domicilio"] as const
-                    ).forEach((tipo) => {
-                      const section = scheduleByType[tipo];
-                      if (!section.enabled) return;
-                      if (
-                        !section.desde ||
-                        !section.hasta ||
-                        !section.dias.length
-                      )
-                        return;
-                      for (const dia of section.dias) {
-                        payload.push({
-                          dia_semana: dia,
-                          hora_inicio: to24(section.desde),
-                          hora_fin: to24(section.hasta),
-                          tipo_atencion: tipo,
-                          activo: 1,
-                        });
-                      }
-                    });
-                    if (payload.length === 0) {
-                      throw new Error(
-                        "Debes configurar al menos un horario antes de guardar."
-                      );
-                    }
-                    // 1) Obtener horarios actuales para borrarlos
+
+                    // 1. Eliminar todos los horarios existentes
                     const currentRes = await fetch(
                       `${apiBase}/disponibilidad-horarios/profesional/${professionalIdProfesional}`,
                       { headers: { Authorization: `Bearer ${adminToken}` } }
@@ -4331,6 +4095,7 @@ export default function AdminProfessionalEditPage() {
                       currentData?.disponibilidad ||
                       currentData?.data ||
                       [];
+
                     for (const cur of currentList) {
                       const delId = cur.id_disponibilidad || cur.id || null;
                       if (!delId) continue;
@@ -4342,25 +4107,35 @@ export default function AdminProfessionalEditPage() {
                         }
                       );
                     }
-                    // 2) Crear nuevos registros
-                    for (const row of payload) {
-                      // Calcular turno
-                      const hStart = row.hora_inicio || "09:00:00";
-                      const hh = parseInt(String(hStart).split(":")[0], 10);
+
+                    // 2. Crear todos los horarios desde scheduleItems
+                    for (const item of scheduleItems) {
+                      if (
+                        !item.dia_semana ||
+                        !item.hora_inicio ||
+                        !item.hora_fin
+                      )
+                        continue;
+
+                      const hora_inicio = normalizeTime(item.hora_inicio);
+                      const hora_fin = normalizeTime(item.hora_fin);
+                      const hh = parseInt(hora_inicio.split(":")[0], 10);
                       const turno = isNaN(hh)
                         ? null
                         : hh < 14
                         ? "matutino"
                         : "vespertino";
+
                       const createBody = {
                         id_profesional: Number(professionalIdProfesional),
-                        dia_semana: row.dia_semana,
-                        hora_inicio: row.hora_inicio,
-                        hora_fin: row.hora_fin,
-                        tipo_atencion: row.tipo_atencion || null,
+                        dia_semana: item.dia_semana,
+                        hora_inicio: hora_inicio,
+                        hora_fin: hora_fin,
+                        tipo_atencion: item.tipo_atencion || "presencial",
                         turno: turno,
                         activo: 1,
                       };
+
                       const postRes = await fetch(
                         `${apiBase}/disponibilidad-horarios`,
                         {
@@ -4372,6 +4147,7 @@ export default function AdminProfessionalEditPage() {
                           body: JSON.stringify(createBody),
                         }
                       );
+
                       if (!postRes.ok) {
                         const postErr = await postRes.json().catch(() => ({}));
                         throw new Error(
@@ -4381,7 +4157,9 @@ export default function AdminProfessionalEditPage() {
                         );
                       }
                     }
+
                     setIsScheduleModalOpen(false);
+                    alert("Horarios guardados correctamente");
                   } catch (e: any) {
                     setScheduleError(
                       e?.message || "Error al actualizar horarios"
