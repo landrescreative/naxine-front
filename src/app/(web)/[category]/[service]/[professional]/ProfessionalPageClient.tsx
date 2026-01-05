@@ -675,7 +675,16 @@ export default function ProfessionalPageClient({
           const diaLower = dia.toLowerCase().trim();
           const diaIndex = diasMap[diaLower];
           if (diaIndex !== undefined) {
-            horarios[diaIndex] = { desde, hasta };
+            if (!horarios[diaIndex]) {
+              horarios[diaIndex] = [];
+            }
+            // Verificar si el rango ya existe para evitar duplicados
+            const rangoExiste = horarios[diaIndex].some(
+              (r) => r.desde === desde && r.hasta === hasta
+            );
+            if (!rangoExiste) {
+              horarios[diaIndex].push({ desde, hasta });
+            }
           }
         });
       }
@@ -869,7 +878,8 @@ export default function ProfessionalPageClient({
               for (const horario of rangosDelDia) {
                 const desde = timeToMinutes(horario.desde);
                 const hasta = timeToMinutes(horario.hasta);
-                  while (currentTime + duracionMinutos <= hasta) {
+                let currentTime = desde;
+                while (currentTime + duracionMinutos <= hasta) {
                   const hour = Math.floor(currentTime / 60);
                   const minute = currentTime % 60;
 
@@ -1231,6 +1241,7 @@ export default function ProfessionalPageClient({
 
         currentTime += duracionMinutos;
       }
+      });
     }
 
     // Ordenar slots por hora
