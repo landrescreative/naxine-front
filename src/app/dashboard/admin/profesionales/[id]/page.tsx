@@ -707,9 +707,11 @@ export default function AdminProfessionalEditPage() {
         idiomas: Array.isArray(professional.languages)
           ? professional.languages.join(", ")
           : "",
+        tituloUniversitario: professional.documents?.universityDegree || professional.titulacion || "",
         servicios: professional.services || "",
         modalidades: professional.modalities || [],
         accesoMovilidad: professional.mobilityAccess || false,
+        tarifaPorHora: (professional.prices as any)?.tarifaPorHora || (professional.prices as any)?.hourlyRate || 0,
         precios: professional.prices,
       });
     }

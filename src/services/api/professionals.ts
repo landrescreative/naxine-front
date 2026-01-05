@@ -435,19 +435,6 @@ export class ProfessionalsService {
     });
   }
 
-  async approveProfessional(id: string): Promise<ApiResponse<ApiProfessional>> {
-    return apiClient.patch<ApiProfessional>(`/professionals/${id}/approve`);
-  }
-
-  async rejectProfessional(
-    id: string,
-    reason?: string
-  ): Promise<ApiResponse<ApiProfessional>> {
-    return apiClient.patch<ApiProfessional>(`/professionals/${id}/reject`, {
-      reason,
-    });
-  }
-
   // Métodos de filtrado y búsqueda
   async getProfessionalsBySpecialty(
     specialty: string,
