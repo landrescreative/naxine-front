@@ -79,6 +79,16 @@ export class ProfessionalsService {
     return apiClient.get<any>("/profesionales", params);
   }
 
+  async approveProfessional(id: string): Promise<ApiResponse<any>> {
+    return apiClient.put<any>(`/profesionales/admin/${id}/aprobar`, {});
+  }
+
+  async rejectProfessional(id: string, motivoRechazo: string): Promise<ApiResponse<any>> {
+    return apiClient.put<any>(`/profesionales/admin/${id}/rechazar`, {
+      motivo_rechazo: motivoRechazo,
+    });
+  }
+
   async getProfessionalById(id: string): Promise<ApiResponse<ApiProfessional>> {
     return apiClient.get<ApiProfessional>(`/professionals/${id}`);
   }
@@ -383,10 +393,17 @@ export class ProfessionalsService {
       email?: string;
       especialidad?: string;
       direccion?: string;
+      domicilio_consultorio?: string;
+      ciudad?: string;
       descripcion?: string;
+      video_presentacion?: string | null;
       tarifa_por_hora?: number;
       experiencia_años?: number;
       numero_colegiado?: string;
+      nif_cif?: string;
+      correo_profesional_publico?: string;
+      codigos_postales_domicilio?: string;
+      titulacion?: string;
     }
   ): Promise<ApiResponse<any>> {
     // PUT /api/profesionales/:id

@@ -22,6 +22,15 @@ import {
   ChevronUp,
   RotateCcw,
   Copy,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Calendar,
+  Clock,
+  CreditCard,
+  Calendar as CalendarIcon,
+  Info,
+  Loader2,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { type AdminProfessional } from "@/data/adminProfessionals";
@@ -143,6 +152,12 @@ export default function AdminProfessionalEditPage() {
     educacion: "",
     certificaciones: "",
     idiomas: "",
+    tituloUniversitario: "",
+    servicios: "",
+    modalidades: [] as string[],
+    accesoMovilidad: false,
+    tarifaPorHora: 0,
+    precios: null as any,
   });
 
   // Modal states
@@ -168,7 +183,24 @@ export default function AdminProfessionalEditPage() {
   // Edit states for each field
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  // Track unsaved changes
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [lastSavedField, setLastSavedField] = useState<string | null>(null);
+  const [saveSuccessVisible, setSaveSuccessVisible] = useState(false);
+  // Edit states for prices
+  const [editingPriceId, setEditingPriceId] = useState<number | null>(null);
+  const [editingPriceData, setEditingPriceData] = useState<{
+    nombre?: string;
+    precio?: string;
+    descripcion?: string;
+    duracion?: string;
+  }>({});
 
+  // Opciones de duración para precios
+  const durationOptions = Array.from({ length: 7 }).map((_, i) => {
+    const minutes = 30 + i * 10;
+    return `${minutes} min`;
+  });
 
   // Función para mapear los datos del backend al formato AdminProfessional
   const mapBackendProfessionalToAdminProfessional = (
@@ -239,6 +271,7 @@ export default function AdminProfessionalEditPage() {
         backendProfessional.numero_colegiado ||
         backendProfessional.licenseNumber ||
         "",
+      nifCif: backendProfessional.nif_cif || backendProfessional.nifCif || "",
       experience:
         backendProfessional.experiencia_años ||
         backendProfessional.experience ||
@@ -285,99 +318,120 @@ export default function AdminProfessionalEditPage() {
           saturday: [],
           sunday: [],
         },
+      titulacion:
+        backendProfessional.titulacion || backendProfessional.degreeTitle || "",
+      publicEmail:
+        backendProfessional.correo_profesional_publico ||
+        backendProfessional.publicEmail ||
+        "",
+      homeVisitPostalCodes:
+        backendProfessional.codigos_postales_domicilio ||
+        backendProfessional.homeVisitPostalCodes ||
+        "",
+      observations:
+        backendProfessional.observaciones ||
+        backendProfessional.observations ||
+        "",
+      services:
+        backendProfessional.servicios || backendProfessional.services || "",
+      modalities:
+        backendProfessional.modalidad_atencion ||
+        backendProfessional.modalities ||
+        [],
+      mobilityAccess:
+        backendProfessional.acceso_movilidad ||
+        backendProfessional.mobilityAccess ||
+        false,
+      documents: {
+        identityCard:
+          backendProfessional.documento_identidad ||
+          backendProfessional.identityCard,
+        universityDegree:
+          backendProfessional.titulo_universitario ||
+          backendProfessional.universityDegree,
+        insurance:
+          backendProfessional.seguro_rc || backendProfessional.insurance,
+        collegialCertificate:
+          backendProfessional.certificado_colegiacion ||
+          backendProfessional.collegialCertificate,
+        cv: backendProfessional.cv,
+        criminalRecord:
+          backendProfessional.certificado_delitos ||
+          backendProfessional.criminalRecord,
+      },
+      prices: backendProfessional.precios || backendProfessional.prices || null,
+      estadoAprobacion:
+        backendProfessional.estado_aprobacion ||
+        backendProfessional.estadoAprobacion,
+      tieneStripe:
+        backendProfessional.tiene_stripe ||
+        backendProfessional.tieneStripe ||
+        false,
+      tieneGoogleCalendar:
+        backendProfessional.tiene_google_calendar ||
+        backendProfessional.tieneGoogleCalendar ||
+        false,
+      ultimaSesion:
+        backendProfessional.ultima_sesion ||
+        backendProfessional.ultimaSesion ||
+        null,
+      proximaCita:
+        backendProfessional.proxima_cita ||
+        backendProfessional.proximaCita ||
+        null,
     };
   };
 
   // Cargar profesional desde la API
   useEffect(() => {
     const fetchProfessional = async () => {
+      if (!userId) return;
+
       try {
         setLoading(true);
         setError(null);
 
-        // Obtener todos los profesionales y buscar el que coincida con el ID
-        const response = await professionalsService.getAdminProfessionals();
+        const adminToken =
+          typeof window !== "undefined"
+            ? JSON.parse(window.localStorage.getItem("user") || "{}").token
+            : null;
 
-        if (response.success && response.data) {
-          let professionalsData: any[] = [];
+        if (!adminToken) {
+          setError("No se encontró token de administrador");
+          setLoading(false);
+          return;
+        }
 
-          if (Array.isArray(response.data)) {
-            professionalsData = response.data;
-          } else if (
-            response.data.data &&
-            response.data.data.profesionales &&
-            Array.isArray(response.data.data.profesionales)
-          ) {
-            professionalsData = response.data.data.profesionales;
-          } else if (response.data.data && Array.isArray(response.data.data)) {
-            professionalsData = response.data.data;
-          } else if (
-            response.data.profesionales &&
-            Array.isArray(response.data.profesionales)
-          ) {
-            professionalsData = response.data.profesionales;
+        const apiBase = (
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
+        ).replace(/\/$/, "");
+
+        // Usar el nuevo endpoint específico para detalles de admin que devuelve toda la info (incluyendo precios y horarios)
+        const response = await fetch(
+          `${apiBase}/profesionales/admin/detalle/${userId}`,
+          {
+            headers: { Authorization: `Bearer ${adminToken}` },
           }
+        );
 
-          // Buscar el profesional por id_profesional, id_usuario o id
-          const foundProfessional = professionalsData.find(
-            (p) =>
-              String(p.id_profesional) === userId ||
-              String(p.id_usuario) === userId ||
-              String(p.id) === userId
-          );
-
-          if (foundProfessional) {
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data && data.data.profesional) {
+            const foundProfessional = data.data.profesional;
             const mappedProfessional =
               mapBackendProfessionalToAdminProfessional(foundProfessional);
-            // Intentar obtener foto de perfil desde API admin
-            try {
-              const adminToken =
-                typeof window !== "undefined"
-                  ? JSON.parse(window.localStorage.getItem("user") || "{}")
-                      .token
-                  : null;
-              if (adminToken) {
-                const apiBase = (
-                  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
-                ).replace(/\/$/, "");
-                const profId = String(
-                  foundProfessional.id_profesional ||
-                    foundProfessional.id ||
-                    userId
-                );
-                const photoRes = await fetch(
-                  `${apiBase}/profesionales/${profId}/foto-perfil`,
-                  {
-                    headers: { Authorization: `Bearer ${adminToken}` },
-                  }
-                );
-                if (photoRes.ok) {
-                  const photoData = await photoRes.json();
-                  if (photoData?.data?.imageUrl) {
-                    mappedProfessional.profileImage = photoData.data.imageUrl;
-                  }
-                }
-              }
-            } catch (photoErr) {
-              console.warn(
-                "[AdminProfessionalEditPage] No se pudo cargar la foto de perfil:",
-                photoErr
-              );
-            }
+
             setProfessional(mappedProfessional);
-            // Guardar el id_profesional original para usar en la actualización
             setProfessionalIdProfesional(
-              String(
-                foundProfessional.id_profesional ||
-                  foundProfessional.id ||
-                  userId
-              )
+              String(foundProfessional.id_profesional)
             );
           } else {
-            setError(`Profesional con ID ${userId} no encontrado`);
+            setError(
+              "Formato de respuesta inválido o profesional no encontrado"
+            );
           }
         } else {
-          setError(response.error || "Error al cargar el profesional");
+          setError(`Error ${response.status}: ${response.statusText}`);
         }
       } catch (err) {
         setError("Ocurrió un error al cargar el profesional");
@@ -387,9 +441,7 @@ export default function AdminProfessionalEditPage() {
       }
     };
 
-    if (userId) {
-      fetchProfessional();
-    }
+    fetchProfessional();
   }, [userId]);
 
   // Cargar balance y transacciones desde API (Stripe Connect) cuando ya tengamos el id_profesional
@@ -453,6 +505,179 @@ export default function AdminProfessionalEditPage() {
     fetchFinance();
   }, [professionalIdProfesional, txPage, txLimit]);
 
+  // Cargar horarios automáticamente
+  useEffect(() => {
+    const fetchSchedule = async () => {
+      if (!professionalIdProfesional) return;
+      try {
+        setLoadingSchedule(true);
+        setScheduleError(null);
+        const adminToken =
+          typeof window !== "undefined"
+            ? JSON.parse(window.localStorage.getItem("user") || "{}")?.token
+            : null;
+        if (!adminToken) return;
+
+        const apiBase = (
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
+        ).replace(/\/$/, "");
+
+        const res = await fetch(
+          `${apiBase}/disponibilidad-horarios/profesional/${professionalIdProfesional}`,
+          { headers: { Authorization: `Bearer ${adminToken}` } }
+        );
+
+        if (!res.ok) {
+          // Si es 404 es normal si no tiene horarios, no lanzamos error visible
+          if (res.status !== 404) {
+            throw new Error(`Error ${res.status} al cargar horarios`);
+          }
+        }
+
+        const data = await res.json().catch(() => ({}));
+
+        const collectArraysWithDia = (obj: any): any[] => {
+          const results: any[] = [];
+          const visit = (node: any) => {
+            if (!node) return;
+            if (Array.isArray(node)) {
+              if (
+                node.length &&
+                typeof node[0] === "object" &&
+                "dia_semana" in (node[0] || {})
+              ) {
+                results.push(node);
+              } else {
+                node.forEach(visit);
+              }
+            } else if (typeof node === "object") {
+              Object.values(node).forEach(visit);
+            }
+          };
+          visit(obj);
+          if (!results.length) {
+            const guess =
+              obj?.data?.disponibilidad ||
+              obj?.disponibilidad ||
+              obj?.data ||
+              [];
+            if (Array.isArray(guess)) results.push(guess);
+          }
+          return results.flat();
+        };
+
+        const horariosSource: any[] = collectArraysWithDia(data);
+        const horarios: any[] = Array.isArray(horariosSource)
+          ? horariosSource
+          : [];
+
+        const normalizeTipo = (
+          val: any
+        ): "presencial" | "en_linea" | "a_domicilio" | null => {
+          if (!val && typeof val !== "string") return null;
+          const raw = String(val || "")
+            .toLowerCase()
+            .trim()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "");
+          const s = raw
+            .replace(/\s+/g, "_")
+            .replace(/en-linea|en_linea|online/, "en_linea")
+            .replace(/a-domicilio|a__domicilio|a_domicilio/, "a_domicilio");
+          if (s.includes("en_linea")) return "en_linea";
+          if (s.includes("a_domicilio")) return "a_domicilio";
+          if (s.includes("presencial") || s === "") return "presencial";
+          return null;
+        };
+
+        const mapped = horarios.map((h: any) => {
+          const tipo = normalizeTipo(h.tipo_atencion);
+          return {
+            id_disponibilidad: h.id_disponibilidad,
+            dia_semana: (h.dia_semana || "").toLowerCase(),
+            hora_inicio: h.hora_inicio?.slice?.(0, 5) || h.hora_inicio,
+            hora_fin: h.hora_fin?.slice?.(0, 5) || h.hora_fin,
+            tipo_atencion: tipo,
+            activo: h.activo ?? true,
+          };
+        });
+        setScheduleItems(mapped);
+
+        const initial: Record<
+          "presencial" | "en_linea" | "a_domicilio",
+          {
+            enabled: boolean;
+            dias: string[];
+            desde: string;
+            hasta: string;
+          }
+        > = {
+          presencial: { enabled: false, dias: [], desde: "", hasta: "" },
+          en_linea: { enabled: false, dias: [], desde: "", hasta: "" },
+          a_domicilio: { enabled: false, dias: [], desde: "", hasta: "" },
+        };
+
+        const presentTipos = new Set<
+          "presencial" | "en_linea" | "a_domicilio"
+        >();
+
+        ["presencial", "en_linea", "a_domicilio"].forEach((tipo) => {
+          const rows = mapped.filter((r) => (r.tipo_atencion || "") === tipo);
+          if (rows.length) {
+            presentTipos.add(tipo as any);
+            initial[tipo as keyof typeof initial].enabled = true;
+            const dias = Array.from(
+              new Set(rows.map((r) => r.dia_semana).filter(Boolean))
+            );
+            initial[tipo as keyof typeof initial].dias = dias;
+            const first = rows[0];
+            const to12 = (v: string) => {
+              if (!v) return "";
+              const [hhRaw, mmRaw] = v.split(":");
+              const hh = parseInt(hhRaw, 10);
+              const mm = mmRaw || "00";
+              const per = hh < 12 ? "AM" : "PM";
+              const h12 = hh % 12 === 0 ? 12 : hh % 12;
+              return `${h12}:${mm} ${per}`;
+            };
+            initial[tipo as keyof typeof initial].desde = to12(
+              first.hora_inicio
+            );
+            initial[tipo as keyof typeof initial].hasta = to12(first.hora_fin);
+          }
+        });
+
+        if (!presentTipos.size && mapped.length) {
+          const rows = mapped;
+          const dias = Array.from(
+            new Set(rows.map((r) => r.dia_semana).filter(Boolean))
+          );
+          const to12 = (v: string) => {
+            if (!v) return "";
+            const [hhRaw, mmRaw] = v.split(":");
+            const hh = parseInt(hhRaw, 10);
+            const mm = mmRaw || "00";
+            const per = hh < 12 ? "AM" : "PM";
+            const h12 = hh % 12 === 0 ? 12 : hh % 12;
+            return `${h12}:${mm} ${per}`;
+          };
+          initial.presencial.enabled = true;
+          initial.presencial.dias = dias;
+          initial.presencial.desde = to12(rows[0].hora_inicio);
+          initial.presencial.hasta = to12(rows[0].hora_fin);
+          presentTipos.add("presencial");
+        }
+        setScheduleByType(initial);
+        setExistingScheduleTypes(presentTipos);
+      } catch (e: any) {
+        setScheduleError(e?.message || "Error al cargar horarios");
+      } finally {
+        setLoadingSchedule(false);
+      }
+    };
+    fetchSchedule();
+  }, [professionalIdProfesional]);
+
   // Load professional data into form
   useEffect(() => {
     if (professional) {
@@ -482,6 +707,10 @@ export default function AdminProfessionalEditPage() {
         idiomas: Array.isArray(professional.languages)
           ? professional.languages.join(", ")
           : "",
+        servicios: professional.services || "",
+        modalidades: professional.modalities || [],
+        accesoMovilidad: professional.mobilityAccess || false,
+        precios: professional.prices,
       });
     }
   }, [professional]);
@@ -590,7 +819,6 @@ export default function AdminProfessionalEditPage() {
         direccion?: string;
         ciudad?: string;
         descripcion?: string;
-        tarifa_por_hora?: number;
         experiencia_años?: number;
         numero_colegiado?: string;
         video_presentacion?: string;
@@ -793,43 +1021,349 @@ export default function AdminProfessionalEditPage() {
     setEditValue(currentValue);
   };
 
-  const handleSaveEdit = (field: string) => {
-      // Update the form with the new value
-      if (field === "videoPresentacion") {
-        // Guardar inmediatamente el video de presentación
-        const adminToken =
-          typeof window !== "undefined"
-            ? JSON.parse(window.localStorage.getItem("user") || "{}")?.token
-            : null;
-        if (adminToken && professionalIdProfesional) {
-          const apiBase = (
-            process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
-          ).replace(/\/$/, "");
-          fetch(
-            `${apiBase}/profesionales/${professionalIdProfesional}`,
-            {
-              method: "PUT",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${adminToken}`,
-              },
-              body: JSON.stringify({
-                video_presentacion: editValue.trim() || null,
-              }),
-            }
-          ).catch((err) => {
-            console.error("Error al guardar video de presentación:", err);
-          });
-        }
+  const handleSaveEdit = async (field: string) => {
+    if (!professionalIdProfesional) {
+      console.error("No hay ID de profesional disponible");
+      return;
+    }
+
+    try {
+      // Mapeo de campos del frontend a campos del backend
+      const fieldMapping: Record<string, string> = {
+        numeroUsuario: "id", // Este campo no se puede editar realmente
+        email: "email",
+        biografia: "descripcion",
+        videoPresentacion: "video_presentacion",
+        especialidad: "especialidad",
+        rating: "rating", // Este campo puede no ser editable directamente
+        telefono: "telefono",
+        direccion: "direccion",
+        ciudad: "ciudad",
+      };
+
+      const backendField = fieldMapping[field];
+
+      if (!backendField) {
+        console.error(`Campo no mapeado: ${field}`);
+        update(field as keyof typeof form, editValue);
+        setEditingField(null);
+        setEditValue("");
+        return;
       }
-      update(field as keyof typeof form, editValue);
-      setEditingField(null);
-      setEditValue("");
-    };
+
+      // Preparar datos para actualizar
+      const updateData: any = {};
+
+      if (field === "biografia") {
+        updateData.descripcion = editValue.trim() || null;
+      } else if (field === "videoPresentacion") {
+        updateData.video_presentacion = editValue.trim() || null;
+      } else if (field === "email") {
+        updateData.email = editValue.trim() || null;
+      } else if (field === "especialidad") {
+        updateData.especialidad = editValue.trim() || null;
+      } else if (field === "telefono") {
+        updateData.telefono = editValue.trim() || null;
+      } else if (field === "direccion") {
+        // La dirección puede ir en direccion o domicilio_consultorio
+        // Usamos domicilio_consultorio que es más específico
+        updateData.domicilio_consultorio = editValue.trim() || null;
+      } else if (field === "ciudad") {
+        updateData.ciudad = editValue.trim() || null;
+      } else if (field === "titulacion") {
+        updateData.titulacion = editValue.trim() || null;
+      } else if (field === "numeroColegiado") {
+        updateData.numero_colegiado = editValue.trim() || null;
+      } else if (field === "nifCif") {
+        updateData.nif_cif = editValue.trim() || null;
+      } else if (field === "correoPublico") {
+        updateData.correo_profesional_publico = editValue.trim() || null;
+      } else if (field === "codigosPostales") {
+        updateData.codigos_postales_domicilio = editValue.trim() || null;
+      } else if (field === "rating") {
+        // El rating generalmente no se edita directamente
+        // Solo actualizamos el estado local para este campo
+        update(field as keyof typeof form, editValue);
+        setEditingField(null);
+        setEditValue("");
+        return;
+      } else if (field === "numeroUsuario") {
+        // El número de usuario (ID) no se puede editar
+        alert("El número de usuario no se puede modificar");
+        setEditingField(null);
+        setEditValue("");
+        return;
+      }
+
+      // Actualizar en el backend
+      const response = await professionalsService.updateAdminProfessional(
+        professionalIdProfesional,
+        updateData
+      );
+
+      if (response.success) {
+        // Actualizar el estado local del formulario
+        update(field as keyof typeof form, editValue);
+
+        // Mostrar notificación de éxito
+        setLastSavedField(field);
+        setSaveSuccessVisible(true);
+        setTimeout(() => {
+          setSaveSuccessVisible(false);
+          setLastSavedField(null);
+        }, 3000);
+
+        // Actualizar el estado del profesional para reflejar los cambios
+        if (professional) {
+          const updatedProfessional = { ...professional };
+
+          if (field === "email") {
+            updatedProfessional.email = editValue.trim();
+          } else if (field === "biografia") {
+            updatedProfessional.bio = editValue.trim();
+          } else if (field === "videoPresentacion") {
+            // El video se actualiza en el form, no en professional directamente
+            // Pero podemos actualizar form.videoPresentacion
+          } else if (field === "especialidad") {
+            updatedProfessional.specialty = editValue.trim();
+          } else if (field === "telefono") {
+            updatedProfessional.phone = editValue.trim();
+          } else if (field === "direccion") {
+            // Actualizar tanto direccion como domicilio_consultorio en el estado
+            (updatedProfessional as any).direccion = editValue.trim();
+            (updatedProfessional as any).domicilio_consultorio =
+              editValue.trim();
+          } else if (field === "ciudad") {
+            updatedProfessional.city = editValue.trim();
+          } else if (field === "titulacion") {
+            updatedProfessional.titulacion = editValue.trim();
+          } else if (field === "numeroColegiado") {
+            updatedProfessional.licenseNumber = editValue.trim();
+          } else if (field === "nifCif") {
+            updatedProfessional.nifCif = editValue.trim();
+          } else if (field === "correoPublico") {
+            updatedProfessional.publicEmail = editValue.trim();
+          } else if (field === "codigosPostales") {
+            updatedProfessional.homeVisitPostalCodes = editValue.trim();
+          }
+
+          setProfessional(updatedProfessional);
+        }
+
+        // Recargar los datos del profesional desde el backend para asegurar sincronización
+        // Esto es opcional pero recomendado para mantener consistencia
+        try {
+          const adminToken =
+            typeof window !== "undefined"
+              ? JSON.parse(window.localStorage.getItem("user") || "{}")?.token
+              : null;
+          if (adminToken && professionalIdProfesional) {
+            const apiBase = (
+              process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
+            ).replace(/\/$/, "");
+            const response = await fetch(
+              `${apiBase}/profesionales/admin/${professionalIdProfesional}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${adminToken}`,
+                },
+              }
+            );
+            if (response.ok) {
+              const data = await response.json();
+              if (data.success && data.data) {
+                // Actualizar el profesional con los datos más recientes del servidor
+                // Esto asegura que todos los campos estén sincronizados
+              }
+            }
+          }
+        } catch (refreshError) {
+          // Si falla la recarga, no es crítico, ya actualizamos el estado local
+          console.warn(
+            "No se pudo recargar los datos del servidor:",
+            refreshError
+          );
+        }
+
+        setEditingField(null);
+        setEditValue("");
+      } else {
+        throw new Error(response.error || "Error al guardar los cambios");
+      }
+    } catch (err: any) {
+      console.error("Error al guardar campo:", err);
+      const errorMessage =
+        err?.message ||
+        "Error al guardar los cambios. Por favor, intenta de nuevo.";
+
+      // Crear toast de error
+      const errorToast = document.createElement("div");
+      errorToast.className =
+        "fixed top-4 right-4 z-50 bg-red-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-top min-w-[280px]";
+      errorToast.innerHTML = `
+        <svg class="h-5 w-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <div class="flex-1">
+          <p class="font-medium text-sm">Error al guardar</p>
+          <p class="text-xs text-red-100">${errorMessage}</p>
+        </div>
+      `;
+      document.body.appendChild(errorToast);
+      setTimeout(() => {
+        errorToast.style.opacity = "0";
+        errorToast.style.transform = "translateY(-10px)";
+        setTimeout(() => errorToast.remove(), 300);
+      }, 4000);
+
+      // No cerrar el modo de edición si hay error, para que el usuario pueda corregir
+    }
+  };
 
   const handleCancelEdit = () => {
     setEditingField(null);
     setEditValue("");
+  };
+
+  // Price editing handlers
+  const handleEditPrice = (priceIndex: number, price: any) => {
+    setEditingPriceId(priceIndex);
+    const duracionMinutos = price.duracion_minutos || price.duracion;
+    const duracionFormatted = duracionMinutos ? `${duracionMinutos} min` : "";
+    setEditingPriceData({
+      nombre:
+        price.name ||
+        price.nombre ||
+        price.nombre_paquete ||
+        price.nombre_servicio ||
+        "",
+      precio: String(
+        price.price || price.precio || price.monto || price.amount || "0"
+      ),
+      descripcion: price.description || price.descripcion || "",
+      duracion: duracionFormatted,
+    });
+  };
+
+  const handleSavePrice = async (priceIndex: number, originalPrice: any) => {
+    if (!professionalIdProfesional) return;
+
+    try {
+      const adminToken =
+        typeof window !== "undefined"
+          ? JSON.parse(window.localStorage.getItem("user") || "{}")?.token
+          : null;
+      if (!adminToken) {
+        alert("Token de administrador no disponible");
+        return;
+      }
+
+      const apiBase = (
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
+      ).replace(/\/$/, "");
+
+      const priceId = originalPrice.id_precio || originalPrice.id;
+      if (!priceId) {
+        alert("No se pudo identificar el ID del precio");
+        return;
+      }
+
+      // Preparar datos de actualización según la estructura de la tabla precios (minúsculas)
+      const updateData: any = {};
+      if (
+        editingPriceData.nombre !== undefined &&
+        editingPriceData.nombre.trim()
+      ) {
+        updateData.nombre_paquete = editingPriceData.nombre.trim();
+      }
+      if (editingPriceData.precio !== undefined) {
+        const precioValue = parseFloat(editingPriceData.precio);
+        if (!isNaN(precioValue) && precioValue >= 0) {
+          updateData.precio = precioValue;
+        }
+      }
+      if (editingPriceData.descripcion !== undefined) {
+        updateData.descripcion = editingPriceData.descripcion.trim() || null;
+      }
+      if (
+        editingPriceData.duracion !== undefined &&
+        editingPriceData.duracion.trim()
+      ) {
+        // Convertir "30 min" a minutos numéricos
+        const duracionMatch = editingPriceData.duracion.match(/(\d+)\s*min/i);
+        if (duracionMatch) {
+          updateData.duracion_minutos = parseInt(duracionMatch[1], 10);
+        }
+      }
+
+      // Usar el endpoint específico para actualizar precios de profesionales
+      const response = await fetch(
+        `${apiBase}/profesionales/admin/${professionalIdProfesional}/precio/${priceId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify(updateData),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        alert(
+          errorData?.message ||
+            errorData?.error ||
+            "Error al actualizar el precio"
+        );
+        return;
+      }
+
+      // Actualizar el estado local
+      if (
+        professional &&
+        professional.prices &&
+        Array.isArray(professional.prices)
+      ) {
+        const updatedPrices = [...professional.prices];
+        const currentPrice = updatedPrices[priceIndex];
+        updatedPrices[priceIndex] = {
+          ...currentPrice,
+          nombre_paquete:
+            updateData.nombre_paquete !== undefined
+              ? updateData.nombre_paquete
+              : currentPrice.nombre_paquete ||
+                currentPrice.nombre ||
+                currentPrice.nombre_servicio,
+          precio:
+            updateData.precio !== undefined
+              ? updateData.precio
+              : currentPrice.precio ||
+                currentPrice.monto ||
+                currentPrice.amount,
+          descripcion:
+            updateData.descripcion !== undefined
+              ? updateData.descripcion
+              : currentPrice.descripcion || currentPrice.description,
+          duracion_minutos:
+            updateData.duracion_minutos !== undefined
+              ? updateData.duracion_minutos
+              : currentPrice.duracion_minutos || currentPrice.duracion,
+        };
+        setProfessional({ ...professional, prices: updatedPrices });
+      }
+
+      setEditingPriceId(null);
+      setEditingPriceData({});
+    } catch (err: any) {
+      alert(err?.message || "Error al guardar el precio");
+      console.error("Error al guardar precio:", err);
+    }
+  };
+
+  const handleCancelPriceEdit = () => {
+    setEditingPriceId(null);
+    setEditingPriceData({});
   };
 
   const handleApprove = async () => {
@@ -875,9 +1409,7 @@ export default function AdminProfessionalEditPage() {
       }
 
       // Actualizar el estado del profesional localmente
-      setProfessional((prev) =>
-        prev ? { ...prev, status: "activo" } : prev
-      );
+      setProfessional((prev) => (prev ? { ...prev, status: "activo" } : prev));
 
       // Recargar la página para reflejar los cambios
       router.push("/dashboard/admin/profesionales");
@@ -911,12 +1443,94 @@ export default function AdminProfessionalEditPage() {
     }
   };
 
-  // Show loading state
+  // Función para determinar el estado detallado del profesional
+  const getDetailedStatus = () => {
+    if (!professional)
+      return { label: "Desconocido", color: "gray", icon: AlertCircle };
+
+    const estadoAprobacion = (
+      professional.estadoAprobacion || ""
+    ).toLowerCase();
+    const tieneStripe = professional.tieneStripe || false;
+    const tieneGoogleCalendar = professional.tieneGoogleCalendar || false;
+
+    // Si no está aprobado
+    if (estadoAprobacion !== "aprobado") {
+      return {
+        label: "Pendiente de Aprobación",
+        color: "orange",
+        icon: AlertCircle,
+        description: "Esperando aprobación del administrador",
+      };
+    }
+
+    // Si está aprobado pero falta setup
+    if (!tieneStripe || !tieneGoogleCalendar) {
+      const missing = [];
+      if (!tieneStripe) missing.push("Stripe");
+      if (!tieneGoogleCalendar) missing.push("Google Calendar");
+
+      return {
+        label: "Pendiente de Setup",
+        color: "blue",
+        icon: Clock,
+        description: `Falta configurar: ${missing.join(", ")}`,
+      };
+    }
+
+    // Si está aprobado y tiene todo configurado
+    return {
+      label: "Activo",
+      color: "green",
+      icon: CheckCircle,
+      description: "Profesional activo y operativo",
+    };
+  };
+
+  const detailedStatus = getDetailedStatus();
+  const StatusIcon = detailedStatus.icon;
+
+  // Show loading state with skeleton
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="text-center py-12">
-          <div className="text-gray-600">Cargando profesional...</div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="w-full max-w-7xl px-6 py-6">
+          <div className="flex gap-6">
+            {/* Left Column Skeleton */}
+            <div className="w-1/3 space-y-6">
+              <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-lg animate-pulse">
+                <div className="flex flex-col items-center space-y-4 mb-6">
+                  <div className="w-24 h-24 bg-gray-200 rounded-full"></div>
+                  <div className="h-6 w-32 bg-gray-200 rounded"></div>
+                  <div className="h-4 w-24 bg-gray-200 rounded"></div>
+                </div>
+                <div className="space-y-4">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="space-y-2">
+                      <div className="h-4 w-24 bg-gray-200 rounded"></div>
+                      <div className="h-8 w-full bg-gray-100 rounded"></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            {/* Right Column Skeleton */}
+            <div className="w-2/3 space-y-6">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="rounded-2xl border border-gray-200 bg-white p-6 shadow-lg animate-pulse"
+                >
+                  <div className="h-6 w-48 bg-gray-200 rounded mb-4"></div>
+                  <div className="space-y-3">
+                    <div className="h-4 w-full bg-gray-100 rounded"></div>
+                    <div className="h-4 w-3/4 bg-gray-100 rounded"></div>
+                    <div className="h-4 w-1/2 bg-gray-100 rounded"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -945,14 +1559,94 @@ export default function AdminProfessionalEditPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      {/* Toast Notification for Save Success */}
+      {saveSuccessVisible && lastSavedField && (
+        <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top duration-300">
+          <div className="bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 min-w-[280px]">
+            <CheckCircle className="h-5 w-5 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="font-medium text-sm">Cambio guardado</p>
+              <p className="text-xs text-green-100">
+                {lastSavedField === "email" && "Correo electrónico actualizado"}
+                {lastSavedField === "biografia" && "Biografía actualizada"}
+                {lastSavedField === "especialidad" &&
+                  "Especialidad actualizada"}
+                {lastSavedField === "telefono" && "Teléfono actualizado"}
+                {lastSavedField === "direccion" && "Dirección actualizada"}
+                {lastSavedField === "ciudad" && "Ciudad actualizada"}
+                {lastSavedField === "titulacion" && "Titulación actualizada"}
+                {lastSavedField === "numeroColegiado" &&
+                  "Número de colegiado actualizado"}
+                {lastSavedField === "nifCif" && "NIF/CIF actualizado"}
+                {lastSavedField === "correoPublico" &&
+                  "Correo público actualizado"}
+                {lastSavedField === "codigosPostales" &&
+                  "Códigos postales actualizados"}
+                {lastSavedField === "videoPresentacion" &&
+                  "Video de presentación actualizado"}
+                {![
+                  "email",
+                  "biografia",
+                  "especialidad",
+                  "telefono",
+                  "direccion",
+                  "ciudad",
+                  "titulacion",
+                  "numeroColegiado",
+                  "nifCif",
+                  "correoPublico",
+                  "codigosPostales",
+                  "videoPresentacion",
+                ].includes(lastSavedField) && "Campo actualizado"}
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setSaveSuccessVisible(false);
+                setLastSavedField(null);
+              }}
+              className="text-green-100 hover:text-white transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 py-6 -mx-6 px-6 mb-6">
+      <div className="bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm py-6 -mx-6 px-6 mb-6 sticky top-0 z-40">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900 mb-2">
-              Detalles del Profesional
-            </h1>
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-2xl font-semibold text-gray-900">
+                Detalles del Profesional
+              </h1>
+              {professional && (
+                <div className="group relative">
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${
+                      detailedStatus.color === "green"
+                        ? "bg-green-100 text-green-700"
+                        : detailedStatus.color === "orange"
+                        ? "bg-orange-100 text-orange-700"
+                        : detailedStatus.color === "blue"
+                        ? "bg-blue-100 text-blue-700"
+                        : "bg-gray-100 text-gray-700"
+                    }`}
+                  >
+                    <StatusIcon className="h-3.5 w-3.5" />
+                    {detailedStatus.label}
+                  </span>
+                  {detailedStatus.description && (
+                    <div className="absolute left-0 top-full mt-2 w-64 p-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                      {detailedStatus.description}
+                      <div className="absolute -top-1 left-4 w-2 h-2 bg-gray-900 rotate-45"></div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
             <div className="flex items-center gap-2 text-sm">
               <button
                 onClick={() => router.push("/dashboard/admin/usuarios")}
@@ -968,7 +1662,9 @@ export default function AdminProfessionalEditPage() {
                 Profesionales
               </button>
               <ChevronRight className="h-4 w-4 text-gray-400" />
-              <span className="text-gray-500">Detalles de profesional</span>
+              <span className="text-gray-500">
+                {professional?.name || "Detalles de profesional"}
+              </span>
             </div>
           </div>
 
@@ -1012,227 +1708,6 @@ export default function AdminProfessionalEditPage() {
                 </div>
               </div>
             )}
-            <button
-              onClick={async () => {
-                if (!professionalIdProfesional) return;
-                setScheduleError(null);
-                setIsScheduleModalOpen(true);
-                setLoadingSchedule(true);
-                try {
-                  const adminToken =
-                    typeof window !== "undefined"
-                      ? JSON.parse(window.localStorage.getItem("user") || "{}")
-                          .token
-                      : null;
-                  if (!adminToken)
-                    throw new Error("Token de administrador no disponible");
-                  const apiBase = (
-                    process.env.NEXT_PUBLIC_API_URL ||
-                    "http://localhost:3000/api"
-                  ).replace(/\/$/, "");
-                  // Cargar horarios desde disponibilidad_horarios (ruta protegida)
-                  const res = await fetch(
-                    `${apiBase}/disponibilidad-horarios/profesional/${professionalIdProfesional}`,
-                    {
-                      headers: { Authorization: `Bearer ${adminToken}` },
-                    }
-                  );
-                  if (!res.ok) {
-                    throw new Error(`Error ${res.status} al cargar horarios`);
-                  }
-                  const data = await res.json();
-                  // Buscar robustamente una lista de horarios dentro del JSON (cualquier nivel)
-                  const collectArraysWithDia = (obj: any): any[] => {
-                    const results: any[] = [];
-                    const visit = (node: any) => {
-                      if (!node) return;
-                      if (Array.isArray(node)) {
-                        if (
-                          node.length &&
-                          typeof node[0] === "object" &&
-                          "dia_semana" in (node[0] || {})
-                        ) {
-                          results.push(node);
-                        } else {
-                          node.forEach(visit);
-                        }
-                      } else if (typeof node === "object") {
-                        Object.values(node).forEach(visit);
-                      }
-                    };
-                    visit(obj);
-                    // Si no se encontró un array directo, intenta patrones comunes
-                    if (!results.length) {
-                      const guess =
-                        obj?.data?.disponibilidad ||
-                        obj?.disponibilidad ||
-                        obj?.data ||
-                        [];
-                      if (Array.isArray(guess)) results.push(guess);
-                    }
-                    return results.flat();
-                  };
-                  const horariosSource: any[] = collectArraysWithDia(data);
-                  const horarios: any[] = Array.isArray(horariosSource)
-                    ? horariosSource
-                    : [];
-                  // Normalización de tipo_atencion (en_linea / presencial / a_domicilio) y campos comunes
-                  const normalizeTipo = (
-                    val: any
-                  ): "presencial" | "en_linea" | "a_domicilio" | null => {
-                    if (!val && typeof val !== "string") return null;
-                    const raw = String(val || "")
-                      .toLowerCase()
-                      .trim()
-                      .normalize("NFD")
-                      .replace(/[\u0300-\u036f]/g, ""); // quitar acentos
-                    // Reemplazos comunes
-                    const s = raw
-                      .replace(/\s+/g, "_")
-                      .replace(/en-linea|en_linea|online/, "en_linea")
-                      .replace(
-                        /a-domicilio|a__domicilio|a_domicilio/,
-                        "a_domicilio"
-                      );
-                    if (s.includes("en_linea")) return "en_linea";
-                    if (s.includes("a_domicilio")) return "a_domicilio";
-                    if (s.includes("presencial") || s === "")
-                      return "presencial";
-                    return null;
-                  };
-                  const mapped = horarios.map((h: any) => {
-                    const tipo = normalizeTipo(h.tipo_atencion);
-                    return {
-                      id_disponibilidad: h.id_disponibilidad,
-                      dia_semana: (h.dia_semana || "").toLowerCase(),
-                      hora_inicio:
-                        h.hora_inicio?.slice?.(0, 5) || h.hora_inicio,
-                      hora_fin: h.hora_fin?.slice?.(0, 5) || h.hora_fin,
-                      tipo_atencion: tipo,
-                      activo: h.activo ?? true,
-                    };
-                  });
-                  setScheduleItems(mapped);
-                  // Construir vista por tipo
-                  const initial: Record<
-                    "presencial" | "en_linea" | "a_domicilio",
-                    {
-                      enabled: boolean;
-                      dias: string[];
-                      desde: string;
-                      hasta: string;
-                    }
-                  > = {
-                    presencial: {
-                      enabled: false,
-                      dias: [],
-                      desde: "",
-                      hasta: "",
-                    },
-                    en_linea: {
-                      enabled: false,
-                      dias: [],
-                      desde: "",
-                      hasta: "",
-                    },
-                    a_domicilio: {
-                      enabled: false,
-                      dias: [],
-                      desde: "",
-                      hasta: "",
-                    },
-                  };
-                  const presentTipos = new Set<
-                    "presencial" | "en_linea" | "a_domicilio"
-                  >();
-                  ["presencial", "en_linea", "a_domicilio"].forEach((tipo) => {
-                    const rows = mapped.filter(
-                      (r) => (r.tipo_atencion || "") === tipo
-                    );
-                    if (rows.length) {
-                      presentTipos.add(tipo as any);
-                      initial[tipo as keyof typeof initial].enabled = true;
-                      // Unificar días
-                      const dias = Array.from(
-                        new Set(rows.map((r) => r.dia_semana).filter(Boolean))
-                      );
-                      initial[tipo as keyof typeof initial].dias = dias;
-                      // Tomar desde/hasta del primer registro
-                      const first = rows[0];
-                      // Convertir 24h a 12h para dropdown
-                      const to12 = (v: string) => {
-                        if (!v) return "";
-                        const [hhRaw, mmRaw] = v.split(":");
-                        const hh = parseInt(hhRaw, 10);
-                        const mm = mmRaw || "00";
-                        const per = hh < 12 ? "AM" : "PM";
-                        const h12 = hh % 12 === 0 ? 12 : hh % 12;
-                        return `${h12}:${mm} ${per}`;
-                      };
-                      initial[tipo as keyof typeof initial].desde = to12(
-                        first.hora_inicio
-                      );
-                      initial[tipo as keyof typeof initial].hasta = to12(
-                        first.hora_fin
-                      );
-                    }
-                  });
-                  // Compatibilidad: si hay filas sin tipo_atencion, tratarlas como 'presencial'
-                  if (!presentTipos.size && mapped.length) {
-                    const rows = mapped;
-                    const dias = Array.from(
-                      new Set(rows.map((r) => r.dia_semana).filter(Boolean))
-                    );
-                    const to12 = (v: string) => {
-                      if (!v) return "";
-                      const [hhRaw, mmRaw] = v.split(":");
-                      const hh = parseInt(hhRaw, 10);
-                      const mm = mmRaw || "00";
-                      const per = hh < 12 ? "AM" : "PM";
-                      const h12 = hh % 12 === 0 ? 12 : hh % 12;
-                      return `${h12}:${mm} ${per}`;
-                    };
-                    initial.presencial.enabled = true;
-                    initial.presencial.dias = dias;
-                    initial.presencial.desde = to12(rows[0].hora_inicio);
-                    initial.presencial.hasta = to12(rows[0].hora_fin);
-                    presentTipos.add("presencial");
-                  }
-                  setScheduleByType(initial);
-                  setExistingScheduleTypes(presentTipos);
-                } catch (e: any) {
-                  setScheduleError(e?.message || "Error al cargar horarios");
-                  setScheduleItems([]);
-                  setScheduleByType({
-                    presencial: {
-                      enabled: false,
-                      dias: [],
-                      desde: "",
-                      hasta: "",
-                    },
-                    en_linea: {
-                      enabled: false,
-                      dias: [],
-                      desde: "",
-                      hasta: "",
-                    },
-                    a_domicilio: {
-                      enabled: false,
-                      dias: [],
-                      desde: "",
-                      hasta: "",
-                    },
-                  });
-                  setExistingScheduleTypes(new Set());
-                } finally {
-                  setLoadingSchedule(false);
-                }
-              }}
-              className="inline-flex items-center gap-2 rounded-lg bg-blue-100 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-200"
-              title="Editar horarios del profesional"
-            >
-              Editar horarios
-            </button>
             {professional?.status === "pendiente" && (
               <button
                 onClick={handleApprove}
@@ -1242,10 +1717,24 @@ export default function AdminProfessionalEditPage() {
                 Aprobar Profesional
               </button>
             )}
+            {hasUnsavedChanges && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg">
+                <AlertCircle className="h-4 w-4 text-amber-600" />
+                <span className="text-xs font-medium text-amber-700">
+                  Cambios sin guardar
+                </span>
+              </div>
+            )}
             <button
               onClick={handleSave}
-              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+              className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+                hasUnsavedChanges
+                  ? "bg-primary text-white hover:bg-primary/90 shadow-md"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+              disabled={!hasUnsavedChanges}
             >
+              <Save className="h-4 w-4" />
               Guardar Cambios
             </button>
           </div>
@@ -1253,12 +1742,12 @@ export default function AdminProfessionalEditPage() {
       </div>
 
       {/* Main Content */}
-      <div className="bg-gray-50 px-6 py-6">
+      <div className="px-6 py-6">
         <div className="flex gap-6">
           {/* Left Column - Professional Details */}
           <div className="w-1/3 space-y-6">
             {/* Profile Card */}
-            <div className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm">
+            <div className="rounded-2xl border border-gray-200/80 bg-white overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
               {/* Profile Header */}
               <div className="relative overflow-hidden">
                 {/* Background Image */}
@@ -1300,168 +1789,310 @@ export default function AdminProfessionalEditPage() {
                       )}
                     </button>
                     <div className="text-center">
-                      <h2 className="text-2xl font-bold text-black mb-1">
+                      <h2 className="text-2xl font-bold text-gray-900 mb-1">
                         {professional.name}
                       </h2>
-                      <p className="text-gray-600 text-sm">
+                      <p className="text-gray-500 text-sm mb-3 font-medium">
                         @{professional.username}
                       </p>
+                      {/* Indicadores de Setup */}
+                      <div className="flex items-center justify-center gap-3">
+                        <div className="group relative">
+                          <div
+                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium ${
+                              professional.tieneStripe
+                                ? "bg-green-50 text-green-700 border border-green-200"
+                                : "bg-gray-50 text-gray-500 border border-gray-200"
+                            }`}
+                          >
+                            <CreditCard
+                              className={`h-3.5 w-3.5 ${
+                                professional.tieneStripe
+                                  ? "text-green-600"
+                                  : "text-gray-400"
+                              }`}
+                            />
+                            <span>Stripe</span>
+                          </div>
+                          <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 p-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                            {professional.tieneStripe
+                              ? "Stripe Connect configurado y activo"
+                              : "Stripe Connect no configurado"}
+                            <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
+                          </div>
+                        </div>
+                        <div className="group relative">
+                          <div
+                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium ${
+                              professional.tieneGoogleCalendar
+                                ? "bg-green-50 text-green-700 border border-green-200"
+                                : "bg-gray-50 text-gray-500 border border-gray-200"
+                            }`}
+                          >
+                            <CalendarIcon
+                              className={`h-3.5 w-3.5 ${
+                                professional.tieneGoogleCalendar
+                                  ? "text-green-600"
+                                  : "text-gray-400"
+                              }`}
+                            />
+                            <span>Google</span>
+                          </div>
+                          <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 p-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                            {professional.tieneGoogleCalendar
+                              ? "Google Calendar conectado y sincronizado"
+                              : "Google Calendar no conectado"}
+                            <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Profile Details */}
-              <div className="p-6 space-y-4">
+              <div className="p-6 space-y-6 bg-gradient-to-b from-white to-gray-50/50">
                 {/* User ID */}
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
-                      <Lock className="h-3 w-3 text-gray-500" />
+                <div className="group relative p-3 rounded-lg hover:bg-gray-50/50 transition-colors">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <div className="w-7 h-7 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center shadow-sm">
+                      <Lock className="h-3.5 w-3.5 text-gray-600" />
                     </div>
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm font-semibold text-gray-800">
                       Número de Usuario
                     </span>
                   </div>
-                  <div className="ml-9 flex items-center justify-between">
-                    {editingField === "numeroUsuario" ? (
-                      <div className="flex items-center space-x-2 flex-1">
-                        <input
-                          type="text"
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          className="text-sm font-medium border border-gray-300 rounded px-2 py-1 flex-1"
-                          autoFocus
-                        />
+                  {editingField === "numeroUsuario" ? (
+                    <div className="ml-10 space-y-3">
+                      <input
+                        type="text"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="w-full px-4 py-2.5 text-sm border-2 border-primary rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all shadow-sm"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter")
+                            handleSaveEdit("numeroUsuario");
+                          if (e.key === "Escape") handleCancelEdit();
+                        }}
+                      />
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleSaveEdit("numeroUsuario")}
-                          className="text-green-600 hover:text-green-800"
+                          className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-green-600 to-green-700 rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-md hover:shadow-lg"
                         >
-                          <Save className="h-4 w-4" />
+                          <Save className="h-3.5 w-3.5" />
+                          Guardar
                         </button>
                         <button
                           onClick={handleCancelEdit}
-                          className="text-red-600 hover:text-red-800"
+                          className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                         >
-                          <X className="h-4 w-4" />
+                          <X className="h-3.5 w-3.5" />
+                          Cancelar
                         </button>
                       </div>
-                    ) : (
-                      <>
-                        <span className="text-sm font-medium">
-                          {professional.id}
-                        </span>
-                        <Edit
-                          className="h-4 w-4 text-gray-400 cursor-pointer hover:text-gray-600"
-                          onClick={() =>
-                            handleEditField("numeroUsuario", professional.id)
-                          }
-                        />
-                      </>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="ml-10 flex items-center justify-between -mx-3 px-3 py-2 rounded-lg transition-colors group-hover:bg-gray-50/80">
+                      <span className="text-sm font-semibold text-gray-900">
+                        {professional.id}
+                      </span>
+                      <button
+                        onClick={() =>
+                          handleEditField("numeroUsuario", professional.id)
+                        }
+                        className="opacity-0 group-hover:opacity-100 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-all shadow-sm"
+                      >
+                        <Edit className="h-3.5 w-3.5" />
+                        Editar
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Email */}
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-3">
+                <div className="group relative">
+                  <div className="flex items-center space-x-3 mb-2">
                     <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
                       <Mail className="h-3 w-3 text-gray-500" />
                     </div>
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm font-medium text-gray-700">
                       Correo Electrónico
                     </span>
                   </div>
-                  <div className="ml-9 flex items-center justify-between">
-                    {editingField === "email" ? (
-                      <div className="flex items-center space-x-2 flex-1">
+                  {editingField === "email" ? (
+                    <div className="ml-9 space-y-2">
+                      <input
+                        type="email"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border-2 border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleSaveEdit("email");
+                          if (e.key === "Escape") handleCancelEdit();
+                        }}
+                      />
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleSaveEdit("email")}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+                        >
+                          <Save className="h-3.5 w-3.5" />
+                          Guardar
+                        </button>
+                        <button
+                          onClick={handleCancelEdit}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="ml-9 flex items-center justify-between group-hover:bg-gray-50 -mx-2 px-2 py-1.5 rounded-lg transition-colors">
+                      <span className="text-sm font-medium text-gray-900">
+                        {professional.email}
+                      </span>
+                      <button
+                        onClick={() =>
+                          handleEditField("email", professional.email)
+                        }
+                        className="opacity-0 group-hover:opacity-100 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-all"
+                      >
+                        <Edit className="h-3.5 w-3.5" />
+                        Editar
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Public Email */}
+                {professional.publicEmail && (
+                  <div className="group relative">
+                    <div className="flex items-center space-x-3 mb-2">
+                      <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
+                        <Mail className="h-3 w-3 text-gray-500" />
+                      </div>
+                      <span className="text-sm font-medium text-gray-700">
+                        Correo Público
+                      </span>
+                    </div>
+                    {editingField === "correoPublico" ? (
+                      <div className="ml-9 space-y-2">
                         <input
                           type="email"
                           value={editValue}
                           onChange={(e) => setEditValue(e.target.value)}
-                          className="text-sm font-medium border border-gray-300 rounded px-2 py-1 flex-1"
+                          className="w-full px-3 py-2 text-sm border-2 border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                           autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter")
+                              handleSaveEdit("correoPublico");
+                            if (e.key === "Escape") handleCancelEdit();
+                          }}
                         />
-                        <button
-                          onClick={() => handleSaveEdit("email")}
-                          className="text-green-600 hover:text-green-800"
-                        >
-                          <Save className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={handleCancelEdit}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <span className="text-sm font-medium">
-                          {professional.email}
-                        </span>
-                        <Edit
-                          className="h-4 w-4 text-gray-400 cursor-pointer hover:text-gray-600"
-                          onClick={() =>
-                            handleEditField("email", professional.email)
-                          }
-                        />
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Bio */}
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
-                      <BookOpen className="h-3 w-3 text-gray-500" />
-                    </div>
-                    <span className="text-sm text-gray-600">Biografía</span>
-                  </div>
-                  <div className="ml-9 flex items-center justify-between">
-                    {editingField === "biografia" ? (
-                      <div className="flex items-center space-x-2 flex-1">
-                        <textarea
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          className="text-sm font-medium border border-gray-300 rounded px-2 py-1 flex-1 min-h-[60px] resize-none"
-                          autoFocus
-                        />
-                        <div className="flex flex-col space-y-1">
+                        <div className="flex items-center gap-2">
                           <button
-                            onClick={() => handleSaveEdit("biografia")}
-                            className="text-green-600 hover:text-green-800"
+                            onClick={() => handleSaveEdit("correoPublico")}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
                           >
-                            <Save className="h-4 w-4" />
+                            <Save className="h-3.5 w-3.5" />
+                            Guardar
                           </button>
                           <button
                             onClick={handleCancelEdit}
-                            className="text-red-600 hover:text-red-800"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                           >
-                            <X className="h-4 w-4" />
+                            <X className="h-3.5 w-3.5" />
+                            Cancelar
                           </button>
                         </div>
                       </div>
                     ) : (
-                      <>
-                        <span className="text-sm font-medium">
-                          {professional.bio || "Sin biografía"}
+                      <div className="ml-9 flex items-center justify-between group-hover:bg-gray-50 -mx-2 px-2 py-1.5 rounded-lg transition-colors">
+                        <span className="text-sm font-medium text-gray-900">
+                          {professional.publicEmail}
                         </span>
-                        <Edit
-                          className="h-4 w-4 text-gray-400 cursor-pointer hover:text-gray-600"
+                        <button
                           onClick={() =>
-                            handleEditField("biografia", professional.bio || "")
+                            handleEditField(
+                              "correoPublico",
+                              professional.publicEmail || ""
+                            )
                           }
-                        />
-                      </>
+                          className="opacity-0 group-hover:opacity-100 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-all"
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                          Editar
+                        </button>
+                      </div>
                     )}
                   </div>
+                )}
+
+                {/* Bio */}
+                <div className="group relative">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
+                      <BookOpen className="h-3 w-3 text-gray-500" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700">
+                      Biografía
+                    </span>
+                  </div>
+                  {editingField === "biografia" ? (
+                    <div className="ml-9 space-y-2">
+                      <textarea
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border-2 border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all min-h-[100px] resize-y"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Escape") handleCancelEdit();
+                        }}
+                      />
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleSaveEdit("biografia")}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+                        >
+                          <Save className="h-3.5 w-3.5" />
+                          Guardar
+                        </button>
+                        <button
+                          onClick={handleCancelEdit}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="ml-9 flex items-start justify-between group-hover:bg-gray-50 -mx-2 px-2 py-1.5 rounded-lg transition-colors">
+                      <span className="text-sm font-medium text-gray-900 flex-1 pr-2">
+                        {professional.bio || "Sin biografía"}
+                      </span>
+                      <button
+                        onClick={() =>
+                          handleEditField("biografia", professional.bio || "")
+                        }
+                        className="opacity-0 group-hover:opacity-100 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-all flex-shrink-0"
+                      >
+                        <Edit className="h-3.5 w-3.5" />
+                        Editar
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Video de Presentación */}
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-3">
+                <div className="group relative">
+                  <div className="flex items-center space-x-3 mb-2">
                     <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
                       <svg
                         className="h-3 w-3 text-gray-500"
@@ -1477,431 +2108,1618 @@ export default function AdminProfessionalEditPage() {
                         />
                       </svg>
                     </div>
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm font-medium text-gray-700">
                       Video de Presentación
                     </span>
                   </div>
-                  <div className="ml-9 flex items-center justify-between">
-                    {editingField === "videoPresentacion" ? (
-                      <div className="flex items-center space-x-2 flex-1">
-                        <input
-                          type="url"
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          className="text-sm font-medium border border-gray-300 rounded px-2 py-1 flex-1"
-                          placeholder="https://www.youtube.com/watch?v=... o https://vimeo.com/..."
-                          autoFocus
-                        />
+                  {editingField === "videoPresentacion" ? (
+                    <div className="ml-9 space-y-2">
+                      <input
+                        type="url"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border-2 border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                        placeholder="https://www.youtube.com/watch?v=... o https://vimeo.com/..."
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter")
+                            handleSaveEdit("videoPresentacion");
+                          if (e.key === "Escape") handleCancelEdit();
+                        }}
+                      />
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleSaveEdit("videoPresentacion")}
-                          className="text-green-600 hover:text-green-800"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
                         >
-                          <Save className="h-4 w-4" />
+                          <Save className="h-3.5 w-3.5" />
+                          Guardar
                         </button>
                         <button
                           onClick={handleCancelEdit}
-                          className="text-red-600 hover:text-red-800"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                         >
-                          <X className="h-4 w-4" />
+                          <X className="h-3.5 w-3.5" />
+                          Cancelar
                         </button>
                       </div>
-                    ) : (
-                      <>
-                        <span className="text-sm font-medium">
-                          {form.videoPresentacion || "Sin video de presentación"}
-                        </span>
-                        <Edit
-                          className="h-4 w-4 text-gray-400 cursor-pointer hover:text-gray-600"
-                          onClick={() =>
-                            handleEditField(
-                              "videoPresentacion",
-                              form.videoPresentacion || ""
-                            )
-                          }
-                        />
-                      </>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="ml-9 flex items-center justify-between group-hover:bg-gray-50 -mx-2 px-2 py-1.5 rounded-lg transition-colors">
+                      <span className="text-sm font-medium text-gray-900 truncate pr-2">
+                        {form.videoPresentacion || "Sin video de presentación"}
+                      </span>
+                      <button
+                        onClick={() =>
+                          handleEditField(
+                            "videoPresentacion",
+                            form.videoPresentacion || ""
+                          )
+                        }
+                        className="opacity-0 group-hover:opacity-100 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-all flex-shrink-0"
+                      >
+                        <Edit className="h-3.5 w-3.5" />
+                        Editar
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Specialty */}
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-3">
+                <div className="group relative">
+                  <div className="flex items-center space-x-3 mb-2">
                     <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
                       <BookOpen className="h-3 w-3 text-gray-500" />
                     </div>
-                    <span className="text-sm text-gray-600">Especialidad</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      Especialidad
+                    </span>
                   </div>
-                  <div className="ml-9 flex items-center justify-between">
-                    {editingField === "especialidad" ? (
-                      <div className="flex items-center space-x-2 flex-1">
-                        <input
-                          type="text"
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          className="text-sm font-medium border border-gray-300 rounded px-2 py-1 flex-1"
-                          autoFocus
-                        />
+                  {editingField === "especialidad" ? (
+                    <div className="ml-9 space-y-2">
+                      <input
+                        type="text"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border-2 border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleSaveEdit("especialidad");
+                          if (e.key === "Escape") handleCancelEdit();
+                        }}
+                      />
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleSaveEdit("especialidad")}
-                          className="text-green-600 hover:text-green-800"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
                         >
-                          <Save className="h-4 w-4" />
+                          <Save className="h-3.5 w-3.5" />
+                          Guardar
                         </button>
                         <button
                           onClick={handleCancelEdit}
-                          className="text-red-600 hover:text-red-800"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                         >
-                          <X className="h-4 w-4" />
+                          <X className="h-3.5 w-3.5" />
+                          Cancelar
                         </button>
                       </div>
-                    ) : (
-                      <>
-                        <span className="text-sm font-medium">
-                          {professional.specialty || "Sin especialidad"}
-                        </span>
-                        <Edit
-                          className="h-4 w-4 text-gray-400 cursor-pointer hover:text-gray-600"
-                          onClick={() =>
-                            handleEditField(
-                              "especialidad",
-                              professional.specialty || ""
-                            )
-                          }
-                        />
-                      </>
-                    )}
+                    </div>
+                  ) : (
+                    <div className="ml-9 flex items-center justify-between group-hover:bg-gray-50 -mx-2 px-2 py-1.5 rounded-lg transition-colors">
+                      <span className="text-sm font-medium text-gray-900">
+                        {professional.specialty || "Sin especialidad"}
+                      </span>
+                      <button
+                        onClick={() =>
+                          handleEditField(
+                            "especialidad",
+                            professional.specialty || ""
+                          )
+                        }
+                        className="opacity-0 group-hover:opacity-100 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-all"
+                      >
+                        <Edit className="h-3.5 w-3.5" />
+                        Editar
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Titulación */}
+                <div className="group relative">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
+                      <BookOpen className="h-3 w-3 text-gray-500" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700">
+                      Titulación
+                    </span>
                   </div>
+                  {editingField === "titulacion" ? (
+                    <div className="ml-9 space-y-2">
+                      <input
+                        type="text"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border-2 border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleSaveEdit("titulacion");
+                          if (e.key === "Escape") handleCancelEdit();
+                        }}
+                      />
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleSaveEdit("titulacion")}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+                        >
+                          <Save className="h-3.5 w-3.5" />
+                          Guardar
+                        </button>
+                        <button
+                          onClick={handleCancelEdit}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="ml-9 flex items-center justify-between group-hover:bg-gray-50 -mx-2 px-2 py-1.5 rounded-lg transition-colors">
+                      <span className="text-sm font-medium text-gray-900">
+                        {professional.titulacion || "No especificada"}
+                      </span>
+                      <button
+                        onClick={() =>
+                          handleEditField(
+                            "titulacion",
+                            professional.titulacion || ""
+                          )
+                        }
+                        className="opacity-0 group-hover:opacity-100 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-all"
+                      >
+                        <Edit className="h-3.5 w-3.5" />
+                        Editar
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* License Number */}
+                <div className="group relative">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
+                      <svg
+                        className="h-3 w-3 text-gray-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
+                      </svg>
+                    </div>
+                    <span className="text-sm font-medium text-gray-700">
+                      Número de Colegiado
+                    </span>
+                  </div>
+                  {editingField === "numeroColegiado" ? (
+                    <div className="ml-9 space-y-2">
+                      <input
+                        type="text"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border-2 border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter")
+                            handleSaveEdit("numeroColegiado");
+                          if (e.key === "Escape") handleCancelEdit();
+                        }}
+                      />
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleSaveEdit("numeroColegiado")}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+                        >
+                          <Save className="h-3.5 w-3.5" />
+                          Guardar
+                        </button>
+                        <button
+                          onClick={handleCancelEdit}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="ml-9 flex items-center justify-between group-hover:bg-gray-50 -mx-2 px-2 py-1.5 rounded-lg transition-colors">
+                      <span className="text-sm font-medium text-gray-900">
+                        {professional.licenseNumber || "No especificado"}
+                      </span>
+                      <button
+                        onClick={() =>
+                          handleEditField(
+                            "numeroColegiado",
+                            professional.licenseNumber || ""
+                          )
+                        }
+                        className="opacity-0 group-hover:opacity-100 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-all"
+                      >
+                        <Edit className="h-3.5 w-3.5" />
+                        Editar
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* NIF/CIF */}
+                <div className="group relative">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
+                      <svg
+                        className="h-3 w-3 text-gray-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"
+                        />
+                      </svg>
+                    </div>
+                    <span className="text-sm font-medium text-gray-700">
+                      NIF/CIF
+                    </span>
+                  </div>
+                  {editingField === "nifCif" ? (
+                    <div className="ml-9 space-y-2">
+                      <input
+                        type="text"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border-2 border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleSaveEdit("nifCif");
+                          if (e.key === "Escape") handleCancelEdit();
+                        }}
+                      />
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleSaveEdit("nifCif")}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+                        >
+                          <Save className="h-3.5 w-3.5" />
+                          Guardar
+                        </button>
+                        <button
+                          onClick={handleCancelEdit}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="ml-9 flex items-center justify-between group-hover:bg-gray-50 -mx-2 px-2 py-1.5 rounded-lg transition-colors">
+                      <span className="text-sm font-medium text-gray-900">
+                        {professional.nifCif || "No especificado"}
+                      </span>
+                      <button
+                        onClick={() =>
+                          handleEditField("nifCif", professional.nifCif || "")
+                        }
+                        className="opacity-0 group-hover:opacity-100 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-all"
+                      >
+                        <Edit className="h-3.5 w-3.5" />
+                        Editar
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Rating */}
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-3">
+                <div className="group relative">
+                  <div className="flex items-center space-x-3 mb-2">
                     <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
                       <Star className="h-3 w-3 text-gray-500" />
                     </div>
-                    <span className="text-sm text-gray-600">Rating</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      Rating
+                    </span>
                   </div>
-                  <div className="ml-9 flex items-center justify-between">
-                    {editingField === "rating" ? (
-                      <div className="flex items-center space-x-2 flex-1">
+                  {editingField === "rating" ? (
+                    <div className="ml-9 space-y-2">
+                      <input
+                        type="text"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border-2 border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleSaveEdit("rating");
+                          if (e.key === "Escape") handleCancelEdit();
+                        }}
+                      />
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleSaveEdit("rating")}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+                        >
+                          <Save className="h-3.5 w-3.5" />
+                          Guardar
+                        </button>
+                        <button
+                          onClick={handleCancelEdit}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="ml-9 flex items-center justify-between group-hover:bg-gray-50 -mx-2 px-2 py-1.5 rounded-lg transition-colors">
+                      <span className="text-sm font-medium text-gray-900">
+                        {professional.rating.toFixed(1)}
+                      </span>
+                      <button
+                        onClick={() =>
+                          handleEditField(
+                            "rating",
+                            professional.rating.toString()
+                          )
+                        }
+                        className="opacity-0 group-hover:opacity-100 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-all"
+                      >
+                        <Edit className="h-3.5 w-3.5" />
+                        Editar
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Phone */}
+                <div className="group relative">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
+                      <Phone className="h-3 w-3 text-gray-500" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700">
+                      Número de Teléfono
+                    </span>
+                  </div>
+                  {editingField === "telefono" ? (
+                    <div className="ml-9 space-y-2">
+                      <input
+                        type="tel"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border-2 border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleSaveEdit("telefono");
+                          if (e.key === "Escape") handleCancelEdit();
+                        }}
+                      />
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleSaveEdit("telefono")}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+                        >
+                          <Save className="h-3.5 w-3.5" />
+                          Guardar
+                        </button>
+                        <button
+                          onClick={handleCancelEdit}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="ml-9 flex items-center justify-between group-hover:bg-gray-50 -mx-2 px-2 py-1.5 rounded-lg transition-colors">
+                      <span className="text-sm font-medium text-gray-900">
+                        {professional.phone || "Sin teléfono"}
+                      </span>
+                      <button
+                        onClick={() =>
+                          handleEditField("telefono", professional.phone || "")
+                        }
+                        className="opacity-0 group-hover:opacity-100 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-all"
+                      >
+                        <Edit className="h-3.5 w-3.5" />
+                        Editar
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Address */}
+                <div className="group relative">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
+                      <MapPin className="h-3 w-3 text-gray-500" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700">
+                      Dirección
+                    </span>
+                  </div>
+                  {editingField === "direccion" ? (
+                    <div className="ml-9 space-y-2">
+                      <textarea
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border-2 border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all min-h-[80px] resize-y"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Escape") handleCancelEdit();
+                        }}
+                      />
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleSaveEdit("direccion")}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+                        >
+                          <Save className="h-3.5 w-3.5" />
+                          Guardar
+                        </button>
+                        <button
+                          onClick={handleCancelEdit}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="ml-9 flex items-start justify-between group-hover:bg-gray-50 -mx-2 px-2 py-1.5 rounded-lg transition-colors">
+                      <span className="text-sm font-medium text-gray-900 flex-1 pr-2">
+                        {(() => {
+                          const dir =
+                            (professional as any)?.direccion ||
+                            (professional as any)?.address ||
+                            "";
+                          const consultorio =
+                            (professional as any)?.domicilio_consultorio ||
+                            (professional as any)?.consultorio ||
+                            "";
+                          if (dir && dir.trim().length > 0) return dir;
+                          if (consultorio && consultorio.trim().length > 0)
+                            return consultorio;
+                          return "Sin dirección";
+                        })()}
+                      </span>
+                      <button
+                        onClick={() =>
+                          handleEditField(
+                            "direccion",
+                            (() => {
+                              const dir =
+                                (professional as any)?.direccion ||
+                                (professional as any)?.address ||
+                                "";
+                              const consultorio =
+                                (professional as any)?.domicilio_consultorio ||
+                                (professional as any)?.consultorio ||
+                                "";
+                              if (dir && dir.trim().length > 0) return dir;
+                              if (consultorio && consultorio.trim().length > 0)
+                                return consultorio;
+                              return "";
+                            })()
+                          )
+                        }
+                        className="opacity-0 group-hover:opacity-100 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-all flex-shrink-0"
+                      >
+                        <Edit className="h-3.5 w-3.5" />
+                        Editar
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Home Visit Postal Codes */}
+                {professional.homeVisitPostalCodes && (
+                  <div className="group relative">
+                    <div className="flex items-center space-x-3 mb-2">
+                      <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
+                        <MapPin className="h-3 w-3 text-gray-500" />
+                      </div>
+                      <span className="text-sm font-medium text-gray-700">
+                        CPs Domicilio
+                      </span>
+                    </div>
+                    {editingField === "codigosPostales" ? (
+                      <div className="ml-9 space-y-2">
                         <input
                           type="text"
                           value={editValue}
                           onChange={(e) => setEditValue(e.target.value)}
-                          className="text-sm font-medium border border-gray-300 rounded px-2 py-1 flex-1"
+                          className="w-full px-3 py-2 text-sm border-2 border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                          placeholder="Ej: 28001, 28002, 28003"
                           autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter")
+                              handleSaveEdit("codigosPostales");
+                            if (e.key === "Escape") handleCancelEdit();
+                          }}
                         />
-                        <button
-                          onClick={() => handleSaveEdit("rating")}
-                          className="text-green-600 hover:text-green-800"
-                        >
-                          <Save className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={handleCancelEdit}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <span className="text-sm font-medium">
-                          {professional.rating.toFixed(1)}
-                        </span>
-                        <Edit
-                          className="h-4 w-4 text-gray-400 cursor-pointer hover:text-gray-600"
-                          onClick={() =>
-                            handleEditField(
-                              "rating",
-                              professional.rating.toString()
-                            )
-                          }
-                        />
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Phone */}
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
-                      <Phone className="h-3 w-3 text-gray-500" />
-                    </div>
-                    <span className="text-sm text-gray-600">
-                      Número de Teléfono
-                    </span>
-                  </div>
-                  <div className="ml-9 flex items-center justify-between">
-                    {editingField === "telefono" ? (
-                      <div className="flex items-center space-x-2 flex-1">
-                        <input
-                          type="tel"
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          className="text-sm font-medium border border-gray-300 rounded px-2 py-1 flex-1"
-                          autoFocus
-                        />
-                        <button
-                          onClick={() => handleSaveEdit("telefono")}
-                          className="text-green-600 hover:text-green-800"
-                        >
-                          <Save className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={handleCancelEdit}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <span className="text-sm font-medium">
-                          {professional.phone || "Sin teléfono"}
-                        </span>
-                        <Edit
-                          className="h-4 w-4 text-gray-400 cursor-pointer hover:text-gray-600"
-                          onClick={() =>
-                            handleEditField(
-                              "telefono",
-                              professional.phone || ""
-                            )
-                          }
-                        />
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Address */}
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
-                      <MapPin className="h-3 w-3 text-gray-500" />
-                    </div>
-                    <span className="text-sm text-gray-600">Dirección</span>
-                  </div>
-                  <div className="ml-9 flex items-center justify-between">
-                    {editingField === "direccion" ? (
-                      <div className="flex items-center space-x-2 flex-1">
-                        <textarea
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          className="text-sm font-medium border border-gray-300 rounded px-2 py-1 flex-1 min-h-[60px] resize-none"
-                          autoFocus
-                        />
-                        <div className="flex flex-col space-y-1">
+                        <div className="flex items-center gap-2">
                           <button
-                            onClick={() => handleSaveEdit("direccion")}
-                            className="text-green-600 hover:text-green-800"
+                            onClick={() => handleSaveEdit("codigosPostales")}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
                           >
-                            <Save className="h-4 w-4" />
+                            <Save className="h-3.5 w-3.5" />
+                            Guardar
                           </button>
                           <button
                             onClick={handleCancelEdit}
-                            className="text-red-600 hover:text-red-800"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                           >
-                            <X className="h-4 w-4" />
+                            <X className="h-3.5 w-3.5" />
+                            Cancelar
                           </button>
                         </div>
                       </div>
                     ) : (
-                      <>
-                        <span className="text-sm font-medium">
-                          {(() => {
-                            const dir =
-                              (professional as any)?.direccion ||
-                              (professional as any)?.address ||
-                              "";
-                            const consultorio =
-                              (professional as any)?.domicilio_consultorio ||
-                              (professional as any)?.consultorio ||
-                              "";
-                            if (dir && dir.trim().length > 0) return dir;
-                            if (consultorio && consultorio.trim().length > 0)
-                              return consultorio;
-                            return "Sin dirección";
-                          })()}
+                      <div className="ml-9 flex items-center justify-between group-hover:bg-gray-50 -mx-2 px-2 py-1.5 rounded-lg transition-colors">
+                        <span className="text-sm font-medium text-gray-900">
+                          {professional.homeVisitPostalCodes}
                         </span>
-                        <Edit
-                          className="h-4 w-4 text-gray-400 cursor-pointer hover:text-gray-600"
+                        <button
                           onClick={() =>
                             handleEditField(
-                              "direccion",
-                              (() => {
-                                const dir =
-                                  (professional as any)?.direccion ||
-                                  (professional as any)?.address ||
-                                  "";
-                                const consultorio =
-                                  (professional as any)
-                                    ?.domicilio_consultorio ||
-                                  (professional as any)?.consultorio ||
-                                  "";
-                                if (dir && dir.trim().length > 0) return dir;
-                                if (
-                                  consultorio &&
-                                  consultorio.trim().length > 0
-                                )
-                                  return consultorio;
-                                return "";
-                              })()
+                              "codigosPostales",
+                              professional.homeVisitPostalCodes || ""
                             )
                           }
-                        />
-                      </>
+                          className="opacity-0 group-hover:opacity-100 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-all"
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                          Editar
+                        </button>
+                      </div>
                     )}
                   </div>
-                </div>
+                )}
 
                 {/* City */}
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-3">
+                <div className="group relative">
+                  <div className="flex items-center space-x-3 mb-2">
                     <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
                       <MapPin className="h-3 w-3 text-gray-500" />
                     </div>
-                    <span className="text-sm text-gray-600">Ciudad</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      Ciudad
+                    </span>
                   </div>
-                  <div className="ml-9 flex items-center justify-between">
-                    {editingField === "ciudad" ? (
-                      <div className="flex items-center space-x-2 flex-1">
-                        <input
-                          type="text"
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          className="text-sm font-medium border border-gray-300 rounded px-2 py-1 flex-1"
-                          autoFocus
-                          placeholder="Ej. Madrid"
-                        />
+                  {editingField === "ciudad" ? (
+                    <div className="ml-9 space-y-2">
+                      <input
+                        type="text"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border-2 border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                        placeholder="Ej. Madrid"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleSaveEdit("ciudad");
+                          if (e.key === "Escape") handleCancelEdit();
+                        }}
+                      />
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleSaveEdit("ciudad")}
-                          className="text-green-600 hover:text-green-800"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
                         >
-                          <Save className="h-4 w-4" />
+                          <Save className="h-3.5 w-3.5" />
+                          Guardar
                         </button>
                         <button
                           onClick={handleCancelEdit}
-                          className="text-red-600 hover:text-red-800"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                         >
-                          <X className="h-4 w-4" />
+                          <X className="h-3.5 w-3.5" />
+                          Cancelar
                         </button>
                       </div>
-                    ) : (
-                      <>
-                        <span className="text-sm font-medium">
-                          {professional.city || "Sin ciudad"}
-                        </span>
-                        <Edit
-                          className="h-4 w-4 text-gray-400 cursor-pointer hover:text-gray-600"
-                          onClick={() =>
-                            handleEditField("ciudad", professional.city || "")
-                          }
+                    </div>
+                  ) : (
+                    <div className="ml-9 flex items-center justify-between group-hover:bg-gray-50 -mx-2 px-2 py-1.5 rounded-lg transition-colors">
+                      <span className="text-sm font-medium text-gray-900">
+                        {professional.city || "Sin ciudad"}
+                      </span>
+                      <button
+                        onClick={() =>
+                          handleEditField("ciudad", professional.city || "")
+                        }
+                        className="opacity-0 group-hover:opacity-100 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-all"
+                      >
+                        <Edit className="h-3.5 w-3.5" />
+                        Editar
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Mobility Access */}
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
+                      <svg
+                        className="h-3 w-3 text-gray-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 14l-7 7m0 0l-7-7m7 7V3"
                         />
-                      </>
-                    )}
+                      </svg>
+                    </div>
+                    <span className="text-sm text-gray-600">
+                      Acceso Movilidad
+                    </span>
+                  </div>
+                  <div className="ml-9 flex items-center justify-between">
+                    <span className="text-sm font-medium">
+                      {professional.mobilityAccess ? "Sí" : "No"}
+                    </span>
                   </div>
                 </div>
 
-                {/* Removed Certifications and Packages sections */}
+                {/* Documents Section */}
+                {professional.documents &&
+                  Object.values(professional.documents).some(Boolean) && (
+                    <div className="pt-6 border-t border-gray-100">
+                      <h3 className="text-sm font-semibold text-gray-900 mb-4">
+                        Documentación Adjunta
+                      </h3>
+                      <div className="space-y-3">
+                        {professional.documents.identityCard && (
+                          <a
+                            href={professional.documents.identityCard}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center p-2 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-colors"
+                          >
+                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                              <svg
+                                className="w-4 h-4 text-blue-600"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0c0 .667.333 1 1 1v1m2-2c0 .667-.333 1-1 1v1"
+                                />
+                              </svg>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                Documento de Identidad
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Ver archivo
+                              </p>
+                            </div>
+                          </a>
+                        )}
+                        {professional.documents.universityDegree && (
+                          <a
+                            href={professional.documents.universityDegree}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center p-2 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-colors"
+                          >
+                            <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center mr-3">
+                              <svg
+                                className="w-4 h-4 text-purple-600"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M12 14l9-5-9-5-9 5 9 5z"
+                                />
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"
+                                />
+                              </svg>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                Título Universitario
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Ver archivo
+                              </p>
+                            </div>
+                          </a>
+                        )}
+                        {professional.documents.insurance && (
+                          <a
+                            href={professional.documents.insurance}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center p-2 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-colors"
+                          >
+                            <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center mr-3">
+                              <svg
+                                className="w-4 h-4 text-green-600"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                />
+                              </svg>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                Seguro RC
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Ver archivo
+                              </p>
+                            </div>
+                          </a>
+                        )}
+                        {professional.documents.collegialCertificate && (
+                          <a
+                            href={professional.documents.collegialCertificate}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center p-2 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-colors"
+                          >
+                            <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center mr-3">
+                              <svg
+                                className="w-4 h-4 text-orange-600"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                                />
+                              </svg>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                Certificado Colegiación
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Ver archivo
+                              </p>
+                            </div>
+                          </a>
+                        )}
+                        {professional.documents.cv && (
+                          <a
+                            href={professional.documents.cv}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center p-2 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-colors"
+                          >
+                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                              <svg
+                                className="w-4 h-4 text-blue-600"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                />
+                              </svg>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                Curriculum Vitae
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Ver archivo
+                              </p>
+                            </div>
+                          </a>
+                        )}
+                        {professional.documents.criminalRecord && (
+                          <a
+                            href={professional.documents.criminalRecord}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center p-2 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-colors"
+                          >
+                            <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center mr-3">
+                              <svg
+                                className="w-4 h-4 text-red-600"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                                />
+                              </svg>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                Certificado Delitos
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Ver archivo
+                              </p>
+                            </div>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
               </div>
             </div>
           </div>
 
           {/* Right Column - Summary and Transactions */}
           <div className="w-2/3 space-y-6">
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-                <div className="flex flex-col items-start">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-3">
-                    <svg
-                      className="w-6 h-6 text-green-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
-                      />
-                    </svg>
+            {/* Información Extra */}
+            <div className="bg-white rounded-2xl border border-gray-200/80 p-6 shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Información Extra
+              </h3>
+              <div className="space-y-6">
+                {/* Modalities */}
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">
+                    Modalidades de Atención
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {professional.modalities &&
+                    (Array.isArray(professional.modalities)
+                      ? professional.modalities.length > 0
+                      : true) ? (
+                      (Array.isArray(professional.modalities)
+                        ? professional.modalities
+                        : typeof professional.modalities === "string"
+                        ? JSON.parse(professional.modalities)
+                        : []
+                      ).map((mod: string, idx: number) => (
+                        <span
+                          key={idx}
+                          className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm capitalize"
+                        >
+                          {mod.replace(/_/g, " ")}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-gray-500 text-sm">
+                        No especificadas
+                      </span>
+                    )}
                   </div>
-                  <p className="text-sm text-gray-600 mb-1">Ingresos Totales</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {(() => {
-                      const cents =
-                        balance?.available_amount ??
-                        balance?.available ??
-                        balance?.total ??
-                        (typeof balance === "number" ? balance : null);
-                      if (cents != null) {
-                        const amount =
-                          typeof cents === "number" ? cents : Number(cents);
-                        const normalized = amount / 100;
-                        return `$${normalized.toFixed(2)}`;
-                      }
-                      return `$${professional.incomeUsd.toFixed(2)}`;
-                    })()}
+                </div>
+
+                {/* Services */}
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">
+                    Servicios Ofrecidos
+                  </h4>
+                  <p className="text-sm text-gray-600 whitespace-pre-line">
+                    {professional.services
+                      ? typeof professional.services === "string" &&
+                        (professional.services.startsWith("[") ||
+                          professional.services.startsWith("{"))
+                        ? (() => {
+                            try {
+                              const parsed = JSON.parse(professional.services);
+                              return Array.isArray(parsed)
+                                ? parsed.join(", ")
+                                : typeof parsed === "object"
+                                ? Object.values(parsed).join(", ")
+                                : professional.services;
+                            } catch {
+                              return professional.services;
+                            }
+                          })()
+                        : professional.services
+                      : "No especificados"}
                   </p>
                 </div>
-              </div>
 
-              <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-                <div className="flex flex-col items-start">
-                  <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mb-3">
-                    <svg
-                      className="w-6 h-6 text-orange-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-                      />
-                    </svg>
-                  </div>
-                  <p className="text-sm text-gray-600 mb-1">Sesiones Totales</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {professional.totalSessions.toLocaleString()}
-                  </p>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-                <div className="flex flex-col items-start">
-                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-3">
-                    <svg
-                      className="w-6 h-6 text-primary"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  </div>
-                  <p className="text-sm text-gray-600 mb-1">Tipo de Sesiones</p>
-                  <p className="text-sm font-medium text-gray-900">
-                    {["En línea", "Presencial", "A domicilio"].join(" + ")}
+                {/* Observations */}
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">
+                    Observaciones
+                  </h4>
+                  <p className="text-sm text-gray-600 whitespace-pre-line">
+                    {professional.observations || "Sin observaciones"}
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Transaction History */}
+            {/* Horarios de Atención */}
             <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Horarios de Atención
+                </h3>
+                {savingSchedule && (
+                  <span className="text-sm text-gray-500">Guardando...</span>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                {loadingSchedule ? (
+                  <div className="text-gray-600">Cargando horarios...</div>
+                ) : scheduleError ? (
+                  <div className="text-sm text-red-600 border border-red-200 bg-red-50 rounded-md p-2">
+                    {scheduleError}
+                  </div>
+                ) : (
+                  <div className="space-y-5">
+                    {(["presencial", "en_linea", "a_domicilio"] as const).map(
+                      (tipo) => (
+                        <div
+                          key={tipo}
+                          className="border border-gray-200 rounded-lg"
+                        >
+                          <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
+                            <div className="flex items-center gap-3">
+                              <span className="text-sm font-medium text-gray-900">
+                                {tipo === "presencial"
+                                  ? "Presencial"
+                                  : tipo === "en_linea"
+                                  ? "En línea"
+                                  : "A domicilio"}
+                              </span>
+                              {scheduleByType[tipo].enabled ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                  Configurado
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                                  Sin configurar
+                                </span>
+                              )}
+                            </div>
+                            {scheduleByType[tipo].enabled ? (
+                              <button
+                                className="px-3 py-1 text-xs rounded-lg border bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                                onClick={() =>
+                                  setScheduleByType((prev) => ({
+                                    ...prev,
+                                    [tipo]: {
+                                      enabled: false,
+                                      dias: [],
+                                      desde: "",
+                                      hasta: "",
+                                    },
+                                  }))
+                                }
+                              >
+                                Quitar horario
+                              </button>
+                            ) : (
+                              <button
+                                className="px-3 py-1 text-xs rounded-lg border bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-200"
+                                onClick={() =>
+                                  setScheduleByType((prev) => ({
+                                    ...prev,
+                                    [tipo]: {
+                                      enabled: true,
+                                      dias: [],
+                                      desde: "",
+                                      hasta: "",
+                                    },
+                                  }))
+                                }
+                              >
+                                Agregar horario
+                              </button>
+                            )}
+                          </div>
+                          {scheduleByType[tipo].enabled && (
+                            <div className="p-4 space-y-3">
+                              <div>
+                                <label className="block text-xs text-gray-600 mb-1">
+                                  Días disponibles
+                                </label>
+                                <div className="flex flex-wrap gap-2">
+                                  {allDays.map((d) => {
+                                    const sel =
+                                      scheduleByType[tipo].dias.includes(d);
+                                    return (
+                                      <button
+                                        key={`${tipo}-${d}`}
+                                        className={`px-2.5 py-1 rounded-full text-xs border ${
+                                          sel
+                                            ? "bg-primary/10 border-primary text-primary"
+                                            : "bg-white border-gray-300 text-gray-700"
+                                        }`}
+                                        onClick={() =>
+                                          setScheduleByType((prev) => {
+                                            const current = prev[tipo];
+                                            const dias = sel
+                                              ? current.dias.filter(
+                                                  (x) => x !== d
+                                                )
+                                              : [...current.dias, d];
+                                            return {
+                                              ...prev,
+                                              [tipo]: { ...current, dias },
+                                            };
+                                          })
+                                        }
+                                      >
+                                        {displayDay(d)}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="block text-xs text-gray-600 mb-1">
+                                    Desde
+                                  </label>
+                                  <select
+                                    value={scheduleByType[tipo].desde || ""}
+                                    onChange={(e) =>
+                                      setScheduleByType((prev) => ({
+                                        ...prev,
+                                        [tipo]: {
+                                          ...prev[tipo],
+                                          desde: e.target.value,
+                                        },
+                                      }))
+                                    }
+                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg bg-white"
+                                  >
+                                    <option value="">Selecciona</option>
+                                    {timeOptions.map((t) => (
+                                      <option
+                                        key={`${tipo}-desde-${t}`}
+                                        value={t}
+                                      >
+                                        {t}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="block text-xs text-gray-600 mb-1">
+                                    Hasta
+                                  </label>
+                                  <select
+                                    value={scheduleByType[tipo].hasta || ""}
+                                    onChange={(e) =>
+                                      setScheduleByType((prev) => ({
+                                        ...prev,
+                                        [tipo]: {
+                                          ...prev[tipo],
+                                          hasta: e.target.value,
+                                        },
+                                      }))
+                                    }
+                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg bg-white"
+                                  >
+                                    <option value="">Selecciona</option>
+                                    {timeOptions.map((t) => (
+                                      <option
+                                        key={`${tipo}-hasta-${t}`}
+                                        value={t}
+                                      >
+                                        {t}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    )}
+                  </div>
+                )}
+
+                <div className="flex justify-end pt-4">
+                  <button
+                    onClick={async () => {
+                      if (!professionalIdProfesional) return;
+                      try {
+                        setSavingSchedule(true);
+                        setScheduleError(null);
+                        const adminToken =
+                          typeof window !== "undefined"
+                            ? JSON.parse(
+                                window.localStorage.getItem("user") || "{}"
+                              )?.token
+                            : null;
+                        if (!adminToken)
+                          throw new Error(
+                            "Token de administrador no disponible"
+                          );
+                        const apiBase = (
+                          process.env.NEXT_PUBLIC_API_URL ||
+                          "http://localhost:3000/api"
+                        ).replace(/\/$/, "");
+                        const to24 = (v: string) => {
+                          const m = v.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+                          if (!m) return v.length === 5 ? `${v}:00` : v;
+                          let hh = parseInt(m[1], 10);
+                          const mm = m[2];
+                          const per = m[3].toUpperCase();
+                          if (per === "PM" && hh !== 12) hh += 12;
+                          if (per === "AM" && hh === 12) hh = 0;
+                          return `${hh.toString().padStart(2, "0")}:${mm}:00`;
+                        };
+                        const payload: Array<any> = [];
+                        (
+                          ["presencial", "en_linea", "a_domicilio"] as const
+                        ).forEach((tipo) => {
+                          const section = scheduleByType[tipo];
+                          if (!section.enabled) return;
+                          if (
+                            !section.desde ||
+                            !section.hasta ||
+                            !section.dias.length
+                          )
+                            return;
+                          for (const dia of section.dias) {
+                            payload.push({
+                              dia_semana: dia,
+                              hora_inicio: to24(section.desde),
+                              hora_fin: to24(section.hasta),
+                              tipo_atencion: tipo,
+                              activo: 1,
+                            });
+                          }
+                        });
+                        // Allow saving empty if user wants to clear everything? Maybe not.
+                        // if (payload.length === 0) { ... }
+
+                        const currentRes = await fetch(
+                          `${apiBase}/disponibilidad-horarios/profesional/${professionalIdProfesional}`,
+                          { headers: { Authorization: `Bearer ${adminToken}` } }
+                        );
+                        const currentData = await currentRes
+                          .json()
+                          .catch(() => ({}));
+                        const currentList: any[] =
+                          (Array.isArray(currentData) && currentData) ||
+                          currentData?.data?.disponibilidad ||
+                          currentData?.disponibilidad ||
+                          currentData?.data ||
+                          [];
+                        for (const cur of currentList) {
+                          const delId = cur.id_disponibilidad || cur.id || null;
+                          if (!delId) continue;
+                          await fetch(
+                            `${apiBase}/disponibilidad-horarios/${delId}`,
+                            {
+                              method: "DELETE",
+                              headers: {
+                                Authorization: `Bearer ${adminToken}`,
+                              },
+                            }
+                          );
+                        }
+                        for (const row of payload) {
+                          const hStart = row.hora_inicio || "09:00:00";
+                          const hh = parseInt(String(hStart).split(":")[0], 10);
+                          const turno = isNaN(hh)
+                            ? null
+                            : hh < 14
+                            ? "matutino"
+                            : "vespertino";
+                          const createBody = {
+                            id_profesional: Number(professionalIdProfesional),
+                            dia_semana: row.dia_semana,
+                            hora_inicio: row.hora_inicio,
+                            hora_fin: row.hora_fin,
+                            tipo_atencion: row.tipo_atencion || null,
+                            turno: turno,
+                            activo: 1,
+                          };
+                          await fetch(`${apiBase}/disponibilidad-horarios`, {
+                            method: "POST",
+                            headers: {
+                              "Content-Type": "application/json",
+                              Authorization: `Bearer ${adminToken}`,
+                            },
+                            body: JSON.stringify(createBody),
+                          });
+                        }
+                        // Recargar para confirmar (o solo mostrar éxito)
+                        alert("Horarios guardados correctamente");
+                      } catch (e: any) {
+                        setScheduleError(
+                          e?.message || "Error al actualizar horarios"
+                        );
+                      } finally {
+                        setSavingSchedule(false);
+                      }
+                    }}
+                    className="px-6 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:opacity-90 disabled:opacity-50"
+                    disabled={savingSchedule || loadingSchedule}
+                  >
+                    {savingSchedule ? "Guardando..." : "Guardar Horarios"}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Paquetes de Precios */}
+            <div className="bg-white rounded-2xl border border-gray-200/80 p-6 shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Paquetes de Precios
+                </h3>
+              </div>
+              {(() => {
+                let pricesList: any[] = [];
+                if (Array.isArray(professional.prices)) {
+                  pricesList = professional.prices;
+                } else if (typeof professional.prices === "string") {
+                  try {
+                    const parsed = JSON.parse(professional.prices);
+                    if (Array.isArray(parsed)) pricesList = parsed;
+                    else if (typeof parsed === "object")
+                      pricesList = Object.values(parsed);
+                  } catch {}
+                } else if (
+                  typeof professional.prices === "object" &&
+                  professional.prices !== null
+                ) {
+                  pricesList = Object.values(professional.prices);
+                }
+
+                if (pricesList.length === 0) {
+                  return (
+                    <span className="text-gray-500 text-sm">
+                      No especificados
+                    </span>
+                  );
+                }
+
+                // Agrupar precios por modalidad
+                const pricesByModality: Record<
+                  string,
+                  { prices: any[]; originalIndices: number[] }
+                > = {};
+
+                pricesList.forEach((value: any, idx: number) => {
+                  if (!value) return;
+                  const modalidad =
+                    value.modalidad || value.modalidad_atencion || "presencial";
+                  const normalizedModality = modalidad.toLowerCase().trim();
+
+                  // Normalizar modalidad: 'domicilio' o 'a_domicilio' -> 'domicilio', otros -> 'presencial' por defecto
+                  const modalityKey =
+                    normalizedModality === "domicilio" ||
+                    normalizedModality === "a_domicilio"
+                      ? "domicilio"
+                      : normalizedModality === "virtual" ||
+                        normalizedModality === "en_linea" ||
+                        normalizedModality === "online"
+                      ? "virtual"
+                      : "presencial";
+
+                  if (!pricesByModality[modalityKey]) {
+                    pricesByModality[modalityKey] = {
+                      prices: [],
+                      originalIndices: [],
+                    };
+                  }
+                  pricesByModality[modalityKey].prices.push(value);
+                  pricesByModality[modalityKey].originalIndices.push(idx);
+                });
+
+                // Función para obtener el nombre de la modalidad
+                const getModalityName = (modality: string) => {
+                  switch (modality.toLowerCase()) {
+                    case "domicilio":
+                    case "a_domicilio":
+                      return "A Domicilio";
+                    case "virtual":
+                    case "en_linea":
+                    case "online":
+                      return "Virtual Presencial";
+                    case "presencial":
+                    default:
+                      return "Presencial";
+                  }
+                };
+
+                // Orden de visualización: presencial primero, luego domicilio, luego virtual
+                const modalityOrder = ["presencial", "domicilio", "virtual"];
+                const sortedModalities = Object.keys(pricesByModality).sort(
+                  (a, b) => {
+                    const indexA = modalityOrder.indexOf(a);
+                    const indexB = modalityOrder.indexOf(b);
+                    return (
+                      (indexA === -1 ? 999 : indexA) -
+                      (indexB === -1 ? 999 : indexB)
+                    );
+                  }
+                );
+
+                return (
+                  <div className="space-y-6">
+                    {sortedModalities.map((modalityKey) => {
+                      const { prices, originalIndices } =
+                        pricesByModality[modalityKey];
+
+                      return (
+                        <div key={modalityKey} className="space-y-3">
+                          {/* Título de la modalidad */}
+                          <div className="flex items-center gap-2 pb-2 border-b border-gray-200">
+                            <h4 className="text-base font-semibold text-gray-900">
+                              Precios - {getModalityName(modalityKey)}
+                            </h4>
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                              {prices.length}{" "}
+                              {prices.length === 1 ? "paquete" : "paquetes"}
+                            </span>
+                          </div>
+
+                          {/* Lista de precios de esta modalidad */}
+                          <div className="space-y-4">
+                            {prices.map((value: any, localIdx: number) => {
+                              const originalIdx = originalIndices[localIdx];
+                              const isEditing = editingPriceId === originalIdx;
+                              const price =
+                                value.price ||
+                                value.precio ||
+                                value.monto ||
+                                value.amount ||
+                                "0";
+                              const name =
+                                value.name ||
+                                value.nombre ||
+                                value.title ||
+                                value.nombre_paquete ||
+                                value.nombre_servicio ||
+                                `Paquete ${localIdx + 1}`;
+                              const desc =
+                                value.description || value.descripcion || "";
+                              const duracionMinutos =
+                                value.duracion_minutos || value.duracion;
+                              const duracionFormatted = duracionMinutos
+                                ? `${duracionMinutos} min`
+                                : "";
+
+                              return (
+                                <div
+                                  key={`${modalityKey}-${originalIdx}`}
+                                  className="rounded-xl border border-gray-200 bg-gray-50 p-4"
+                                >
+                                  {isEditing ? (
+                                    <div className="space-y-4">
+                                      <div className="grid grid-cols-3 gap-4">
+                                        <div>
+                                          <label className="block text-xs text-gray-500 mb-1">
+                                            Precio
+                                          </label>
+                                          <div className="relative">
+                                            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                                              €
+                                            </span>
+                                            <input
+                                              type="text"
+                                              value={
+                                                editingPriceData.precio || ""
+                                              }
+                                              onChange={(e) =>
+                                                setEditingPriceData({
+                                                  ...editingPriceData,
+                                                  precio: e.target.value,
+                                                })
+                                              }
+                                              placeholder="Ej: 50"
+                                              className="w-full pl-6 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white"
+                                            />
+                                          </div>
+                                        </div>
+                                        <div>
+                                          <label className="block text-xs text-gray-500 mb-1">
+                                            Nombre y descripción del paquete
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={
+                                              editingPriceData.nombre || ""
+                                            }
+                                            onChange={(e) =>
+                                              setEditingPriceData({
+                                                ...editingPriceData,
+                                                nombre: e.target.value,
+                                              })
+                                            }
+                                            placeholder="Ej: Primera sesión"
+                                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white"
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="block text-xs text-gray-500 mb-1">
+                                            Duración
+                                          </label>
+                                          <select
+                                            value={
+                                              editingPriceData.duracion || ""
+                                            }
+                                            onChange={(e) =>
+                                              setEditingPriceData({
+                                                ...editingPriceData,
+                                                duracion: e.target.value,
+                                              })
+                                            }
+                                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white"
+                                          >
+                                            <option value="">
+                                              Selecciona duración
+                                            </option>
+                                            {durationOptions.map((opt) => (
+                                              <option
+                                                key={`dur-${originalIdx}-${opt}`}
+                                                value={opt}
+                                              >
+                                                {opt}
+                                              </option>
+                                            ))}
+                                          </select>
+                                        </div>
+                                      </div>
+                                      {desc !== undefined && (
+                                        <div>
+                                          <label className="block text-xs text-gray-500 mb-1">
+                                            Descripción adicional (opcional)
+                                          </label>
+                                          <textarea
+                                            value={
+                                              editingPriceData.descripcion || ""
+                                            }
+                                            onChange={(e) =>
+                                              setEditingPriceData({
+                                                ...editingPriceData,
+                                                descripcion: e.target.value,
+                                              })
+                                            }
+                                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white resize-none"
+                                            rows={2}
+                                            placeholder="Descripción opcional"
+                                          />
+                                        </div>
+                                      )}
+                                      <div className="flex items-center gap-2 pt-2">
+                                        <button
+                                          onClick={() =>
+                                            handleSavePrice(originalIdx, value)
+                                          }
+                                          className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
+                                        >
+                                          <Save className="h-4 w-4" />
+                                          Guardar
+                                        </button>
+                                        <button
+                                          onClick={handleCancelPriceEdit}
+                                          className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2"
+                                        >
+                                          <X className="h-4 w-4" />
+                                          Cancelar
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="relative">
+                                      <div className="grid grid-cols-3 gap-4">
+                                        <div>
+                                          <p className="text-xs text-gray-500 mb-1">
+                                            Precio
+                                          </p>
+                                          <p className="text-lg font-bold text-primary">
+                                            €
+                                            {typeof price === "number"
+                                              ? price.toFixed(2)
+                                              : parseFloat(price).toFixed(2)}
+                                          </p>
+                                        </div>
+                                        <div>
+                                          <p className="text-xs text-gray-500 mb-1">
+                                            Nombre
+                                          </p>
+                                          <p className="text-sm font-medium text-gray-900 capitalize">
+                                            {name}
+                                          </p>
+                                        </div>
+                                        <div>
+                                          <p className="text-xs text-gray-500 mb-1">
+                                            Duración
+                                          </p>
+                                          <p className="text-sm text-gray-700">
+                                            {duracionFormatted ||
+                                              "No especificada"}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      {desc && (
+                                        <div className="mt-3">
+                                          <p className="text-xs text-gray-500 mb-1">
+                                            Descripción
+                                          </p>
+                                          <p className="text-sm text-gray-600">
+                                            {desc}
+                                          </p>
+                                        </div>
+                                      )}
+                                      <button
+                                        onClick={() =>
+                                          handleEditPrice(originalIdx, value)
+                                        }
+                                        className="absolute top-0 right-0 p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
+                                        title="Editar precio"
+                                      >
+                                        <Edit className="h-4 w-4" />
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Transaction History */}
+            <div className="bg-white rounded-2xl border border-gray-200/80 p-6 shadow-lg hover:shadow-xl transition-shadow duration-300">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-gray-900">
                   Historial de transacciones
@@ -2752,7 +4570,6 @@ export default function AdminProfessionalEditPage() {
           </div>
         </div>
       )}
-
 
       {/* Error message */}
       {saveError && (

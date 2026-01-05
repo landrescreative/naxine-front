@@ -9,6 +9,7 @@ export interface AdminProfessional {
   postalCode: string;
   specialty: string;
   licenseNumber: string;
+  nifCif?: string;
   experience: number; // years
   rating: number;
   totalSessions: number;
@@ -16,9 +17,35 @@ export interface AdminProfessional {
   status: "activo" | "inactivo" | "pendiente" | "suspendido";
   joinDate: string;
   lastActive: string;
+  // Información detallada del estado
+  estadoAprobacion?: string; // "aprobado" | "pendiente" | "rechazado" | "suspendido"
+  tieneStripe?: boolean;
+  tieneGoogleCalendar?: boolean;
+  ultimaSesion?: string | null;
+  proximaCita?: {
+    fecha_hora: string;
+    estado: string;
+    tipo_atencion?: string;
+  } | null;
   profileImage?: string;
   bio: string;
   videoUrl?: string;
+  titulacion?: string;
+  publicEmail?: string;
+  homeVisitPostalCodes?: string;
+  observations?: string;
+  services?: string;
+  modalities?: string[];
+  mobilityAccess?: boolean;
+  documents?: {
+    identityCard?: string;
+    universityDegree?: string;
+    insurance?: string;
+    collegialCertificate?: string;
+    cv?: string;
+    criminalRecord?: string;
+  };
+  prices?: any;
   education: string[];
   certifications: string[];
   languages: string[];

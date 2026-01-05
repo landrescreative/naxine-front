@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { X, HelpCircle } from "lucide-react";
+import { X, HelpCircle, Check } from "lucide-react";
 import { authService } from "@/services/api/auth";
 import { validateEmail, validatePassword } from "@/services/utils/api-helpers";
 import { SpecialtiesService } from "@/services/api/specialties";
@@ -19,6 +19,7 @@ export default function RegisterProfessionalPage() {
     confirmPassword: "",
     telefono: "",
     numeroColegiado: "",
+    nifCif: "",
     titulacion: "",
     correoProfesionalPublico: "",
     especialidad: "",
@@ -105,6 +106,7 @@ export default function RegisterProfessionalPage() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -388,6 +390,152 @@ export default function RegisterProfessionalPage() {
     return youtubeRegex.test(url) || vimeoRegex.test(url);
   };
 
+  const getMissingField = useCallback(() => {
+    // 1. Validaciones básicas
+    if (!formData.nombreCompleto.trim())
+      return { field: "nombreCompleto", error: "El nombre completo es requerido" };
+    if (!formData.correoElectronico.trim())
+      return { field: "correoElectronico", error: "El correo es requerido" };
+    if (!validateEmail(formData.correoElectronico))
+      return { field: "correoElectronico", error: "El formato del correo no es válido" };
+    if (!formData.password)
+      return { field: "password", error: "La contraseña es requerida" };
+    const passwordValidation = validatePassword(formData.password);
+    if (!passwordValidation.isValid)
+      return { field: "password", error: passwordValidation.errors.join(", ") };
+    if (!formData.confirmPassword)
+      return { field: "confirmPassword", error: "Por favor confirma tu contraseña" };
+    if (formData.password !== formData.confirmPassword)
+      return { field: "confirmPassword", error: "Las contraseñas no coinciden" };
+    if (!formData.telefono.trim())
+      return { field: "telefono", error: "El teléfono es requerido" };
+    if (!formData.titulacion.trim())
+      return { field: "titulacion", error: "La titulación profesional es requerida" };
+    if (!formData.numeroColegiado.trim())
+      return { field: "numeroColegiado", error: "El número de colegiado/a es requerido" };
+    if (!formData.nifCif.trim())
+      return { field: "nifCif", error: "El NIF/CIF es requerido" };
+    if (!formData.correoProfesionalPublico.trim())
+      return { field: "correoProfesionalPublico", error: "El correo electrónico profesional es requerido" };
+    if (!validateEmail(formData.correoProfesionalPublico))
+      return { field: "correoProfesionalPublico", error: "El formato del correo electrónico profesional no es válido" };
+    if (!formData.descripcion.trim())
+      return { field: "descripcion", error: "La descripción general del perfil profesional es requerida" };
+    if (formData.descripcion.length > 1500)
+      return { field: "descripcion", error: "La descripción no debe superar los 1.500 caracteres" };
+    if (!formData.serviciosOfrecidos.trim())
+      return { field: "serviciosOfrecidos", error: "Los servicios ofrecidos son requeridos" };
+    if (!foto)
+      return { field: "foto", error: "La foto del perfil profesional es requerida" };
+    if (formData.modalidades.length === 0)
+      return { field: "modalidades", error: "Debes seleccionar al menos una modalidad de atención" };
+    if (!formData.accesibleMovilidad)
+      return { field: "accesibleMovilidad", error: "Debes indicar si tu consulta es accesible para personas con movilidad reducida" };
+
+    // 2. Validaciones condicionales de dirección
+    if (
+      formData.modalidades.includes("presencial") &&
+      !formData.direccionConsulta.trim()
+    ) {
+      return { field: "direccionConsulta", error: "La dirección de consulta es requerida si ofreces atención presencial" };
+    }
+    if (
+      formData.modalidades.includes("domicilio") &&
+      !formData.codigosPostalesDomicilio.trim()
+    ) {
+      return { field: "codigosPostalesDomicilio", error: "Los códigos postales son requeridos si ofreces atención a domicilio" };
+    }
+
+    // 3. Validaciones de horarios
+    const validateHorarios = (horarios: any) => {
+      if (!horarios || !horarios.dias || horarios.dias.length === 0)
+        return "Debes seleccionar al menos un día";
+      if (horarios.dias.some((d: any) => !d.desde || !d.hasta))
+        return "Debes especificar las horas de inicio y fin";
+      return null;
+    };
+
+    if (formData.modalidades.includes("online")) {
+      const err = validateHorarios(formData.horariosEnLinea);
+      if (err) return { field: "horariosEnLinea", error: err + " para atención en línea" };
+    }
+    if (formData.modalidades.includes("presencial")) {
+      const err = validateHorarios(formData.horariosPresencial);
+      if (err) return { field: "horariosPresencial", error: err + " para atención presencial" };
+    }
+    if (formData.modalidades.includes("domicilio")) {
+      const err = validateHorarios(formData.horariosADomicilio);
+      if (err) return { field: "horariosADomicilio", error: err + " para atención a domicilio" };
+    }
+
+    // 4. Validaciones de precios
+    const hasPrice = (p: any) => p.precio && p.precio.trim() !== "";
+    const isValidPrice = (p: any) =>
+      !hasPrice(p) || (p.nombre.trim() !== "" && p.duracion.trim() !== "");
+    // Pack3 no requiere duración
+    const isValidPack3 = (p: any) => !hasPrice(p) || p.nombre.trim() !== "";
+
+    const precios = formData.precios;
+    const hasAnyPrice =
+      hasPrice(precios.primeraSesion) ||
+      hasPrice(precios.seguimiento) ||
+      hasPrice(precios.pack3);
+
+    if (!hasAnyPrice) return { field: "precios", error: "Debes configurar al menos un precio" };
+    
+    if (!isValidPrice(precios.primeraSesion)) return { field: "preciosPrimeraSesion", error: "Falta nombre o duración en Primera Sesión" };
+    if (!isValidPrice(precios.seguimiento)) return { field: "preciosSeguimiento", error: "Falta nombre o duración en Seguimiento" };
+    if (!isValidPack3(precios.pack3)) return { field: "preciosPack3", error: "Falta nombre en Pack 3" };
+
+    // 5. Validaciones de precios domicilio
+    if (formData.modalidades.includes("domicilio")) {
+      const preciosDom = formData.preciosDomicilio;
+      const hasAnyPriceDom =
+        hasPrice(preciosDom.primeraSesion) ||
+        hasPrice(preciosDom.seguimiento) ||
+        hasPrice(preciosDom.pack3);
+
+      if (!hasAnyPriceDom) return { field: "preciosDomicilio", error: "Debes configurar al menos un precio para atención a domicilio" };
+      
+      if (!isValidPrice(preciosDom.primeraSesion)) return { field: "preciosDomicilioPrimeraSesion", error: "Falta nombre o duración en Primera Sesión (Domicilio)" };
+      if (!isValidPrice(preciosDom.seguimiento)) return { field: "preciosDomicilioSeguimiento", error: "Falta nombre o duración en Seguimiento (Domicilio)" };
+      if (!isValidPack3(preciosDom.pack3)) return { field: "preciosDomicilioPack3", error: "Falta nombre en Pack 3 (Domicilio)" };
+    }
+
+    // 6. Video opcional
+    if (
+      formData.videoPresentacion &&
+      !validateVideoUrl(formData.videoPresentacion)
+    ) {
+      return { field: "videoPresentacion", error: "El enlace al vídeo debe ser de YouTube o Vimeo" };
+    }
+
+    return null;
+  }, [formData, foto]);
+
+  const isFormComplete = useMemo(() => {
+    return getMissingField() === null;
+  }, [getMissingField]);
+
+  const handleDisabledCheckboxClick = (e: React.MouseEvent) => {
+    if (isFormComplete) return;
+    
+    e.preventDefault();
+    const missing = getMissingField();
+    if (missing) {
+      setErrors((prev) => ({ ...prev, [missing.field]: missing.error }));
+      
+      // Scroll al campo
+      const element = document.getElementById(missing.field) || document.querySelector(`[name="${missing.field}"]`);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+        if (element instanceof HTMLElement) {
+           element.focus({ preventScroll: true });
+        }
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log("🚀 [REGISTRO] Iniciando envío del formulario...");
@@ -442,6 +590,10 @@ export default function RegisterProfessionalPage() {
 
     if (!formData.numeroColegiado.trim()) {
       newErrors.numeroColegiado = "El número de colegiado/a es requerido";
+    }
+
+    if (!formData.nifCif.trim()) {
+      newErrors.nifCif = "El NIF/CIF es requerido";
     }
 
     if (!formData.correoProfesionalPublico.trim()) {
@@ -695,6 +847,7 @@ export default function RegisterProfessionalPage() {
       formDataToSend.append("password", formData.password);
       formDataToSend.append("telefono", formData.telefono.trim());
       formDataToSend.append("numeroColegiado", formData.numeroColegiado.trim());
+      formDataToSend.append("nifCif", formData.nifCif.trim());
       formDataToSend.append(
         "aceptaTerminos",
         formData.aceptaTerminos.toString()
@@ -766,6 +919,9 @@ export default function RegisterProfessionalPage() {
       }
       if (formData.experiencia_años) {
         formDataToSend.append("experiencia_años", formData.experiencia_años);
+      }
+      if (formData.observaciones.trim()) {
+        formDataToSend.append("observaciones", formData.observaciones.trim());
       }
       if (formData.tarifa_por_hora) {
         formDataToSend.append("tarifa_por_hora", formData.tarifa_por_hora);
@@ -895,6 +1051,7 @@ export default function RegisterProfessionalPage() {
           confirmPassword: "",
           telefono: "",
           numeroColegiado: "",
+          nifCif: "",
           titulacion: "",
           correoProfesionalPublico: "",
           especialidad: "",
@@ -1202,10 +1359,12 @@ export default function RegisterProfessionalPage() {
                   name="password"
                   value={formData.password}
                   onChange={handleInputChange}
+                  onFocus={() => setPasswordFocused(true)}
+                  onBlur={() => setPasswordFocused(false)}
                   className={`w-full px-4 py-3 pr-12 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
                     errors.password ? "border-red-300" : "border-gray-300"
                   }`}
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder="Mínimo 8 caracteres"
                   required
                   disabled={!!successMsg}
                   aria-invalid={Boolean(errors.password)}
@@ -1223,6 +1382,64 @@ export default function RegisterProfessionalPage() {
               </div>
               {errors.password && (
                 <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+              )}
+              {/* Requisitos de contraseña en tiempo real */}
+              {(passwordFocused || formData.password) && (
+                <div
+                  className={`mt-3 p-3 rounded-lg border transition-colors duration-200 ${
+                    validatePassword(formData.password).isValid
+                      ? "bg-green-50 border-green-200"
+                      : "bg-gray-50 border-gray-100"
+                  } space-y-2`}
+                >
+                  <p
+                    className={`text-xs font-medium mb-2 ${
+                      validatePassword(formData.password).isValid
+                        ? "text-green-700"
+                        : "text-gray-700"
+                    }`}
+                  >
+                    {validatePassword(formData.password).isValid
+                      ? "¡Contraseña segura!"
+                      : "La contraseña debe contener:"}
+                  </p>
+                  {[
+                    {
+                      label: "Mínimo 8 caracteres",
+                      valid: formData.password.length >= 8,
+                    },
+                    {
+                      label: "Al menos una letra mayúscula",
+                      valid: /[A-Z]/.test(formData.password),
+                    },
+                    {
+                      label: "Al menos una letra minúscula",
+                      valid: /[a-z]/.test(formData.password),
+                    },
+                    {
+                      label: "Al menos un número",
+                      valid: /\d/.test(formData.password),
+                    },
+                  ].map((req, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-2 text-xs transition-colors duration-200"
+                    >
+                      {req.valid ? (
+                        <Check className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                      ) : (
+                        <div className="w-3.5 h-3.5 rounded-full border border-gray-300 flex-shrink-0" />
+                      )}
+                      <span
+                        className={
+                          req.valid ? "text-green-700" : "text-gray-500"
+                        }
+                      >
+                        {req.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
 
@@ -1264,7 +1481,23 @@ export default function RegisterProfessionalPage() {
                   {showConfirmPassword ? "👁️" : "👁️‍🗨️"}
                 </button>
               </div>
-              {errors.confirmPassword && (
+              {/* Mensaje de coincidencia de contraseña en tiempo real */}
+              {formData.confirmPassword && (
+                <div className="mt-1">
+                  {formData.password === formData.confirmPassword ? (
+                    <p className="text-sm text-green-600 flex items-center gap-1">
+                      <Check className="w-3.5 h-3.5" />
+                      Las contraseñas coinciden
+                    </p>
+                  ) : (
+                    <p className="text-sm text-red-600 flex items-center gap-1">
+                      <X className="w-3.5 h-3.5" />
+                      Las contraseñas no coinciden
+                    </p>
+                  )}
+                </div>
+              )}
+              {errors.confirmPassword && !formData.confirmPassword && (
                 <p className="mt-1 text-sm text-red-600">
                   {errors.confirmPassword}
                 </p>
@@ -1356,6 +1589,35 @@ export default function RegisterProfessionalPage() {
               {errors.numeroColegiado && (
                 <p className="mt-1 text-sm text-red-600">
                   {errors.numeroColegiado}
+                </p>
+              )}
+            </div>
+
+            {/* 8.1. NIF/CIF */}
+            <div>
+              <label
+                htmlFor="nifCif"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                NIF/CIF <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="nifCif"
+                name="nifCif"
+                value={formData.nifCif}
+                onChange={handleInputChange}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
+                  errors.nifCif ? "border-red-300" : "border-gray-300"
+                }`}
+                placeholder="Ej: 12345678A o B12345678"
+                required
+                disabled={!!successMsg}
+                aria-invalid={Boolean(errors.nifCif)}
+              />
+              {errors.nifCif && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.nifCif}
                 </p>
               )}
             </div>
@@ -1542,7 +1804,7 @@ export default function RegisterProfessionalPage() {
                     ? "border-red-300"
                     : "border-gray-300"
                 }`}
-                placeholder="Ej: Terapia individual, Terapia de pareja, Terapia familiar, Evaluación psicológica..."
+                placeholder=""
                 disabled={!!successMsg}
                 aria-invalid={Boolean(errors.serviciosOfrecidos)}
               />
@@ -1787,7 +2049,10 @@ export default function RegisterProfessionalPage() {
             {/* 18. Horarios por Modalidad */}
             {/* Horarios En Línea */}
             {formData.modalidades.includes("online") && (
-              <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
+              <div
+                id="horariosEnLinea"
+                className="rounded-xl border border-gray-200 bg-gray-50 p-6"
+              >
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   Horario En Línea <span className="text-red-500">*</span>
                 </h3>
@@ -1921,7 +2186,10 @@ export default function RegisterProfessionalPage() {
 
             {/* Horarios Presencial */}
             {formData.modalidades.includes("presencial") && (
-              <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
+              <div
+                id="horariosPresencial"
+                className="rounded-xl border border-gray-200 bg-gray-50 p-6"
+              >
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   Horario Presencial <span className="text-red-500">*</span>
                 </h3>
@@ -2244,8 +2512,8 @@ export default function RegisterProfessionalPage() {
                         updatePrecios("primeraSesion", "nombre", e.target.value)
                       }
                       placeholder="Ej: Primera sesión"
-                      className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary ${
-                        errors.preciosPrimeraSesion
+                      className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
+                        errors.preciosPack3
                           ? "border-red-300"
                           : "border-gray-300"
                       }`}
@@ -2388,8 +2656,11 @@ export default function RegisterProfessionalPage() {
                     <input
                       type="text"
                       value={formData.precios.pack3.nombre}
-                      readOnly
-                      className={`w-full px-3 py-2 text-sm border rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed ${
+                      onChange={(e) =>
+                        updatePrecios("pack3", "nombre", e.target.value)
+                      }
+                      placeholder="Ej: Pack 3 sesiones"
+                      className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
                         errors.preciosPack3
                           ? "border-red-300"
                           : "border-gray-300"
@@ -2408,7 +2679,10 @@ export default function RegisterProfessionalPage() {
 
             {/* 19.1. Precios para atención a domicilio */}
             {formData.modalidades.includes("domicilio") && (
-              <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
+              <div
+                id="preciosDomicilio"
+                className="rounded-xl border border-gray-200 bg-gray-50 p-6"
+              >
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   Precios para atención a domicilio{" "}
                   <span className="text-red-500">*</span>
@@ -2473,38 +2747,38 @@ export default function RegisterProfessionalPage() {
                       {errors.preciosDomicilioPrimeraSesion && (
                         <p className="mt-1 text-xs text-red-600">
                           {errors.preciosDomicilioPrimeraSesion}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">
-                        Duración
-                      </label>
-                      <select
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">
+                      Duración
+                    </label>
+                    <select
                         value={formData.preciosDomicilio.primeraSesion.duracion}
-                        onChange={(e) =>
+                      onChange={(e) =>
                           updatePreciosDomicilio(
                             "primeraSesion",
                             "duracion",
                             e.target.value
                           )
-                        }
-                        className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
+                      }
+                      className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
                           errors.preciosDomicilioPrimeraSesion
-                            ? "border-red-300"
-                            : "border-gray-300"
-                        }`}
-                        disabled={!!successMsg}
-                      >
-                        <option value="">Selecciona duración</option>
-                        {durationOptions.map((opt) => (
+                          ? "border-red-300"
+                          : "border-gray-300"
+                      }`}
+                      disabled={!!successMsg}
+                    >
+                      <option value="">Selecciona duración</option>
+                      {durationOptions.map((opt) => (
                           <option key={`dur-dom-primera-${opt}`} value={opt}>
-                            {opt}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
                   </div>
+                </div>
 
                   {/* Seguimiento Domicilio */}
                   <div className="grid grid-cols-3 gap-4">
@@ -2587,8 +2861,8 @@ export default function RegisterProfessionalPage() {
                           </option>
                         ))}
                       </select>
-                    </div>
-                  </div>
+              </div>
+            </div>
 
                   {/* Pack x3 Domicilio */}
                   <div className="grid grid-cols-2 gap-4">
@@ -2623,8 +2897,15 @@ export default function RegisterProfessionalPage() {
                       <input
                         type="text"
                         value={formData.preciosDomicilio.pack3.nombre}
-                        readOnly
-                        className={`w-full px-3 py-2 text-sm border rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed ${
+                        onChange={(e) =>
+                          updatePreciosDomicilio(
+                            "pack3",
+                            "nombre",
+                            e.target.value
+                          )
+                        }
+                        placeholder="Ej: Pack 3 sesiones a domicilio"
+                        className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary ${
                           errors.preciosDomicilioPack3
                             ? "border-red-300"
                             : "border-gray-300"
@@ -2665,16 +2946,24 @@ export default function RegisterProfessionalPage() {
             {/* Consentimiento y Términos y Condiciones */}
             <div className="space-y-4">
               {/* Consentimiento */}
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <label className="flex items-start gap-3 cursor-pointer">
+              <div
+                className={`bg-gray-50 p-4 rounded-lg transition-opacity duration-200 ${
+                  !isFormComplete ? "opacity-60" : "opacity-100"
+                }`}
+              >
+                <label
+                  className={`flex items-start gap-3 ${
+                    !isFormComplete ? "cursor-not-allowed" : "cursor-pointer"
+                  }`}
+                >
                   <input
                     type="checkbox"
                     name="consentimiento"
                     checked={formData.consentimiento}
                     onChange={handleInputChange}
                     required
-                    className="mt-1 w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
-                    disabled={!!successMsg}
+                    className="mt-1 w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!!successMsg || !isFormComplete}
                   />
                   <span className="text-sm text-gray-700">
                     Declaro haber leído la información anterior y consiento el
@@ -2691,21 +2980,39 @@ export default function RegisterProfessionalPage() {
               </div>
 
               {/* Términos y Condiciones para Profesionales */}
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <label className="flex items-start gap-3 cursor-pointer">
+              <div
+                className={`bg-gray-50 p-4 rounded-lg transition-opacity duration-200 ${
+                  !isFormComplete ? "opacity-60" : "opacity-100"
+                }`}
+                onClick={
+                  !isFormComplete ? handleDisabledCheckboxClick : undefined
+                }
+              >
+                <label
+                  className={`flex items-start gap-3 ${
+                    !isFormComplete ? "cursor-not-allowed" : "cursor-pointer"
+                  }`}
+                >
                   <input
                     type="checkbox"
                     name="aceptaTerminos"
                     checked={formData.aceptaTerminos}
                     onChange={handleInputChange}
                     required
-                    className="mt-1 w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
-                    disabled={!!successMsg}
+                    className="mt-1 w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!!successMsg || !isFormComplete}
                   />
                   <span className="text-sm text-gray-700 flex items-start gap-2">
                     <span>
-                      He leído y acepto los términos y condiciones para
-                      profesionales. <span className="text-red-500">*</span>
+                      He leído y acepto los{" "}
+                      <Link
+                        href="/terminos-condiciones-profesionales"
+                        className="text-primary hover:underline"
+                        target="_blank"
+                      >
+                        términos y condiciones para profesionales
+                      </Link>
+                      . <span className="text-red-500">*</span>
                     </span>
                     <span className="relative group cursor-help inline-flex items-center">
                       <HelpCircle className="h-4 w-4 text-gray-400 hover:text-primary transition-colors flex-shrink-0 mt-0.5" />
