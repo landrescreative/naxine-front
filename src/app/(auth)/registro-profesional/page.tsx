@@ -46,22 +46,28 @@ export default function RegisterProfessionalPage() {
     horariosEnLinea: null as {
       dias: Array<{
         dia: string;
-        desde: string;
-        hasta: string;
+        rangos: Array<{
+          desde: string;
+          hasta: string;
+        }>;
       }>;
     } | null,
     horariosPresencial: null as {
       dias: Array<{
         dia: string;
-        desde: string;
-        hasta: string;
+        rangos: Array<{
+          desde: string;
+          hasta: string;
+        }>;
       }>;
     } | null,
     horariosADomicilio: null as {
       dias: Array<{
         dia: string;
-        desde: string;
-        hasta: string;
+        rangos: Array<{
+          desde: string;
+          hasta: string;
+        }>;
       }>;
     } | null,
     precios: {
@@ -254,18 +260,20 @@ export default function RegisterProfessionalPage() {
     const diaIndex = horariosActuales.dias.findIndex((d) => d.dia === dia);
     const isSelected = diaIndex !== -1;
 
-    let newDias: Array<{ dia: string; desde: string; hasta: string }>;
+    let newDias: Array<{
+      dia: string;
+      rangos: Array<{ desde: string; hasta: string }>;
+    }>;
     if (isSelected) {
       // Remover el día
       newDias = horariosActuales.dias.filter((d) => d.dia !== dia);
     } else {
-      // Agregar el día con horas por defecto vacías
+      // Agregar el día con un rango inicial vacío
       newDias = [
         ...horariosActuales.dias,
         {
           dia: dia,
-          desde: "",
-          hasta: "",
+          rangos: [{ desde: "", hasta: "" }],
         },
       ];
     }
@@ -278,10 +286,74 @@ export default function RegisterProfessionalPage() {
     }));
   };
 
-  // Función para actualizar horas de horarios por modalidad y día específico
+  // Función para agregar un nuevo rango de horario a un día
+  const agregarRangoHorario = (
+    modalidad: "online" | "presencial" | "domicilio",
+    dia: string
+  ) => {
+    const horarioKey =
+      modalidad === "online"
+        ? "horariosEnLinea"
+        : modalidad === "presencial"
+        ? "horariosPresencial"
+        : "horariosADomicilio";
+
+    const horariosActuales = formData[horarioKey] || { dias: [] };
+
+    const newDias = horariosActuales.dias.map((d) =>
+      d.dia === dia
+        ? {
+            ...d,
+            rangos: [...d.rangos, { desde: "", hasta: "" }],
+          }
+        : d
+    );
+
+    setFormData((prev) => ({
+      ...prev,
+      [horarioKey]: {
+        dias: newDias,
+      },
+    }));
+  };
+
+  // Función para eliminar un rango de horario de un día
+  const eliminarRangoHorario = (
+    modalidad: "online" | "presencial" | "domicilio",
+    dia: string,
+    indiceRango: number
+  ) => {
+    const horarioKey =
+      modalidad === "online"
+        ? "horariosEnLinea"
+        : modalidad === "presencial"
+        ? "horariosPresencial"
+        : "horariosADomicilio";
+
+    const horariosActuales = formData[horarioKey] || { dias: [] };
+
+    const newDias = horariosActuales.dias.map((d) =>
+      d.dia === dia
+        ? {
+            ...d,
+            rangos: d.rangos.filter((_, idx) => idx !== indiceRango),
+          }
+        : d
+    );
+
+    setFormData((prev) => ({
+      ...prev,
+      [horarioKey]: {
+        dias: newDias,
+      },
+    }));
+  };
+
+  // Función para actualizar horas de horarios por modalidad, día y rango específico
   const updateHorarioTime = (
     modalidad: "online" | "presencial" | "domicilio",
     dia: string,
+    indiceRango: number,
     campo: "desde" | "hasta",
     time24: string
   ) => {
@@ -307,12 +379,14 @@ export default function RegisterProfessionalPage() {
       time12 = `${hh}:${mm} ${period}`;
     }
 
-    // Actualizar el día específico
+    // Actualizar el rango específico del día
     const newDias = horariosActuales.dias.map((d) =>
       d.dia === dia
         ? {
             ...d,
-            [campo]: time12,
+            rangos: d.rangos.map((rango, idx) =>
+              idx === indiceRango ? { ...rango, [campo]: time12 } : rango
+            ),
           }
         : d
     );
@@ -393,79 +467,150 @@ export default function RegisterProfessionalPage() {
   const getMissingField = useCallback(() => {
     // 1. Validaciones básicas
     if (!formData.nombreCompleto.trim())
-      return { field: "nombreCompleto", error: "El nombre completo es requerido" };
+      return {
+        field: "nombreCompleto",
+        error: "El nombre completo es requerido",
+      };
     if (!formData.correoElectronico.trim())
       return { field: "correoElectronico", error: "El correo es requerido" };
     if (!validateEmail(formData.correoElectronico))
-      return { field: "correoElectronico", error: "El formato del correo no es válido" };
+      return {
+        field: "correoElectronico",
+        error: "El formato del correo no es válido",
+      };
     if (!formData.password)
       return { field: "password", error: "La contraseña es requerida" };
     const passwordValidation = validatePassword(formData.password);
     if (!passwordValidation.isValid)
       return { field: "password", error: passwordValidation.errors.join(", ") };
     if (!formData.confirmPassword)
-      return { field: "confirmPassword", error: "Por favor confirma tu contraseña" };
+      return {
+        field: "confirmPassword",
+        error: "Por favor confirma tu contraseña",
+      };
     if (formData.password !== formData.confirmPassword)
-      return { field: "confirmPassword", error: "Las contraseñas no coinciden" };
+      return {
+        field: "confirmPassword",
+        error: "Las contraseñas no coinciden",
+      };
     if (!formData.telefono.trim())
       return { field: "telefono", error: "El teléfono es requerido" };
     if (!formData.titulacion.trim())
-      return { field: "titulacion", error: "La titulación profesional es requerida" };
+      return {
+        field: "titulacion",
+        error: "La titulación profesional es requerida",
+      };
     if (!formData.numeroColegiado.trim())
-      return { field: "numeroColegiado", error: "El número de colegiado/a es requerido" };
+      return {
+        field: "numeroColegiado",
+        error: "El número de colegiado/a es requerido",
+      };
     if (!formData.nifCif.trim())
       return { field: "nifCif", error: "El NIF/CIF es requerido" };
     if (!formData.correoProfesionalPublico.trim())
-      return { field: "correoProfesionalPublico", error: "El correo electrónico profesional es requerido" };
+      return {
+        field: "correoProfesionalPublico",
+        error: "El correo electrónico profesional es requerido",
+      };
     if (!validateEmail(formData.correoProfesionalPublico))
-      return { field: "correoProfesionalPublico", error: "El formato del correo electrónico profesional no es válido" };
+      return {
+        field: "correoProfesionalPublico",
+        error: "El formato del correo electrónico profesional no es válido",
+      };
     if (!formData.descripcion.trim())
-      return { field: "descripcion", error: "La descripción general del perfil profesional es requerida" };
+      return {
+        field: "descripcion",
+        error: "La descripción general del perfil profesional es requerida",
+      };
     if (formData.descripcion.length > 1500)
-      return { field: "descripcion", error: "La descripción no debe superar los 1.500 caracteres" };
+      return {
+        field: "descripcion",
+        error: "La descripción no debe superar los 1.500 caracteres",
+      };
     if (!formData.serviciosOfrecidos.trim())
-      return { field: "serviciosOfrecidos", error: "Los servicios ofrecidos son requeridos" };
+      return {
+        field: "serviciosOfrecidos",
+        error: "Los servicios ofrecidos son requeridos",
+      };
     if (!foto)
-      return { field: "foto", error: "La foto del perfil profesional es requerida" };
+      return {
+        field: "foto",
+        error: "La foto del perfil profesional es requerida",
+      };
     if (formData.modalidades.length === 0)
-      return { field: "modalidades", error: "Debes seleccionar al menos una modalidad de atención" };
+      return {
+        field: "modalidades",
+        error: "Debes seleccionar al menos una modalidad de atención",
+      };
     if (!formData.accesibleMovilidad)
-      return { field: "accesibleMovilidad", error: "Debes indicar si tu consulta es accesible para personas con movilidad reducida" };
+      return {
+        field: "accesibleMovilidad",
+        error:
+          "Debes indicar si tu consulta es accesible para personas con movilidad reducida",
+      };
 
     // 2. Validaciones condicionales de dirección
     if (
       formData.modalidades.includes("presencial") &&
       !formData.direccionConsulta.trim()
     ) {
-      return { field: "direccionConsulta", error: "La dirección de consulta es requerida si ofreces atención presencial" };
+      return {
+        field: "direccionConsulta",
+        error:
+          "La dirección de consulta es requerida si ofreces atención presencial",
+      };
     }
     if (
       formData.modalidades.includes("domicilio") &&
       !formData.codigosPostalesDomicilio.trim()
     ) {
-      return { field: "codigosPostalesDomicilio", error: "Los códigos postales son requeridos si ofreces atención a domicilio" };
+      return {
+        field: "codigosPostalesDomicilio",
+        error:
+          "Los códigos postales son requeridos si ofreces atención a domicilio",
+      };
     }
 
     // 3. Validaciones de horarios
     const validateHorarios = (horarios: any) => {
       if (!horarios || !horarios.dias || horarios.dias.length === 0)
         return "Debes seleccionar al menos un día";
-      if (horarios.dias.some((d: any) => !d.desde || !d.hasta))
-        return "Debes especificar las horas de inicio y fin";
+      // Validar que cada día tenga al menos un rango completo
+      if (
+        horarios.dias.some(
+          (d: any) =>
+            !d.rangos ||
+            d.rangos.length === 0 ||
+            d.rangos.some((r: any) => !r.desde || !r.hasta)
+        )
+      )
+        return "Debes especificar las horas de inicio y fin para todos los rangos";
       return null;
     };
 
     if (formData.modalidades.includes("online")) {
       const err = validateHorarios(formData.horariosEnLinea);
-      if (err) return { field: "horariosEnLinea", error: err + " para atención en línea" };
+      if (err)
+        return {
+          field: "horariosEnLinea",
+          error: err + " para atención en línea",
+        };
     }
     if (formData.modalidades.includes("presencial")) {
       const err = validateHorarios(formData.horariosPresencial);
-      if (err) return { field: "horariosPresencial", error: err + " para atención presencial" };
+      if (err)
+        return {
+          field: "horariosPresencial",
+          error: err + " para atención presencial",
+        };
     }
     if (formData.modalidades.includes("domicilio")) {
       const err = validateHorarios(formData.horariosADomicilio);
-      if (err) return { field: "horariosADomicilio", error: err + " para atención a domicilio" };
+      if (err)
+        return {
+          field: "horariosADomicilio",
+          error: err + " para atención a domicilio",
+        };
     }
 
     // 4. Validaciones de precios
@@ -481,11 +626,21 @@ export default function RegisterProfessionalPage() {
       hasPrice(precios.seguimiento) ||
       hasPrice(precios.pack3);
 
-    if (!hasAnyPrice) return { field: "precios", error: "Debes configurar al menos un precio" };
-    
-    if (!isValidPrice(precios.primeraSesion)) return { field: "preciosPrimeraSesion", error: "Falta nombre o duración en Primera Sesión" };
-    if (!isValidPrice(precios.seguimiento)) return { field: "preciosSeguimiento", error: "Falta nombre o duración en Seguimiento" };
-    if (!isValidPack3(precios.pack3)) return { field: "preciosPack3", error: "Falta nombre en Pack 3" };
+    if (!hasAnyPrice)
+      return { field: "precios", error: "Debes configurar al menos un precio" };
+
+    if (!isValidPrice(precios.primeraSesion))
+      return {
+        field: "preciosPrimeraSesion",
+        error: "Falta nombre o duración en Primera Sesión",
+      };
+    if (!isValidPrice(precios.seguimiento))
+      return {
+        field: "preciosSeguimiento",
+        error: "Falta nombre o duración en Seguimiento",
+      };
+    if (!isValidPack3(precios.pack3))
+      return { field: "preciosPack3", error: "Falta nombre en Pack 3" };
 
     // 5. Validaciones de precios domicilio
     if (formData.modalidades.includes("domicilio")) {
@@ -495,11 +650,28 @@ export default function RegisterProfessionalPage() {
         hasPrice(preciosDom.seguimiento) ||
         hasPrice(preciosDom.pack3);
 
-      if (!hasAnyPriceDom) return { field: "preciosDomicilio", error: "Debes configurar al menos un precio para atención a domicilio" };
-      
-      if (!isValidPrice(preciosDom.primeraSesion)) return { field: "preciosDomicilioPrimeraSesion", error: "Falta nombre o duración en Primera Sesión (Domicilio)" };
-      if (!isValidPrice(preciosDom.seguimiento)) return { field: "preciosDomicilioSeguimiento", error: "Falta nombre o duración en Seguimiento (Domicilio)" };
-      if (!isValidPack3(preciosDom.pack3)) return { field: "preciosDomicilioPack3", error: "Falta nombre en Pack 3 (Domicilio)" };
+      if (!hasAnyPriceDom)
+        return {
+          field: "preciosDomicilio",
+          error:
+            "Debes configurar al menos un precio para atención a domicilio",
+        };
+
+      if (!isValidPrice(preciosDom.primeraSesion))
+        return {
+          field: "preciosDomicilioPrimeraSesion",
+          error: "Falta nombre o duración en Primera Sesión (Domicilio)",
+        };
+      if (!isValidPrice(preciosDom.seguimiento))
+        return {
+          field: "preciosDomicilioSeguimiento",
+          error: "Falta nombre o duración en Seguimiento (Domicilio)",
+        };
+      if (!isValidPack3(preciosDom.pack3))
+        return {
+          field: "preciosDomicilioPack3",
+          error: "Falta nombre en Pack 3 (Domicilio)",
+        };
     }
 
     // 6. Video opcional
@@ -507,7 +679,10 @@ export default function RegisterProfessionalPage() {
       formData.videoPresentacion &&
       !validateVideoUrl(formData.videoPresentacion)
     ) {
-      return { field: "videoPresentacion", error: "El enlace al vídeo debe ser de YouTube o Vimeo" };
+      return {
+        field: "videoPresentacion",
+        error: "El enlace al vídeo debe ser de YouTube o Vimeo",
+      };
     }
 
     return null;
@@ -519,18 +694,20 @@ export default function RegisterProfessionalPage() {
 
   const handleDisabledCheckboxClick = (e: React.MouseEvent) => {
     if (isFormComplete) return;
-    
+
     e.preventDefault();
     const missing = getMissingField();
     if (missing) {
       setErrors((prev) => ({ ...prev, [missing.field]: missing.error }));
-      
+
       // Scroll al campo
-      const element = document.getElementById(missing.field) || document.querySelector(`[name="${missing.field}"]`);
+      const element =
+        document.getElementById(missing.field) ||
+        document.querySelector(`[name="${missing.field}"]`);
       if (element) {
         element.scrollIntoView({ behavior: "smooth", block: "center" });
         if (element instanceof HTMLElement) {
-           element.focus({ preventScroll: true });
+          element.focus({ preventScroll: true });
         }
       }
     }
@@ -648,13 +825,16 @@ export default function RegisterProfessionalPage() {
         newErrors.horariosEnLinea =
           "Debes seleccionar al menos un día para atención en línea";
       } else {
-        // Validar que cada día tenga horas de inicio y fin
+        // Validar que cada día tenga al menos un rango completo
         const diasIncompletos = formData.horariosEnLinea.dias.filter(
-          (d) => !d.desde || !d.hasta
+          (d) =>
+            !d.rangos ||
+            d.rangos.length === 0 ||
+            d.rangos.some((r) => !r.desde || !r.hasta)
         );
         if (diasIncompletos.length > 0) {
           newErrors.horariosEnLinea =
-            "Debes especificar las horas de inicio y fin para todos los días seleccionados en atención en línea";
+            "Debes especificar las horas de inicio y fin para todos los rangos horarios en atención en línea";
         }
       }
     }
@@ -667,13 +847,16 @@ export default function RegisterProfessionalPage() {
         newErrors.horariosPresencial =
           "Debes seleccionar al menos un día para atención presencial";
       } else {
-        // Validar que cada día tenga horas de inicio y fin
+        // Validar que cada día tenga al menos un rango completo
         const diasIncompletos = formData.horariosPresencial.dias.filter(
-          (d) => !d.desde || !d.hasta
+          (d) =>
+            !d.rangos ||
+            d.rangos.length === 0 ||
+            d.rangos.some((r) => !r.desde || !r.hasta)
         );
         if (diasIncompletos.length > 0) {
           newErrors.horariosPresencial =
-            "Debes especificar las horas de inicio y fin para todos los días seleccionados en atención presencial";
+            "Debes especificar las horas de inicio y fin para todos los rangos horarios en atención presencial";
         }
       }
     }
@@ -686,13 +869,16 @@ export default function RegisterProfessionalPage() {
         newErrors.horariosADomicilio =
           "Debes seleccionar al menos un día para atención a domicilio";
       } else {
-        // Validar que cada día tenga horas de inicio y fin
+        // Validar que cada día tenga al menos un rango completo
         const diasIncompletos = formData.horariosADomicilio.dias.filter(
-          (d) => !d.desde || !d.hasta
+          (d) =>
+            !d.rangos ||
+            d.rangos.length === 0 ||
+            d.rangos.some((r) => !r.desde || !r.hasta)
         );
         if (diasIncompletos.length > 0) {
           newErrors.horariosADomicilio =
-            "Debes especificar las horas de inicio y fin para todos los días seleccionados en atención a domicilio";
+            "Debes especificar las horas de inicio y fin para todos los rangos horarios en atención a domicilio";
         }
       }
       // Validar códigos postales si ofrece atención a domicilio
@@ -934,22 +1120,51 @@ export default function RegisterProfessionalPage() {
       }
 
       // Agregar horarios por modalidad si están configurados
+      // Transformar la estructura de rangos múltiples al formato que espera el backend
+      // Backend espera: { dias: [{ dia: "Lunes", desde: "...", hasta: "..." }, ...] }
       if (formData.horariosEnLinea) {
+        const horariosTransformados = {
+          dias: formData.horariosEnLinea.dias.flatMap((d) =>
+            d.rangos.map((r) => ({
+              dia: d.dia,
+              desde: r.desde,
+              hasta: r.hasta,
+            }))
+          ),
+        };
         formDataToSend.append(
           "horariosEnLinea",
-          JSON.stringify(formData.horariosEnLinea)
+          JSON.stringify(horariosTransformados)
         );
       }
       if (formData.horariosPresencial) {
+        const horariosTransformados = {
+          dias: formData.horariosPresencial.dias.flatMap((d) =>
+            d.rangos.map((r) => ({
+              dia: d.dia,
+              desde: r.desde,
+              hasta: r.hasta,
+            }))
+          ),
+        };
         formDataToSend.append(
           "horariosPresencial",
-          JSON.stringify(formData.horariosPresencial)
+          JSON.stringify(horariosTransformados)
         );
       }
       if (formData.horariosADomicilio) {
+        const horariosTransformados = {
+          dias: formData.horariosADomicilio.dias.flatMap((d) =>
+            d.rangos.map((r) => ({
+              dia: d.dia,
+              desde: r.desde,
+              hasta: r.hasta,
+            }))
+          ),
+        };
         formDataToSend.append(
           "horariosADomicilio",
-          JSON.stringify(formData.horariosADomicilio)
+          JSON.stringify(horariosTransformados)
         );
       }
 
@@ -1616,9 +1831,7 @@ export default function RegisterProfessionalPage() {
                 aria-invalid={Boolean(errors.nifCif)}
               />
               {errors.nifCif && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.nifCif}
-                </p>
+                <p className="mt-1 text-sm text-red-600">{errors.nifCif}</p>
               )}
             </div>
 
@@ -2113,68 +2326,127 @@ export default function RegisterProfessionalPage() {
                         {formData.horariosEnLinea.dias.map((diaHorario) => (
                           <div
                             key={diaHorario.dia}
-                            className="bg-white rounded-lg border border-gray-200 p-4"
+                            className="bg-white rounded-lg border border-gray-200 p-4 space-y-4"
                           >
-                            <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center justify-between mb-2">
                               <h5 className="text-sm font-semibold text-gray-900">
                                 {diaHorario.dia}
                               </h5>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (!successMsg)
-                                    toggleDiaHorario("online", diaHorario.dia);
-                                }}
-                                className="text-red-600 hover:text-red-800 text-xs font-medium"
-                              >
-                                Quitar
-                              </button>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (!successMsg)
+                                      agregarRangoHorario(
+                                        "online",
+                                        diaHorario.dia
+                                      );
+                                  }}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
+                                >
+                                  <svg
+                                    className="w-3.5 h-3.5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M12 4v16m8-8H4"
+                                    />
+                                  </svg>
+                                  Agregar horario
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (!successMsg)
+                                      toggleDiaHorario(
+                                        "online",
+                                        diaHorario.dia
+                                      );
+                                  }}
+                                  className="text-red-600 hover:text-red-800 text-xs font-medium"
+                                >
+                                  Quitar día
+                                </button>
+                              </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <label className="block text-xs text-gray-600 mb-1.5">
-                                  Hora de inicio
-                                </label>
-                                <input
-                                  type="time"
-                                  value={getTime24From12(
-                                    diaHorario.desde || ""
+                            <div className="space-y-3">
+                              {diaHorario.rangos.map((rango, idxRango) => (
+                                <div
+                                  key={idxRango}
+                                  className="flex items-end gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
+                                >
+                                  <div className="flex-1 grid grid-cols-2 gap-3">
+                                    <div>
+                                      <label className="block text-xs text-gray-600 mb-1.5">
+                                        Hora de inicio
+                                      </label>
+                                      <input
+                                        type="time"
+                                        value={getTime24From12(
+                                          rango.desde || ""
+                                        )}
+                                        onChange={(e) =>
+                                          updateHorarioTime(
+                                            "online",
+                                            diaHorario.dia,
+                                            idxRango,
+                                            "desde",
+                                            e.target.value
+                                          )
+                                        }
+                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+                                        disabled={!!successMsg}
+                                        required
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs text-gray-600 mb-1.5">
+                                        Hora de fin
+                                      </label>
+                                      <input
+                                        type="time"
+                                        value={getTime24From12(
+                                          rango.hasta || ""
+                                        )}
+                                        onChange={(e) =>
+                                          updateHorarioTime(
+                                            "online",
+                                            diaHorario.dia,
+                                            idxRango,
+                                            "hasta",
+                                            e.target.value
+                                          )
+                                        }
+                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+                                        disabled={!!successMsg}
+                                        required
+                                      />
+                                    </div>
+                                  </div>
+                                  {diaHorario.rangos.length > 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (!successMsg)
+                                          eliminarRangoHorario(
+                                            "online",
+                                            diaHorario.dia,
+                                            idxRango
+                                          );
+                                      }}
+                                      className="px-2 py-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
+                                      title="Eliminar este horario"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
                                   )}
-                                  onChange={(e) =>
-                                    updateHorarioTime(
-                                      "online",
-                                      diaHorario.dia,
-                                      "desde",
-                                      e.target.value
-                                    )
-                                  }
-                                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
-                                  disabled={!!successMsg}
-                                  required
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-xs text-gray-600 mb-1.5">
-                                  Hora de fin
-                                </label>
-                                <input
-                                  type="time"
-                                  value={getTime24From12(
-                                    diaHorario.hasta || ""
-                                  )}
-                                  onChange={(e) =>
-                                    updateHorarioTime(
-                                      "online",
-                                      diaHorario.dia,
-                                      "hasta",
-                                      e.target.value
-                                    )
-                                  }
-                                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
-                                  disabled={!!successMsg}
-                                  required
-                                />
-                              </div>
+                                </div>
+                              ))}
                             </div>
                           </div>
                         ))}
@@ -2251,71 +2523,127 @@ export default function RegisterProfessionalPage() {
                         {formData.horariosPresencial.dias.map((diaHorario) => (
                           <div
                             key={diaHorario.dia}
-                            className="bg-white rounded-lg border border-gray-200 p-4"
+                            className="bg-white rounded-lg border border-gray-200 p-4 space-y-4"
                           >
-                            <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center justify-between mb-2">
                               <h5 className="text-sm font-semibold text-gray-900">
                                 {diaHorario.dia}
                               </h5>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (!successMsg)
-                                    toggleDiaHorario(
-                                      "presencial",
-                                      diaHorario.dia
-                                    );
-                                }}
-                                className="text-red-600 hover:text-red-800 text-xs font-medium"
-                              >
-                                Quitar
-                              </button>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (!successMsg)
+                                      agregarRangoHorario(
+                                        "presencial",
+                                        diaHorario.dia
+                                      );
+                                  }}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
+                                >
+                                  <svg
+                                    className="w-3.5 h-3.5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M12 4v16m8-8H4"
+                                    />
+                                  </svg>
+                                  Agregar horario
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (!successMsg)
+                                      toggleDiaHorario(
+                                        "presencial",
+                                        diaHorario.dia
+                                      );
+                                  }}
+                                  className="text-red-600 hover:text-red-800 text-xs font-medium"
+                                >
+                                  Quitar día
+                                </button>
+                              </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <label className="block text-xs text-gray-600 mb-1.5">
-                                  Hora de inicio
-                                </label>
-                                <input
-                                  type="time"
-                                  value={getTime24From12(
-                                    diaHorario.desde || ""
+                            <div className="space-y-3">
+                              {diaHorario.rangos.map((rango, idxRango) => (
+                                <div
+                                  key={idxRango}
+                                  className="flex items-end gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
+                                >
+                                  <div className="flex-1 grid grid-cols-2 gap-3">
+                                    <div>
+                                      <label className="block text-xs text-gray-600 mb-1.5">
+                                        Hora de inicio
+                                      </label>
+                                      <input
+                                        type="time"
+                                        value={getTime24From12(
+                                          rango.desde || ""
+                                        )}
+                                        onChange={(e) =>
+                                          updateHorarioTime(
+                                            "presencial",
+                                            diaHorario.dia,
+                                            idxRango,
+                                            "desde",
+                                            e.target.value
+                                          )
+                                        }
+                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+                                        disabled={!!successMsg}
+                                        required
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs text-gray-600 mb-1.5">
+                                        Hora de fin
+                                      </label>
+                                      <input
+                                        type="time"
+                                        value={getTime24From12(
+                                          rango.hasta || ""
+                                        )}
+                                        onChange={(e) =>
+                                          updateHorarioTime(
+                                            "presencial",
+                                            diaHorario.dia,
+                                            idxRango,
+                                            "hasta",
+                                            e.target.value
+                                          )
+                                        }
+                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+                                        disabled={!!successMsg}
+                                        required
+                                      />
+                                    </div>
+                                  </div>
+                                  {diaHorario.rangos.length > 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (!successMsg)
+                                          eliminarRangoHorario(
+                                            "presencial",
+                                            diaHorario.dia,
+                                            idxRango
+                                          );
+                                      }}
+                                      className="px-2 py-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
+                                      title="Eliminar este horario"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
                                   )}
-                                  onChange={(e) =>
-                                    updateHorarioTime(
-                                      "presencial",
-                                      diaHorario.dia,
-                                      "desde",
-                                      e.target.value
-                                    )
-                                  }
-                                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
-                                  disabled={!!successMsg}
-                                  required
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-xs text-gray-600 mb-1.5">
-                                  Hora de fin
-                                </label>
-                                <input
-                                  type="time"
-                                  value={getTime24From12(
-                                    diaHorario.hasta || ""
-                                  )}
-                                  onChange={(e) =>
-                                    updateHorarioTime(
-                                      "presencial",
-                                      diaHorario.dia,
-                                      "hasta",
-                                      e.target.value
-                                    )
-                                  }
-                                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
-                                  disabled={!!successMsg}
-                                  required
-                                />
-                              </div>
+                                </div>
+                              ))}
                             </div>
                           </div>
                         ))}
@@ -2389,71 +2717,127 @@ export default function RegisterProfessionalPage() {
                         {formData.horariosADomicilio.dias.map((diaHorario) => (
                           <div
                             key={diaHorario.dia}
-                            className="bg-white rounded-lg border border-gray-200 p-4"
+                            className="bg-white rounded-lg border border-gray-200 p-4 space-y-4"
                           >
-                            <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center justify-between mb-2">
                               <h5 className="text-sm font-semibold text-gray-900">
                                 {diaHorario.dia}
                               </h5>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (!successMsg)
-                                    toggleDiaHorario(
-                                      "domicilio",
-                                      diaHorario.dia
-                                    );
-                                }}
-                                className="text-red-600 hover:text-red-800 text-xs font-medium"
-                              >
-                                Quitar
-                              </button>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (!successMsg)
+                                      agregarRangoHorario(
+                                        "domicilio",
+                                        diaHorario.dia
+                                      );
+                                  }}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
+                                >
+                                  <svg
+                                    className="w-3.5 h-3.5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M12 4v16m8-8H4"
+                                    />
+                                  </svg>
+                                  Agregar horario
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (!successMsg)
+                                      toggleDiaHorario(
+                                        "domicilio",
+                                        diaHorario.dia
+                                      );
+                                  }}
+                                  className="text-red-600 hover:text-red-800 text-xs font-medium"
+                                >
+                                  Quitar día
+                                </button>
+                              </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <label className="block text-xs text-gray-600 mb-1.5">
-                                  Hora de inicio
-                                </label>
-                                <input
-                                  type="time"
-                                  value={getTime24From12(
-                                    diaHorario.desde || ""
+                            <div className="space-y-3">
+                              {diaHorario.rangos.map((rango, idxRango) => (
+                                <div
+                                  key={idxRango}
+                                  className="flex items-end gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
+                                >
+                                  <div className="flex-1 grid grid-cols-2 gap-3">
+                                    <div>
+                                      <label className="block text-xs text-gray-600 mb-1.5">
+                                        Hora de inicio
+                                      </label>
+                                      <input
+                                        type="time"
+                                        value={getTime24From12(
+                                          rango.desde || ""
+                                        )}
+                                        onChange={(e) =>
+                                          updateHorarioTime(
+                                            "domicilio",
+                                            diaHorario.dia,
+                                            idxRango,
+                                            "desde",
+                                            e.target.value
+                                          )
+                                        }
+                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+                                        disabled={!!successMsg}
+                                        required
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs text-gray-600 mb-1.5">
+                                        Hora de fin
+                                      </label>
+                                      <input
+                                        type="time"
+                                        value={getTime24From12(
+                                          rango.hasta || ""
+                                        )}
+                                        onChange={(e) =>
+                                          updateHorarioTime(
+                                            "domicilio",
+                                            diaHorario.dia,
+                                            idxRango,
+                                            "hasta",
+                                            e.target.value
+                                          )
+                                        }
+                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+                                        disabled={!!successMsg}
+                                        required
+                                      />
+                                    </div>
+                                  </div>
+                                  {diaHorario.rangos.length > 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (!successMsg)
+                                          eliminarRangoHorario(
+                                            "domicilio",
+                                            diaHorario.dia,
+                                            idxRango
+                                          );
+                                      }}
+                                      className="px-2 py-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
+                                      title="Eliminar este horario"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
                                   )}
-                                  onChange={(e) =>
-                                    updateHorarioTime(
-                                      "domicilio",
-                                      diaHorario.dia,
-                                      "desde",
-                                      e.target.value
-                                    )
-                                  }
-                                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
-                                  disabled={!!successMsg}
-                                  required
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-xs text-gray-600 mb-1.5">
-                                  Hora de fin
-                                </label>
-                                <input
-                                  type="time"
-                                  value={getTime24From12(
-                                    diaHorario.hasta || ""
-                                  )}
-                                  onChange={(e) =>
-                                    updateHorarioTime(
-                                      "domicilio",
-                                      diaHorario.dia,
-                                      "hasta",
-                                      e.target.value
-                                    )
-                                  }
-                                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
-                                  disabled={!!successMsg}
-                                  required
-                                />
-                              </div>
+                                </div>
+                              ))}
                             </div>
                           </div>
                         ))}
@@ -2747,38 +3131,38 @@ export default function RegisterProfessionalPage() {
                       {errors.preciosDomicilioPrimeraSesion && (
                         <p className="mt-1 text-xs text-red-600">
                           {errors.preciosDomicilioPrimeraSesion}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">
-                      Duración
-                    </label>
-                    <select
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        Duración
+                      </label>
+                      <select
                         value={formData.preciosDomicilio.primeraSesion.duracion}
-                      onChange={(e) =>
+                        onChange={(e) =>
                           updatePreciosDomicilio(
                             "primeraSesion",
                             "duracion",
                             e.target.value
                           )
-                      }
-                      className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
+                        }
+                        className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
                           errors.preciosDomicilioPrimeraSesion
-                          ? "border-red-300"
-                          : "border-gray-300"
-                      }`}
-                      disabled={!!successMsg}
-                    >
-                      <option value="">Selecciona duración</option>
-                      {durationOptions.map((opt) => (
+                            ? "border-red-300"
+                            : "border-gray-300"
+                        }`}
+                        disabled={!!successMsg}
+                      >
+                        <option value="">Selecciona duración</option>
+                        {durationOptions.map((opt) => (
                           <option key={`dur-dom-primera-${opt}`} value={opt}>
-                          {opt}
-                        </option>
-                      ))}
-                    </select>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
-                </div>
 
                   {/* Seguimiento Domicilio */}
                   <div className="grid grid-cols-3 gap-4">
@@ -2861,8 +3245,8 @@ export default function RegisterProfessionalPage() {
                           </option>
                         ))}
                       </select>
-              </div>
-            </div>
+                    </div>
+                  </div>
 
                   {/* Pack x3 Domicilio */}
                   <div className="grid grid-cols-2 gap-4">

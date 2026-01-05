@@ -607,7 +607,8 @@ export default function ProfessionalPageClient({
 
   // Extraer horarios disponibles del profesional filtrados por tipo de atención seleccionado
   const horariosDisponibles = useMemo(() => {
-    const horarios: { [key: number]: { desde: string; hasta: string } } = {};
+    // Cambiar estructura para soportar múltiples rangos por día
+    const horarios: { [key: number]: Array<{ desde: string; hasta: string }> } = {};
 
     // Si hay horarios cargados (ya filtrados por tipo de atención), usarlos
     if (horariosCargados.length > 0) {
@@ -628,22 +629,18 @@ export default function ProfessionalPageClient({
             `[ProfessionalPageClient] Horario encontrado: ${horario.dia_semana} (${diaNormalizado}) -> índice ${diaIndex}, ${desde} - ${hasta}`
           );
 
-          // Si ya existe un horario para este día, combinar rangos (tomar el más amplio)
-          if (horarios[diaIndex]) {
-            const desdeActual = timeToMinutes(horarios[diaIndex].desde);
-            const hastaActual = timeToMinutes(horarios[diaIndex].hasta);
-            const desdeNuevo = timeToMinutes(desde);
-            const hastaNuevo = timeToMinutes(hasta);
-
-            const desdeMin = Math.min(desdeActual, desdeNuevo);
-            const hastaMax = Math.max(hastaActual, hastaNuevo);
-
-            horarios[diaIndex] = {
-              desde: minutesToTime(desdeMin),
-              hasta: minutesToTime(hastaMax),
-            };
-          } else {
-            horarios[diaIndex] = { desde, hasta };
+          // Agregar el rango al array de rangos del día (soporta múltiples rangos)
+          if (!horarios[diaIndex]) {
+            horarios[diaIndex] = [];
+          }
+          
+          // Verificar si el rango ya existe para evitar duplicados
+          const rangoExiste = horarios[diaIndex].some(
+            (r) => r.desde === desde && r.hasta === hasta
+          );
+          
+          if (!rangoExiste) {
+            horarios[diaIndex].push({ desde, hasta });
           }
         } else {
           console.warn(
@@ -861,23 +858,25 @@ export default function ProfessionalPageClient({
         if (isAvailable && !isPast) {
           if (selectedPrice) {
             // Si hay precio seleccionado, verificar slots ocupados
-            const horario = horariosDisponibles[dayOfWeek];
-            if (horario) {
-              const desde = timeToMinutes(horario.desde);
-              const hasta = timeToMinutes(horario.hasta);
+            // Procesar todos los rangos horarios del día
+            const rangosDelDia = horariosDisponibles[dayOfWeek];
+            if (rangosDelDia && rangosDelDia.length > 0) {
               const duracionMinutos = selectedPrice.duracion
                 ? parseInt(selectedPrice.duracion.replace(/\D/g, "")) || 60
                 : 60;
 
-              let currentTime = desde;
-              while (currentTime + duracionMinutos <= hasta) {
-                const hour = Math.floor(currentTime / 60);
-                const minute = currentTime % 60;
+              // Verificar si hay al menos un slot disponible en algún rango
+              for (const horario of rangosDelDia) {
+                const desde = timeToMinutes(horario.desde);
+                const hasta = timeToMinutes(horario.hasta);
+                  while (currentTime + duracionMinutos <= hasta) {
+                  const hour = Math.floor(currentTime / 60);
+                  const minute = currentTime % 60;
 
-                // Crear fecha UTC interpretando la hora como hora de España
-                const year = date.getFullYear();
-                const month = date.getMonth();
-                const day = date.getDate();
+                  // Crear fecha UTC interpretando la hora como hora de España
+                  const year = date.getFullYear();
+                  const month = date.getMonth();
+                  const day = date.getDate();
                 const slotDateTimeUTC = crearFechaEspanaUTC(
                   year,
                   month,
@@ -906,12 +905,16 @@ export default function ProfessionalPageClient({
                   );
                 });
 
-                if (!isOccupied) {
-                  hasAvailableSlots = true;
-                  break;
-                }
+                  if (!isOccupied) {
+                    hasAvailableSlots = true;
+                    break; // Salir del loop de slots
+                  }
 
-                currentTime += duracionMinutos;
+                  currentTime += duracionMinutos;
+                }
+                
+                // Si ya encontramos un slot disponible, salir del loop de rangos
+                if (hasAvailableSlots) break;
               }
             }
           } else {
@@ -994,8 +997,11 @@ export default function ProfessionalPageClient({
     );
 
     // Si no hay horarios específicos para este día y tipo, usar el horario general
-    const horario = horariosDisponibles[dayOfWeek];
-    if (!horario && horariosDelDia.length === 0) return [];
+    const rangosDelDia = horariosDisponibles[dayOfWeek];
+    if (!rangosDelDia || rangosDelDia.length === 0) {
+      // Si no hay rangos en horariosDisponibles, usar horariosDelDia (horarios específicos cargados)
+      if (horariosDelDia.length === 0) return [];
+    }
 
     const slots: Array<{
       time: string;
@@ -1120,11 +1126,12 @@ export default function ProfessionalPageClient({
           currentTime += duracionMinutos;
         }
       });
-    } else if (horario) {
-      // Fallback: usar horario general si no hay horarios específicos
-      const desde = timeToMinutes(horario.desde);
-      const hasta = timeToMinutes(horario.hasta);
-      let currentTime = desde;
+    } else if (rangosDelDia && rangosDelDia.length > 0) {
+      // Fallback: usar rangos de horariosDisponibles si no hay horarios específicos del día
+      rangosDelDia.forEach((horario) => {
+        const desde = timeToMinutes(horario.desde);
+        const hasta = timeToMinutes(horario.hasta);
+        let currentTime = desde;
 
       while (currentTime + duracionMinutos <= hasta) {
         const slotTime = minutesToTime(currentTime);
