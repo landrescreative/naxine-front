@@ -533,14 +533,14 @@ export default function Navbar() {
                           </>
                         ) : (
                           <>
-                            <a
+                            <Link
                               href="/iniciar-sesion"
                               onClick={closeUserMenu}
                               className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors"
                             >
                               <LogIn className="h-5 w-5" aria-hidden="true" />
-                              Iniciar sesion
-                            </a>
+                              <span className="text-sm font-medium">Iniciar sesion</span>
+                            </Link>
                             <Link
                               href="/registro"
                               onClick={closeUserMenu}
@@ -666,13 +666,13 @@ export default function Navbar() {
                   </>
                 ) : (
                   <>
-                    <a
+                    <Link
                       href="/iniciar-sesion"
                       className="flex items-center space-x-2 text-gray-800 hover:text-gray-600 transition-colors px-3 py-2"
                     >
                       <User className="h-5 w-5" aria-hidden="true" />
-                      Iniciar sesion
-                    </a>
+                      <span className="text-sm font-medium">Iniciar sesion</span>
+                    </Link>
                     <div className="h-6 w-px bg-gray-300"></div>
                     <Link
                       href="/registro-profesional"
@@ -836,7 +836,7 @@ export default function Navbar() {
                           aria-controls={`mobile-category-panel-${category.key}`}
                         >
                           <span className="flex items-center space-x-3">
-                            <Icon className="h-5 w-5" />
+                            <Icon className="h-5 w-5" aria-hidden="true" />
                             <span className="text-sm font-medium">
                               {category.title}
                             </span>
@@ -847,14 +847,15 @@ export default function Navbar() {
                                 ? "rotate-180"
                                 : "rotate-0"
                             }`}
+                            aria-hidden="true"
                           />
                         </button>
                         {openMobileCategory === category.key && (
                           <div
                             className="pl-9 pr-3 pb-2 space-y-1"
                             id={`mobile-category-panel-${category.key}`}
-                            role="region"
-                            aria-label={`Servicios para ${category.title}`}
+                            role="menu"
+                            aria-label={`Servicios de ${category.title}`}
                           >
                             {isLoadingServices(
                               category.specialtyId || category.key
@@ -874,6 +875,7 @@ export default function Navbar() {
                                     href={item.href}
                                     onClick={closeMobileMenu}
                                     className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
+                                    role="menuitem"
                                   >
                                     {item.label}
                                   </Link>
@@ -983,10 +985,28 @@ export default function Navbar() {
                     }
                     onMouseLeave={handleDesktopCategoryLeave}
                   >
-                    <span className="text-gray-800 hover:text-purple-600 text-sm font-medium transition-colors px-2 inline-block cursor-default whitespace-nowrap">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // Toggle del menú al hacer click
+                        if (isActive) {
+                          setActiveDesktopCategory(null);
+                        } else {
+                          handleDesktopCategoryEnter(displayKey, specialtyId);
+                        }
+                      }}
+                      onFocus={() =>
+                        handleDesktopCategoryEnter(displayKey, specialtyId)
+                      }
+                      className="text-gray-800 hover:text-purple-600 focus:text-purple-600 text-sm font-medium transition-colors px-2 inline-block whitespace-nowrap focus:outline-none focus:underline"
+                      aria-expanded={isActive}
+                      aria-haspopup="true"
+                      aria-controls={`desktop-menu-${key}`}
+                    >
                       {title}
-                    </span>
+                    </button>
                     <div
+                      id={`desktop-menu-${key}`}
                       className={`transition-opacity duration-150 absolute top-full left-1/2 -translate-x-1/2 ${
                         key === "legales" ? "w-80" : "w-72"
                       } bg-white/90 backdrop-blur rounded-xl shadow-lg border border-gray-200/60 ring-1 ring-black/5 z-50 text-left mt-2 ${
@@ -994,6 +1014,8 @@ export default function Navbar() {
                           ? "opacity-100 pointer-events-auto"
                           : "opacity-0 pointer-events-none"
                       }`}
+                      role="menu"
+                      aria-label={`Servicios de ${title}`}
                     >
                       <div className="py-2">
                         {isLoadingServices(specialtyId || key) ? (
@@ -1010,9 +1032,11 @@ export default function Navbar() {
                                 key={itemKey}
                                 href={itemHref}
                                 onClick={() => {
+                                  setActiveDesktopCategory(null);
                                   setIsDesktopMenuOpen(false);
                                 }}
-                                className="block px-4 py-2 text-gray-800 hover:bg-gray-50 hover:text-purple-600 text-sm"
+                                className="block px-4 py-2 text-gray-800 hover:bg-gray-50 hover:text-purple-600 focus:bg-gray-50 focus:text-purple-600 text-sm focus:outline-none"
+                                role="menuitem"
                               >
                                 {item.label}
                               </Link>
