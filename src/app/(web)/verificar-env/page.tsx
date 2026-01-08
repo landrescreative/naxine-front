@@ -4,11 +4,15 @@
  */
 
 import Link from "next/link";
+import { ProductionGuard } from "@/lib/production-guard";
 
 // Forzar rendering dinámico para que el middleware se ejecute
 export const dynamic = "force-dynamic";
 
 export default function VerificarEnvPage() {
+  // Proteger esta ruta en producción
+  ProductionGuard("/verificar-env");
+  
   const appEnv = process.env.NEXT_PUBLIC_APP_ENV;
   const nodeEnv = process.env.NODE_ENV;
 
@@ -42,10 +46,10 @@ export default function VerificarEnvPage() {
               {appEnv === "production" ? (
                 <>
                   <li>✅ APP_ENV = production (CORRECTO)</li>
-                  <li>✅ Solo /proximamente y /registro-profesional visibles</li>
                   <li>
-                    ⚠️ Esta página NO debería ser accesible en producción
+                    ✅ Solo /proximamente y /registro-profesional visibles
                   </li>
+                  <li>⚠️ Esta página NO debería ser accesible en producción</li>
                   <li>
                     🔄 Después de verificar, deberías ser redirigido a
                     /proximamente
@@ -78,7 +82,9 @@ export default function VerificarEnvPage() {
                 ⚠️ Acción Requerida:
               </h2>
               <ol className="text-sm text-red-900 space-y-1 list-decimal list-inside">
-                <li>Ve a Vercel Dashboard → Settings → Environment Variables</li>
+                <li>
+                  Ve a Vercel Dashboard → Settings → Environment Variables
+                </li>
                 <li>Agrega: NEXT_PUBLIC_APP_ENV = production</li>
                 <li>Marca SOLO "Production" environment</li>
                 <li>Haz Redeploy del proyecto</li>
@@ -88,10 +94,7 @@ export default function VerificarEnvPage() {
         </div>
 
         <div className="mt-6 text-center">
-          <Link
-            href="/"
-            className="text-blue-600 hover:underline text-sm"
-          >
+          <Link href="/" className="text-blue-600 hover:underline text-sm">
             ← Volver al inicio
           </Link>
         </div>
@@ -104,4 +107,3 @@ export default function VerificarEnvPage() {
     </div>
   );
 }
-

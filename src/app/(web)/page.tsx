@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ProductionGuard } from "@/lib/production-guard";
 import HeroSection from "@/components/ui/HeroSection";
 import SeparatorSection from "@/components/ui/SeparatorSection";
 import ServicesSection from "@/components/ui/ServicesSection";
@@ -46,6 +47,9 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
+  // Proteger esta ruta en producción (redirige a /proximamente)
+  ProductionGuard("/");
+  
   // Cargar servicios dinámicamente desde el backend
   const serviciosRes = await getServicios({ soloActivos: true });
   const servicios = serviciosRes.success ? serviciosRes.data || [] : [];
