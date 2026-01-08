@@ -109,6 +109,7 @@ const FAQSection: React.FC = () => {
           aria-expanded={isOpen}
           aria-controls={panelId}
           id={questionId}
+          aria-label={`Pregunta ${item.id}`}
         >
           <span
             className="text-gray-900 !font-bold text-lg pr-4"

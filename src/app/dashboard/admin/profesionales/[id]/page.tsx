@@ -891,15 +891,19 @@ export default function AdminProfessionalEditPage() {
         videoPresentacion: "video_presentacion",
         especialidad: "especialidad",
         telefono: "telefono",
-        direccion: "direccion",
+        direccion: "domicilio_consultorio",
         ciudad: "ciudad",
+        titulacion: "titulacion",
+        numeroColegiado: "numero_colegiado",
+        nifCif: "nif_cif",
+        correoPublico: "correo_profesional_publico",
+        codigosPostales: "codigos_postales_domicilio",
       };
 
       const backendField = fieldMapping[field];
 
       if (!backendField) {
-        console.error(`Campo no mapeado: ${field}`);
-        update(field as keyof typeof form, editValue);
+        console.warn(`Campo no mapeado: ${field}`);
         setEditingField(null);
         setEditValue("");
         return;
@@ -3152,6 +3156,38 @@ export default function AdminProfessionalEditPage() {
                           return time;
                         };
 
+                        // Función para extraer horarios del response (misma lógica que al cargar)
+                        const extractSchedules = (obj: any): any[] => {
+                          const results: any[] = [];
+                          const visit = (node: any) => {
+                            if (!node) return;
+                            if (Array.isArray(node)) {
+                              if (
+                                node.length &&
+                                typeof node[0] === "object" &&
+                                ("dia_semana" in (node[0] || {}) ||
+                                  "id_disponibilidad" in (node[0] || {}))
+                              ) {
+                                results.push(node);
+                              } else {
+                                node.forEach(visit);
+                              }
+                            } else if (typeof node === "object") {
+                              Object.values(node).forEach(visit);
+                            }
+                          };
+                          visit(obj);
+                          if (!results.length) {
+                            const guess =
+                              obj?.data?.disponibilidad ||
+                              obj?.disponibilidad ||
+                              obj?.data ||
+                              [];
+                            if (Array.isArray(guess)) results.push(guess);
+                          }
+                          return results.flat();
+                        };
+
                         // 1. Eliminar todos los horarios existentes
                         const currentRes = await fetch(
                           `${apiBase}/disponibilidad-horarios/profesional/${professionalIdProfesional}`,
@@ -3160,17 +3196,14 @@ export default function AdminProfessionalEditPage() {
                         const currentData = await currentRes
                           .json()
                           .catch(() => ({}));
-                        const currentList: any[] =
-                          (Array.isArray(currentData) && currentData) ||
-                          currentData?.data?.disponibilidad ||
-                          currentData?.disponibilidad ||
-                          currentData?.data ||
-                          [];
+                        const currentList = extractSchedules(currentData);
 
+                        // Eliminar cada horario existente y verificar éxito
+                        let deletedCount = 0;
                         for (const cur of currentList) {
                           const delId = cur.id_disponibilidad || cur.id || null;
                           if (!delId) continue;
-                          await fetch(
+                          const delRes = await fetch(
                             `${apiBase}/disponibilidad-horarios/${delId}`,
                             {
                               method: "DELETE",
@@ -3179,9 +3212,21 @@ export default function AdminProfessionalEditPage() {
                               },
                             }
                           );
+                          if (delRes.ok) {
+                            deletedCount++;
+                          } else {
+                            console.warn(
+                              `No se pudo eliminar horario ${delId}:`,
+                              await delRes.text().catch(() => "")
+                            );
+                          }
                         }
+                        console.log(
+                          `Eliminados ${deletedCount} de ${currentList.length} horarios existentes`
+                        );
 
                         // 2. Crear todos los horarios desde scheduleItems
+                        let createdCount = 0;
                         for (const item of scheduleItems) {
                           if (
                             !item.dia_semana ||
@@ -3209,14 +3254,74 @@ export default function AdminProfessionalEditPage() {
                             activo: 1,
                           };
 
-                          await fetch(`${apiBase}/disponibilidad-horarios`, {
-                            method: "POST",
-                            headers: {
-                              "Content-Type": "application/json",
-                              Authorization: `Bearer ${adminToken}`,
-                            },
-                            body: JSON.stringify(createBody),
-                          });
+                          const createRes = await fetch(
+                            `${apiBase}/disponibilidad-horarios`,
+                            {
+                              method: "POST",
+                              headers: {
+                                "Content-Type": "application/json",
+                                Authorization: `Bearer ${adminToken}`,
+                              },
+                              body: JSON.stringify(createBody),
+                            }
+                          );
+                          if (createRes.ok) {
+                            createdCount++;
+                          } else {
+                            console.warn(
+                              `Error al crear horario:`,
+                              await createRes.text().catch(() => "")
+                            );
+                          }
+                        }
+                        console.log(`Creados ${createdCount} horarios nuevos`);
+
+                        // 3. Recargar los horarios desde el servidor para sincronizar
+                        const refreshRes = await fetch(
+                          `${apiBase}/disponibilidad-horarios/profesional/${professionalIdProfesional}`,
+                          { headers: { Authorization: `Bearer ${adminToken}` } }
+                        );
+                        if (refreshRes.ok) {
+                          const refreshData = await refreshRes
+                            .json()
+                            .catch(() => ({}));
+                          const refreshedList = extractSchedules(refreshData);
+                          const normalizeTipo = (
+                            val: any
+                          ):
+                            | "presencial"
+                            | "en_linea"
+                            | "a_domicilio"
+                            | null => {
+                            if (!val && typeof val !== "string") return null;
+                            const raw = String(val || "")
+                              .toLowerCase()
+                              .trim()
+                              .normalize("NFD")
+                              .replace(/[\u0300-\u036f]/g, "");
+                            const s = raw
+                              .replace(/\s+/g, "_")
+                              .replace(/en-linea|en_linea|online/, "en_linea")
+                              .replace(
+                                /a-domicilio|a__domicilio|a_domicilio/,
+                                "a_domicilio"
+                              );
+                            if (s.includes("en_linea")) return "en_linea";
+                            if (s.includes("a_domicilio")) return "a_domicilio";
+                            if (s.includes("presencial") || s === "")
+                              return "presencial";
+                            return null;
+                          };
+                          const mapped = refreshedList.map((h: any) => ({
+                            id_disponibilidad: h.id_disponibilidad,
+                            dia_semana: (h.dia_semana || "").toLowerCase(),
+                            hora_inicio:
+                              h.hora_inicio?.slice?.(0, 5) || h.hora_inicio,
+                            hora_fin: h.hora_fin?.slice?.(0, 5) || h.hora_fin,
+                            tipo_atencion: normalizeTipo(h.tipo_atencion),
+                            activo: h.activo ?? true,
+                          }));
+                          setScheduleItems(mapped);
                         }
 
                         alert("Horarios guardados correctamente");
@@ -4081,6 +4186,38 @@ export default function AdminProfessionalEditPage() {
                       return time;
                     };
 
+                    // Función para extraer horarios del response
+                    const extractSchedules = (obj: any): any[] => {
+                      const results: any[] = [];
+                      const visit = (node: any) => {
+                        if (!node) return;
+                        if (Array.isArray(node)) {
+                          if (
+                            node.length &&
+                            typeof node[0] === "object" &&
+                            ("dia_semana" in (node[0] || {}) ||
+                              "id_disponibilidad" in (node[0] || {}))
+                          ) {
+                            results.push(node);
+                          } else {
+                            node.forEach(visit);
+                          }
+                        } else if (typeof node === "object") {
+                          Object.values(node).forEach(visit);
+                        }
+                      };
+                      visit(obj);
+                      if (!results.length) {
+                        const guess =
+                          obj?.data?.disponibilidad ||
+                          obj?.disponibilidad ||
+                          obj?.data ||
+                          [];
+                        if (Array.isArray(guess)) results.push(guess);
+                      }
+                      return results.flat();
+                    };
+
                     // 1. Eliminar todos los horarios existentes
                     const currentRes = await fetch(
                       `${apiBase}/disponibilidad-horarios/profesional/${professionalIdProfesional}`,
@@ -4089,12 +4226,7 @@ export default function AdminProfessionalEditPage() {
                     const currentData = await currentRes
                       .json()
                       .catch(() => ({}));
-                    const currentList: any[] =
-                      (Array.isArray(currentData) && currentData) ||
-                      currentData?.data?.disponibilidad ||
-                      currentData?.disponibilidad ||
-                      currentData?.data ||
-                      [];
+                    const currentList = extractSchedules(currentData);
 
                     for (const cur of currentList) {
                       const delId = cur.id_disponibilidad || cur.id || null;

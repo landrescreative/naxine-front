@@ -293,7 +293,10 @@ export default function CategoryServicePage({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-gray-50" aria-labelledby="category-title">
+      <h1 id="category-title" className="sr-only">
+        {pageTitle}
+      </h1>
       {/* Purple Section */}
       <PurpleSection
         title={pageTitle}
@@ -303,24 +306,38 @@ export default function CategoryServicePage({
       />
 
       {/* Filter Bar */}
-      <div className="bg-white border-b border-gray-200">
+      <section
+        className="bg-white border-b border-gray-200"
+        aria-labelledby="filter-title"
+      >
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
           <div className="flex items-center justify-center mb-4 sm:mb-6">
-            <h2 className="text-lg font-semibold text-purple-600">
+            <h2
+              id="filter-title"
+              className="text-lg font-semibold text-purple-600"
+            >
               Profesionales Disponibles
             </h2>
           </div>
 
           <div className="flex flex-col sm:flex-row justify-center items-stretch sm:items-center gap-3 sm:gap-6">
             <div className="relative w-full sm:w-auto">
+              <label htmlFor="modalidad-filter" className="sr-only">
+                Filtrar por modalidad
+              </label>
               <select
+                id="modalidad-filter"
                 className="w-full appearance-none px-3 sm:px-4 py-2 pr-8 border border-gray-300 rounded-lg bg-white text-gray-600 text-sm sm:text-base focus:ring-2 focus:ring-purple-500 focus:border-transparent min-w-[140px]"
                 value={filterModalidad}
                 onChange={(e) => setFilterModalidad(e.target.value)}
+                aria-label="Modalidad de sesión"
               >
                 <option value="Online">Online</option>
               </select>
-              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+              <div
+                className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none"
+                aria-hidden="true"
+              >
                 <svg
                   className="w-4 h-4 text-purple-600"
                   fill="none"
@@ -338,18 +355,31 @@ export default function CategoryServicePage({
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Professionals Grid */}
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 lg:py-12">
+      <section
+        className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 lg:py-12"
+        aria-labelledby="professionals-list-title"
+      >
+        <h2 id="professionals-list-title" className="sr-only">
+          Lista de profesionales
+        </h2>
         {loadingProfessionals ? (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+          <div className="text-center py-12" role="status" aria-live="polite">
+            <div
+              className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"
+              aria-hidden="true"
+            ></div>
             <p className="mt-4 text-gray-600">Cargando profesionales...</p>
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+            <div
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8"
+              role="list"
+              aria-label="Profesionales disponibles"
+            >
               {currentProfessionals.map((professional) => {
                 // Usar el serviceSlug si existe, sino usar el slug de la especialidad
                 const effectiveServiceSlug = serviceSlug || categorySlug;
@@ -428,6 +458,7 @@ export default function CategoryServicePage({
                     onClick={goToPreviousPage}
                     disabled={currentPage === 1}
                     className="px-3 py-2 text-xs sm:text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label="Página anterior"
                   >
                     Anterior
                   </button>
@@ -469,6 +500,10 @@ export default function CategoryServicePage({
                                 ? "bg-purple-600 text-white"
                                 : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"
                             }`}
+                            aria-label={`Página ${page}`}
+                            aria-current={
+                              currentPage === page ? "page" : undefined
+                            }
                           >
                             {page}
                           </button>
@@ -482,6 +517,7 @@ export default function CategoryServicePage({
                     onClick={goToNextPage}
                     disabled={currentPage === totalPages}
                     className="px-3 py-2 text-xs sm:text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label="Página siguiente"
                   >
                     Siguiente
                   </button>
@@ -491,7 +527,10 @@ export default function CategoryServicePage({
 
             {/* Información de paginación */}
             {totalProfessionals > 0 && (
-              <div className="mt-6 text-center text-xs sm:text-sm text-gray-500">
+              <div
+                className="mt-6 text-center text-xs sm:text-sm text-gray-500"
+                aria-live="polite"
+              >
                 Mostrando {(currentPage - 1) * professionalsPerPage + 1} -{" "}
                 {Math.min(
                   currentPage * professionalsPerPage,
@@ -502,17 +541,22 @@ export default function CategoryServicePage({
             )}
           </>
         )}
-      </div>
+      </section>
 
       {/* Empty State */}
       {!loadingProfessionals && totalProfessionals === 0 && (
-        <div className="container mx-auto px-4 py-12 text-center">
+        <section
+          className="container mx-auto px-4 py-12 text-center"
+          role="status"
+          aria-live="polite"
+        >
           <div className="max-w-md mx-auto">
             <svg
               className="w-16 h-16 mx-auto text-gray-400 mb-4"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"
@@ -528,8 +572,8 @@ export default function CategoryServicePage({
               Pronto tendremos profesionales disponibles en esta categoría.
             </p>
           </div>
-        </div>
+        </section>
       )}
-    </div>
+    </main>
   );
 }

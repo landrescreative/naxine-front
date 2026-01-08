@@ -46,30 +46,30 @@ export default function LatestPayments({ payments }: LatestPaymentsProps) {
   };
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-lg font-bold text-gray-900">Últimas transacciones</h2>
+    <section className="space-y-4" aria-labelledby="latest-payments-title">
+      <h2 id="latest-payments-title" className="text-lg font-bold text-gray-900">Últimas transacciones</h2>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+          <table className="min-w-full divide-y divide-gray-200" aria-label="Tabla de últimas transacciones">
             <thead className="bg-white">
               <tr>
-                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Profesional
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
+                <th scope="col" className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
                   Producto
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                <th scope="col" className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
                   Id
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+                <th scope="col" className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
                   Tipo
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Estado
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Fecha
                 </th>
               </tr>
@@ -122,6 +122,7 @@ export default function LatestPayments({ payments }: LatestPaymentsProps) {
                         className={`h-2 w-2 rounded-full ${getStatusColor(
                           payment.status
                         )} mr-2`}
+                        aria-hidden="true"
                       ></div>
                       <span className="text-xs sm:text-sm text-gray-900">
                         {getStatusText(payment.status)}
@@ -137,6 +138,6 @@ export default function LatestPayments({ payments }: LatestPaymentsProps) {
           </table>
         </div>
       </div>
-    </div>
+    </section>
   );
 }

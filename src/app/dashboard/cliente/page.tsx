@@ -532,13 +532,14 @@ export default function ClienteDashboard() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+      <div className="bg-red-50 border border-red-200 rounded-lg p-6" role="alert" aria-live="assertive">
         <div className="flex items-start space-x-3">
           <svg
             className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            aria-hidden="true"
           >
             <path
               strokeLinecap="round"
@@ -555,6 +556,7 @@ export default function ClienteDashboard() {
             <button
               onClick={() => window.location.reload()}
               className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+              aria-label="Reintentar carga de datos"
             >
               Reintentar
             </button>
@@ -566,7 +568,7 @@ export default function ClienteDashboard() {
 
   if (!isAuthenticated) {
     return (
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6" role="status" aria-live="polite">
         <p className="text-yellow-800">
           Por favor, inicia sesión para ver tu dashboard.
         </p>

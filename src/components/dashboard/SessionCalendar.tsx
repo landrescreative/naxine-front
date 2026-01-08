@@ -144,25 +144,27 @@ export default function SessionCalendar({
   const days = getDaysInMonth(currentDate);
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-lg font-bold text-gray-900">
+    <section className="space-y-4" aria-labelledby="session-calendar-title">
+      <h2 id="session-calendar-title" className="text-lg font-bold text-gray-900">
         Calendario de Sesiones
       </h2>
 
       {/* Calendar Navigation */}
-      <div className="flex items-center justify-between bg-primary/15 rounded-lg p-3">
+      <nav className="flex items-center justify-between bg-primary/15 rounded-lg p-3" aria-label="Navegación del calendario">
         <span className="text-sm font-medium text-primary">Calendario</span>
 
         <div className="flex items-center space-x-4">
           <button
             onClick={() => navigateMonth("prev")}
             className="p-1 hover:bg-primary/20 rounded transition-colors"
+            aria-label="Mes anterior"
           >
             <svg
               className="w-4 h-4 text-primary"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"
@@ -173,19 +175,21 @@ export default function SessionCalendar({
             </svg>
           </button>
 
-          <span className="text-sm font-semibold text-primary">
+          <span className="text-sm font-semibold text-primary" aria-live="polite">
             {months[currentDate.getMonth()]} {currentDate.getFullYear()}
           </span>
 
           <button
             onClick={() => navigateMonth("next")}
             className="p-1 hover:bg-primary/20 rounded transition-colors"
+            aria-label="Mes siguiente"
           >
             <svg
               className="w-4 h-4 text-primary"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"
@@ -196,16 +200,18 @@ export default function SessionCalendar({
             </svg>
           </button>
         </div>
-      </div>
+      </nav>
 
       {/* Calendar Grid */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden" role="grid" aria-label={`Calendario de ${months[currentDate.getMonth()]} ${currentDate.getFullYear()}`}>
         {/* Days of Week Header */}
-        <div className="grid grid-cols-7">
+        <div className="grid grid-cols-7" role="row">
           {daysOfWeek.map((day) => (
             <div
               key={day}
               className="bg-primary text-white text-[10px] sm:text-xs font-medium py-2 sm:py-3 text-center"
+              role="columnheader"
+              aria-label={day}
             >
               {day}
             </div>
@@ -213,7 +219,7 @@ export default function SessionCalendar({
         </div>
 
         {/* Calendar Days */}
-        <div className="grid grid-cols-7">
+        <div className="grid grid-cols-7" role="rowgroup">
           {days.map((dayData, index) => {
             const appointment = getAppointmentForDate(
               dayData.day,
@@ -226,6 +232,8 @@ export default function SessionCalendar({
                 className={`min-h-[60px] sm:min-h-[80px] p-1 sm:p-2 border-r border-b border-gray-200 last:border-r-0 ${
                   dayData.isCurrentMonth ? "bg-white" : "bg-gray-50"
                 }`}
+                role="gridcell"
+                aria-label={dayData.isCurrentMonth ? `Día ${dayData.day}${appointment ? ', tiene cita' : ''}${dayData.isToday ? ', hoy' : ''}` : undefined}
               >
                 <div
                   className={`text-xs sm:text-sm font-medium mb-1 ${
@@ -235,14 +243,16 @@ export default function SessionCalendar({
                         : "text-gray-900"
                       : "text-gray-400"
                   }`}
+                  aria-hidden="true"
                 >
                   {dayData.day}
                 </div>
 
                 {appointment && (
-                  <div
-                    className="bg-primary/15 rounded p-1 sm:p-2 text-[10px] sm:text-xs cursor-pointer hover:bg-primary/25 transition-colors"
+                  <button
+                    className="w-full text-left bg-primary/15 rounded p-1 sm:p-2 text-[10px] sm:text-xs cursor-pointer hover:bg-primary/25 transition-colors"
                     onClick={() => handleAppointmentClick(appointment)}
+                    aria-label={`Cita: ${appointment.specialty} con ${appointment.professional} a las ${appointment.time}`}
                   >
                     <div className="font-medium text-primary truncate">
                       {appointment.specialty}
@@ -251,13 +261,13 @@ export default function SessionCalendar({
                       {appointment.professional}
                     </div>
                     <div className="text-primary hidden sm:block">{appointment.time}</div>
-                  </div>
+                  </button>
                 )}
               </div>
             );
           })}
         </div>
       </div>
-    </div>
+    </section>
   );
 }

@@ -23,12 +23,15 @@ export const metadata: Metadata = {
 
 export default function ServiciosPage() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-gray-50" aria-labelledby="servicios-title">
+      <h1 id="servicios-title" className="sr-only">
+        Servicios profesionales de NAXINE
+      </h1>
       <PurpleSection
         title="Explora, elige y contrata al profesional colegiado ideal para ti"
         subtitle="Encuentra al profesional indicado para ti."
         searchPlaceholder="Selecciona una categoría o servicio específico"
       />
-    </div>
+    </main>
   );
 }

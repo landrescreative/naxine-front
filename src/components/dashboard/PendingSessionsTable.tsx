@@ -59,35 +59,35 @@ export default function PendingSessionsTable({
   };
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-lg font-bold text-secondary">
+    <section className="space-y-4" aria-labelledby="pending-sessions-title">
+      <h2 id="pending-sessions-title" className="text-lg font-bold text-secondary">
         Lista de sesiones pendientes
       </h2>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+          <table className="min-w-full divide-y divide-gray-200" aria-label="Tabla de sesiones pendientes">
             <thead className="bg-white">
               <tr>
-                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
+                <th scope="col" className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
                   Profesional
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
+                <th scope="col" className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
                   Estado
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider hidden md:table-cell">
+                <th scope="col" className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider hidden md:table-cell">
                   Fecha y Hora
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider hidden lg:table-cell">
+                <th scope="col" className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider hidden lg:table-cell">
                   Categoría
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider hidden lg:table-cell">
+                <th scope="col" className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider hidden lg:table-cell">
                   Modalidad
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider hidden xl:table-cell">
+                <th scope="col" className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider hidden xl:table-cell">
                   Producto
                 </th>
-                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
+                <th scope="col" className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
                   Acciones
                 </th>
               </tr>
@@ -157,6 +157,7 @@ export default function PendingSessionsTable({
                           }
                         }}
                         className="bg-primary hover:bg-primary/90 text-white text-xs sm:text-sm font-medium py-1.5 sm:py-2 px-3 sm:px-4 rounded-lg transition-colors"
+                        aria-label={`Ver detalles de sesión con ${session.professional.name}`}
                       >
                         Ver detalles
                       </button>
@@ -167,6 +168,7 @@ export default function PendingSessionsTable({
                           )
                         }
                         className="bg-purple-600 hover:bg-purple-700 text-white text-xs sm:text-sm font-medium py-1.5 sm:py-2 px-3 sm:px-4 rounded-lg transition-colors"
+                        aria-label={`Reagendar sesión con ${session.professional.name}`}
                       >
                         Reagendar
                       </button>
@@ -178,6 +180,6 @@ export default function PendingSessionsTable({
           </table>
         </div>
       </div>
-    </div>
+    </section>
   );
 }

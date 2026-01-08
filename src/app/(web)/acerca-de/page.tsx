@@ -25,18 +25,18 @@ export const metadata: Metadata = {
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <main className="min-h-screen bg-white" aria-labelledby="about-title">
       {/* Hero Section */}
-      <section className="px-4 sm:px-6 md:px-10 lg:px-20 py-10 md:py-16 lg:py-20">
+      <section className="px-4 sm:px-6 md:px-10 lg:px-20 py-10 md:py-16 lg:py-20" aria-labelledby="about-title">
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
             {/* Left side - Text */}
             <div className="space-y-6">
               <div className="space-y-4">
-                <h2 className="text-sm font-semibold text-primary uppercase tracking-wider">
+                <p className="text-sm font-semibold text-primary uppercase tracking-wider">
                   ACERCA DE
-                </h2>
-                <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl font-bold text-secondary leading-tight">
+                </p>
+                <h1 id="about-title" className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl font-bold text-secondary leading-tight">
                   NAXINE es una plataforma digital que facilita el acceso a
                   servicios profesionales
                 </h1>
@@ -85,7 +85,8 @@ export default function AboutPage() {
       </section>
 
       {/* Mission and Vision Section */}
-      <section className="px-4 sm:px-6 md:px-10 lg:px-20 py-10 md:py-16">
+      <section className="px-4 sm:px-6 md:px-10 lg:px-20 py-10 md:py-16" aria-labelledby="mission-vision-title">
+        <h2 id="mission-vision-title" className="sr-only">Misión y Visión</h2>
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-2 gap-6 lg:gap-8">
             {/* Mission Card */}
@@ -117,12 +118,13 @@ export default function AboutPage() {
       </section>
 
       {/* Core Values Section */}
-      <section className="px-4 sm:px-6 md:px-10 lg:px-20 py-10 md:py-16">
+      <section className="px-4 sm:px-6 md:px-10 lg:px-20 py-10 md:py-16" aria-labelledby="values-title">
+        <h2 id="values-title" className="sr-only">Nuestros valores</h2>
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-12 items-center">
             {/* Trust */}
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+            <article className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center flex-shrink-0" aria-hidden="true">
                 <svg
                   className="w-6 h-6 text-white"
                   fill="currentColor"
@@ -141,11 +143,11 @@ export default function AboutPage() {
                   Solo trabajamos con profesionales colegiados y verificados.
                 </p>
               </div>
-            </div>
+            </article>
 
             {/* Closeness */}
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+            <article className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center flex-shrink-0" aria-hidden="true">
                 <svg
                   className="w-6 h-6 text-white"
                   fill="currentColor"
@@ -165,11 +167,11 @@ export default function AboutPage() {
                   innecesarios.
                 </p>
               </div>
-            </div>
+            </article>
 
             {/* Transparency */}
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+            <article className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center flex-shrink-0" aria-hidden="true">
                 <svg
                   className="w-6 h-6 text-white"
                   fill="currentColor"
@@ -191,11 +193,11 @@ export default function AboutPage() {
                   abierta.
                 </p>
               </div>
-            </div>
+            </article>
 
             {/* Ethical Innovation */}
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+            <article className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center flex-shrink-0" aria-hidden="true">
                 <svg
                   className="w-6 h-6 text-white"
                   fill="currentColor"
@@ -217,11 +219,11 @@ export default function AboutPage() {
                   privacidad y mejora la accesibilidad.
                 </p>
               </div>
-            </div>
+            </article>
 
             {/* Inclusive Design */}
-            <div className="flex items-center space-x-4 sm:col-span-2 lg:col-span-1">
-              <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+            <article className="flex items-center space-x-4 sm:col-span-2 lg:col-span-1">
+              <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center flex-shrink-0" aria-hidden="true">
                 <svg
                   className="w-6 h-6 text-white"
                   fill="currentColor"
@@ -243,18 +245,18 @@ export default function AboutPage() {
                   personas, cumpliendo con estándares internacionales.
                 </p>
               </div>
-            </div>
+            </article>
           </div>
         </div>
       </section>
 
       {/* Team Section */}
-      <section className="px-4 sm:px-6 md:px-10 lg:px-20 py-10 md:py-16 lg:py-20">
+      <section className="px-4 sm:px-6 md:px-10 lg:px-20 py-10 md:py-16 lg:py-20" aria-labelledby="team-title">
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
             {/* Left side - Text */}
             <div className="space-y-6">
-              <h2 className="text-2xl lg:text-3xl font-bold text-secondary">
+              <h2 id="team-title" className="text-2xl lg:text-3xl font-bold text-secondary">
                 Nuestro equipo
               </h2>
 
@@ -297,7 +299,7 @@ export default function AboutPage() {
       </section>
 
       {/* Social Impact Section */}
-      <section className="px-4 sm:px-6 md:px-10 lg:px-20 py-10 md:py-16">
+      <section className="px-4 sm:px-6 md:px-10 lg:px-20 py-10 md:py-16" aria-labelledby="impact-title">
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
             {/* Left side - Image */}
@@ -316,7 +318,7 @@ export default function AboutPage() {
 
             {/* Right side - Text */}
             <div className="space-y-6 order-1 lg:order-2">
-              <h2 className="text-2xl lg:text-3xl font-bold text-secondary">
+              <h2 id="impact-title" className="text-2xl lg:text-3xl font-bold text-secondary">
                 Impacto social
               </h2>
 
@@ -337,32 +339,32 @@ export default function AboutPage() {
               </div>
 
               {/* Bullet Points */}
-              <div className="space-y-3">
-                <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+              <ul className="space-y-3" role="list">
+                <li className="flex items-start space-x-3">
+                  <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0" aria-hidden="true"></div>
                   <p className="text-secondary/80 text-sm leading-relaxed">
                     La aplicación de criterios de accesibilidad digital en toda
                     la plataforma.
                   </p>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+                </li>
+                <li className="flex items-start space-x-3">
+                  <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0" aria-hidden="true"></div>
                   <p className="text-secondary/80 text-sm leading-relaxed">
                     Un enfoque de diseño y comunicación inclusivo y respetuoso.
                   </p>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+                </li>
+                <li className="flex items-start space-x-3">
+                  <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0" aria-hidden="true"></div>
                   <p className="text-secondary/80 text-sm leading-relaxed">
                     La apertura a colaboraciones con profesionales y
                     organizaciones sociales que compartan nuestra visión.
                   </p>
-                </div>
-              </div>
+                </li>
+              </ul>
             </div>
           </div>
         </div>
       </section>
-    </div>
+    </main>
   );
 }

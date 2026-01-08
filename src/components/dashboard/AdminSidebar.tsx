@@ -80,11 +80,13 @@ export default function AdminSidebar({
           className={`absolute ${
             isCollapsed ? "top-2 right-2" : "top-4 right-4"
           } p-2 rounded-lg hover:bg-gray-100 transition-colors`}
+          aria-label={isCollapsed ? "Expandir menú" : "Colapsar menú"}
+          aria-expanded={!isCollapsed}
         >
           {isCollapsed ? (
-            <ChevronRight className="w-5 h-5 text-gray-600" />
+            <ChevronRight className="w-5 h-5 text-gray-600" aria-hidden="true" />
           ) : (
-            <ChevronLeft className="w-5 h-5 text-gray-600" />
+            <ChevronLeft className="w-5 h-5 text-gray-600" aria-hidden="true" />
           )}
         </button>
       </div>
@@ -115,7 +117,7 @@ export default function AdminSidebar({
             <div
               className={`flex items-center ${isCollapsed ? "" : "space-x-3"}`}
             >
-              <Users className={`${isCollapsed ? "w-6 h-6" : "w-5 h-5"}`} />
+              <Users className={`${isCollapsed ? "w-6 h-6" : "w-5 h-5"}`} aria-hidden="true" />
               {!isCollapsed && <span className="font-medium">Usuarios</span>}
             </div>
             {!isCollapsed && (
@@ -123,6 +125,7 @@ export default function AdminSidebar({
                 className={`w-4 h-4 transition-transform ${
                   isUsersExpanded ? "rotate-0" : "rotate-180"
                 }`}
+                aria-hidden="true"
               />
             )}
           </button>
@@ -174,7 +177,7 @@ export default function AdminSidebar({
           title={isCollapsed ? "Lista de Sesiones" : undefined}
           aria-current={activeItem === "sesiones" ? "page" : undefined}
         >
-          <FileText className={`${isCollapsed ? "w-6 h-6" : "w-5 h-5"}`} />
+          <FileText className={`${isCollapsed ? "w-6 h-6" : "w-5 h-5"}`} aria-hidden="true" />
           {!isCollapsed && (
             <span className="font-medium">Lista de Sesiones</span>
           )}
@@ -193,7 +196,7 @@ export default function AdminSidebar({
           title={isCollapsed ? "Valoraciones" : undefined}
           aria-current={activeItem === "valoraciones" ? "page" : undefined}
         >
-          <Star className={`${isCollapsed ? "w-6 h-6" : "w-5 h-5"}`} />
+          <Star className={`${isCollapsed ? "w-6 h-6" : "w-5 h-5"}`} aria-hidden="true" />
           {!isCollapsed && <span className="font-medium">Valoraciones</span>}
         </button>
 
@@ -210,7 +213,7 @@ export default function AdminSidebar({
           title={isCollapsed ? "Pagos" : undefined}
           aria-current={activeItem === "pagos" ? "page" : undefined}
         >
-          <ShoppingCart className={`${isCollapsed ? "w-6 h-6" : "w-5 h-5"}`} />
+          <ShoppingCart className={`${isCollapsed ? "w-6 h-6" : "w-5 h-5"}`} aria-hidden="true" />
           {!isCollapsed && <span className="font-medium">Pagos</span>}
         </button>
 
@@ -227,7 +230,7 @@ export default function AdminSidebar({
           title={isCollapsed ? "Soporte" : undefined}
           aria-current={activeItem === "soporte" ? "page" : undefined}
         >
-          <Shield className={`${isCollapsed ? "w-6 h-6" : "w-5 h-5"}`} />
+          <Shield className={`${isCollapsed ? "w-6 h-6" : "w-5 h-5"}`} aria-hidden="true" />
           {!isCollapsed && <span className="font-medium">Soporte</span>}
         </button>
 
@@ -244,7 +247,7 @@ export default function AdminSidebar({
           title={isCollapsed ? "Ajustes" : undefined}
           aria-current={activeItem === "ajustes" ? "page" : undefined}
         >
-          <Settings className={`${isCollapsed ? "w-6 h-6" : "w-5 h-5"}`} />
+          <Settings className={`${isCollapsed ? "w-6 h-6" : "w-5 h-5"}`} aria-hidden="true" />
           {!isCollapsed && <span className="font-medium">Ajustes</span>}
         </button>
       </div>

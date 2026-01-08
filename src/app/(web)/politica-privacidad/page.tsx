@@ -51,7 +51,7 @@ export default async function PoliticasPrivacidadPage() {
   }
 
   return (
-    <div className="min-h-screen relative">
+    <main className="min-h-screen relative" aria-labelledby="privacy-title">
       {/* Imagen de fondo con opacidad reducida */}
       <div
         className="absolute inset-0 opacity-50"
@@ -63,6 +63,7 @@ export default async function PoliticasPrivacidadPage() {
           backgroundRepeat: "no-repeat",
           backgroundSize: "cover",
         }}
+        aria-hidden="true"
       ></div>
       <div className="relative z-10">
         <SeparatorSection
@@ -73,12 +74,13 @@ export default async function PoliticasPrivacidadPage() {
         />
 
         {/* Contenido dinámico */}
-        <div className="max-w-4xl mx-auto px-4 py-8">
-          <pre className="whitespace-pre-wrap text-gray-700 leading-relaxed">
+        <article className="max-w-4xl mx-auto px-4 py-8">
+          <h1 id="privacy-title" className="sr-only">Política de Privacidad de NAXINE</h1>
+          <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
             {content}
-          </pre>
-        </div>
+          </div>
+        </article>
       </div>
-    </div>
+    </main>
   );
 }

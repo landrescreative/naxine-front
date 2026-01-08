@@ -99,14 +99,14 @@ export default function ContactPage() {
   const statusMessageId = "contact-form-status";
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center px-4 py-12">
+    <main className="min-h-screen bg-white flex items-center justify-center px-4 py-12" aria-labelledby="contact-title">
       <div className="w-full max-w-md">
         {/* Logo */}
-        <div className="text-center">
+        <div className="text-center" aria-hidden="true">
           <div className="inline-flex items-center justify-center w-56 h-56 ">
             <Image
               src={logo}
-              alt="NAXINE Logo"
+              alt=""
               width={200}
               height={200}
               className="w-full h-full object-contain"
@@ -116,9 +116,9 @@ export default function ContactPage() {
 
         {/* Main Content */}
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-800 mb-4">
+          <h1 id="contact-title" className="text-3xl font-bold text-gray-800 mb-4">
             Hola, ¿En qué podemos ayudarte?
-          </h2>
+          </h1>
           <p className="text-gray-600 text-lg">
             No dudes en contactarnos. ¡Estamos aquí para escucharte!
           </p>
@@ -250,6 +250,6 @@ export default function ContactPage() {
           </form>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

@@ -105,13 +105,13 @@ function LoginForm() {
   const statusMessageId = "login-form-status";
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
+    <main className="min-h-screen flex flex-col lg:flex-row" aria-labelledby="login-title">
       {/* Left Side - Login Form */}
       <div className="flex-1 flex items-center justify-center bg-white px-8 py-12">
         <div className="w-full max-w-md">
           {/* Header */}
           <div className="text-left mb-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">
+            <h1 id="login-title" className="text-3xl font-bold text-gray-800 mb-2">
               Iniciar Sesión
             </h1>
             <p className="text-gray-600">Accede a tu cuenta</p>
@@ -194,6 +194,7 @@ function LoginForm() {
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
+                      aria-hidden="true"
                     >
                       <path
                         strokeLinecap="round"
@@ -208,6 +209,7 @@ function LoginForm() {
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
+                      aria-hidden="true"
                     >
                       <path
                         strokeLinecap="round"
@@ -282,13 +284,13 @@ function LoginForm() {
       </div>
 
       {/* Right Side - Professional Image */}
-      <div className="flex flex-1 relative">
+      <div className="flex flex-1 relative" aria-hidden="true">
         <div className="relative w-full h-full flex items-center lg:items-start justify-center p-2">
           <div className="sticky top-4 w-full">
             <div className="w-11/12 h-[400px] lg:h-[600px] relative rounded-3xl overflow-hidden">
               <Image
                 src="/smk_Snapchat-Picture.webp"
-                alt="Profesional"
+                alt=""
                 fill
                 className="object-cover"
                 priority
@@ -298,7 +300,7 @@ function LoginForm() {
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
 

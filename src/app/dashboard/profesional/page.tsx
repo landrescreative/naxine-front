@@ -470,7 +470,7 @@ export default function ProfesionalDashboard() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+      <div className="bg-red-50 border border-red-200 rounded-lg p-6" role="alert" aria-live="assertive">
         <p className="text-red-800">{error}</p>
       </div>
     );
