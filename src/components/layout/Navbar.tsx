@@ -480,17 +480,16 @@ export default function Navbar() {
                     isUserMenuOpen
                       ? "bg-gray-100 ring-1 ring-gray-200 rounded-lg"
                       : ""
-                  } text-gray-800 hover:text-gray-600 focus:outline-none p-2 transition-colors flex items-center gap-1`}
+                  } text-gray-800 hover:text-gray-600 focus:outline-none p-2 transition-colors`}
                   aria-expanded={isUserMenuOpen}
                   aria-controls="mobile-user-menu"
                   aria-label="Menú usuario"
                 >
                   {isUserMenuOpen ? (
-                    <X className="h-5 w-5" aria-hidden="true" />
+                    <X className="h-6 w-6" aria-hidden="true" />
                   ) : (
-                    <User className="h-5 w-5" aria-hidden="true" />
+                    <User className="h-6 w-6" aria-hidden="true" />
                   )}
-                  <span className="text-xs font-medium">Menú</span>
                 </a>
 
                 {/* Menú desplegable de usuario */}
@@ -606,17 +605,16 @@ export default function Navbar() {
                   e.preventDefault();
                   toggleMobileMenu();
                 }}
-                className="text-gray-800 hover:text-gray-600 focus:outline-none p-2 flex items-center gap-1"
+                className="text-gray-800 hover:text-gray-600 focus:outline-none p-2"
                 aria-expanded={isMobileMenuOpen}
                 aria-controls="mobile-primary-menu"
                 aria-label="Menú principal"
               >
                 {isMobileMenuOpen ? (
-                  <X className="h-5 w-5" aria-hidden="true" />
+                  <X className="h-6 w-6" aria-hidden="true" />
                 ) : (
-                  <Menu className="h-5 w-5" aria-hidden="true" />
+                  <Menu className="h-6 w-6" aria-hidden="true" />
                 )}
-                <span className="text-xs font-medium">Menú</span>
               </a>
             </div>
 
@@ -635,13 +633,12 @@ export default function Navbar() {
                     isDesktopMenuOpen
                       ? "bg-gray-100 ring-1 ring-gray-200 rounded-lg"
                       : ""
-                  } text-gray-800 hover:text-gray-600 focus:outline-none p-2 transition-colors flex items-center gap-1`}
+                  } text-gray-800 hover:text-gray-600 focus:outline-none p-2 transition-colors`}
                   aria-expanded={isDesktopMenuOpen}
                   aria-controls="desktop-primary-menu"
                   aria-label="Menú"
                 >
-                  <Menu className="h-5 w-5" aria-hidden="true" />
-                  <span className="text-sm font-medium">Menú</span>
+                  <Menu className="h-6 w-6" aria-hidden="true" />
                 </a>
 
                 {/* Logo */}

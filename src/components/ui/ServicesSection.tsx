@@ -187,13 +187,15 @@ function ServiceIconCard({
         href={href}
         className="relative z-20 inline-flex items-center justify-center gap-1.5 w-full rounded-xl bg-primary hover:bg-primary/90 px-4 py-2.5 text-sm font-medium text-white shadow-md hover:shadow-lg transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:ring-offset-2"
         onClick={(e) => e.stopPropagation()}
+        aria-label={`Ver más sobre ${title}`}
       >
-        Ver más
+        <span>Ver más</span>
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 20 20"
           fill="currentColor"
           className="w-4 h-4 transition-transform group-hover:translate-x-0.5"
+          aria-hidden="true"
         >
           <path
             fillRule="evenodd"

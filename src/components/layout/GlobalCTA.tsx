@@ -15,6 +15,7 @@ export default function GlobalCTA() {
       <section
         ref={sectionRef}
         className="w-full flex flex-col lg:flex-row max-h-[500px]"
+        aria-labelledby="global-cta-title"
       >
         {/* Left Section - Purple Background (50% on desktop, full width on mobile) */}
         <div className="w-full lg:w-[50%] bg-primary flex items-center px-6 sm:px-12 lg:px-32 py-8 lg:py-6">
@@ -28,7 +29,7 @@ export default function GlobalCTA() {
               delay: 0.3, // Aparece después de la imagen
             }}
           >
-            <h2 className="text-white text-3xl sm:text-4xl lg:text-4xl font-bold leading-tight mb-4">
+            <h2 id="global-cta-title" className="text-white text-3xl sm:text-4xl lg:text-4xl font-bold leading-tight mb-4">
               Cómo funciona
             </h2>
             <p className="text-white text-base sm:text-lg leading-relaxed">
@@ -50,10 +51,11 @@ export default function GlobalCTA() {
             ease: [0.25, 0.46, 0.45, 0.94],
             delay: 0.1, // Aparece primero
           }}
+          aria-hidden="true"
         >
           <img
             src={office.src}
-            alt="Office workspace with man on phone"
+            alt=""
             className="w-full h-full object-cover"
           />
         </motion.div>

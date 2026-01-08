@@ -11,7 +11,10 @@ type Step = {
 };
 
 const IconWrap = ({ children }: { children: React.ReactNode }) => (
-  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white shadow-[0_10px_25px_rgba(74,33,237,0.25)] transition-all duration-200 group-hover:scale-110 group-hover:shadow-[0_14px_34px_rgba(74,33,237,0.35)]">
+  <div 
+    className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white shadow-[0_10px_25px_rgba(74,33,237,0.25)] transition-all duration-200 group-hover:scale-110 group-hover:shadow-[0_14px_34px_rgba(74,33,237,0.35)]"
+    aria-hidden="true"
+  >
     {children}
   </div>
 );
@@ -142,7 +145,8 @@ export default function HowItWorksSection() {
   ];
 
   return (
-    <section ref={sectionRef} className="w-full py-8 md:py-14">
+    <section ref={sectionRef} className="w-full py-8 md:py-14" aria-labelledby="how-it-works-title">
+      <h2 id="how-it-works-title" className="sr-only">Cómo funciona NAXINE</h2>
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Grid en zig-zag para replicar la composición del mockup */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12">

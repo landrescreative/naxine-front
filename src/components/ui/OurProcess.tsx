@@ -36,13 +36,15 @@ const OurProcess = () => {
   ];
 
   return (
-    <section ref={sectionRef} className="py-16 px-4 bg-white">
+    <section ref={sectionRef} className="py-16 px-4 bg-white" aria-labelledby="our-process-title">
+      <h2 id="our-process-title" className="sr-only">Nuestras garantías</h2>
       <div className="max-w-6xl mx-auto">
-        <div className="flex flex-col lg:flex-row items-start justify-between gap-8 lg:gap-4">
+        <div className="flex flex-col lg:flex-row items-start justify-between gap-8 lg:gap-4" role="list">
           {processSteps.map((step, index) => (
             <React.Fragment key={step.number}>
-              <motion.div
+              <motion.article
                 className="flex items-start gap-4 max-w-sm"
+                role="listitem"
                 initial={{ y: 50, opacity: 0 }}
                 animate={
                   isInView ? { y: 0, opacity: 1 } : { y: 50, opacity: 0 }
@@ -60,6 +62,7 @@ const OurProcess = () => {
                       ? "bg-primary text-white"
                       : "border-2 border-primary text-primary bg-white"
                   }`}
+                  aria-hidden="true"
                 >
                   <span className="text-lg font-bold">{step.number}</span>
                 </div>
@@ -76,7 +79,7 @@ const OurProcess = () => {
                     {step.description}
                   </p>
                 </div>
-              </motion.div>
+              </motion.article>
 
               {/* Arrow Separator */}
               {index < processSteps.length - 1 && (
@@ -89,6 +92,7 @@ const OurProcess = () => {
                     ease: [0.25, 0.46, 0.45, 0.94],
                     delay: index * 0.2 + 0.3, // Aparece después de la tarjeta
                   }}
+                  aria-hidden="true"
                 >
                   <ChevronRight className="w-6 h-6" />
                 </motion.div>

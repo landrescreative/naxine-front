@@ -101,7 +101,7 @@ const FAQSection: React.FC = () => {
     const panelId = `faq-panel-${item.id}`;
 
     return (
-      <div className="border border-primary rounded-lg bg-white shadow-sm hover:shadow-md hover:border-primary transition-all duration-300 ease-in-out">
+      <div className="border border-primary rounded-lg bg-white shadow-sm hover:shadow-md hover:border-primary transition-all duration-300 ease-in-out" role="listitem">
         <button
           type="button"
           onClick={() => onToggle(item.id)}
@@ -116,7 +116,7 @@ const FAQSection: React.FC = () => {
           >
             {item.question}
           </span>
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0" aria-hidden="true">
             <div
               className={`transform transition-transform duration-300 ease-in-out ${
                 isOpen ? "rotate-180" : "rotate-0"
@@ -148,8 +148,9 @@ const FAQSection: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto px-4 py-12">
-      <div className="space-y-4">
+    <section className="w-full max-w-4xl mx-auto px-4 py-12" aria-labelledby="faq-section-title">
+      <h2 id="faq-section-title" className="sr-only">Preguntas frecuentes</h2>
+      <div className="space-y-4" role="list">
         {faqData.map((item) => {
           const isOpen = openItems.includes(item.id);
 
@@ -163,7 +164,7 @@ const FAQSection: React.FC = () => {
           );
         })}
       </div>
-    </div>
+    </section>
   );
 };
 

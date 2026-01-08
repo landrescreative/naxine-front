@@ -145,15 +145,15 @@ export default function BenefitsSection() {
         style={{ backgroundColor: "#E3DCFF" }}
       >
         {/* Decorative elements */}
-        <div className="absolute top-0 left-0 w-40 h-40 opacity-10">
+        <div className="absolute top-0 left-0 w-40 h-40 opacity-10" aria-hidden="true">
           <div className="w-full h-full bg-purple-300 rounded-lg"></div>
         </div>
 
-        <div className="absolute top-20 right-20 w-40 h-40 opacity-10 transform translate-x-12 -translate-y-12">
+        <div className="absolute top-20 right-20 w-40 h-40 opacity-10 transform translate-x-12 -translate-y-12" aria-hidden="true">
           <div className="w-full h-full bg-purple-300 rounded-full"></div>
         </div>
 
-        <div className="absolute bottom-20 right-20 w-32 h-20 opacity-10 transform translate-x-16 translate-y-8">
+        <div className="absolute bottom-20 right-20 w-32 h-20 opacity-10 transform translate-x-16 translate-y-8" aria-hidden="true">
           <div className="w-full h-full bg-purple-300 rounded-lg"></div>
         </div>
 
@@ -162,7 +162,7 @@ export default function BenefitsSection() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
             {/* First two cards - full width on desktop */}
             {accessibilityFeatures.slice(0, 2).map((feature, index) => (
-              <motion.div
+              <motion.article
                 key={feature.id}
                 className="bg-white rounded-xl px-6 py-10"
                 initial={{ scale: 1.1, opacity: 0 }}
@@ -178,7 +178,7 @@ export default function BenefitsSection() {
                 }}
               >
                 <div className="text-left">
-                  <div className="w-16 h-16 bg-primary rounded-lg flex items-center justify-center text-white mb-4">
+                  <div className="w-16 h-16 bg-primary rounded-lg flex items-center justify-center text-white mb-4" aria-hidden="true">
                     {feature.icon}
                   </div>
                   <h3 className="text-lg font-bold text-gray-900 mb-3">
@@ -188,14 +188,14 @@ export default function BenefitsSection() {
                     {feature.description}
                   </p>
                 </div>
-              </motion.div>
+              </motion.article>
             ))}
           </div>
 
           {/* Second row - three cards with equal width */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
             {accessibilityFeatures.slice(2).map((feature, index) => (
-              <motion.div
+              <motion.article
                 key={feature.id}
                 className="bg-white rounded-xl px-6 py-10"
                 initial={{ scale: 1.1, opacity: 0 }}
@@ -211,7 +211,7 @@ export default function BenefitsSection() {
                 }}
               >
                 <div className="text-left">
-                  <div className="w-16 h-16 bg-primary rounded-lg flex items-center justify-center text-white mb-4">
+                  <div className="w-16 h-16 bg-primary rounded-lg flex items-center justify-center text-white mb-4" aria-hidden="true">
                     {feature.icon}
                   </div>
                   <h3 className="text-lg font-bold text-gray-900 mb-3">
@@ -221,7 +221,7 @@ export default function BenefitsSection() {
                     {feature.description}
                   </p>
                 </div>
-              </motion.div>
+              </motion.article>
             ))}
           </div>
         </div>
