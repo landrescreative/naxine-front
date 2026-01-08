@@ -449,14 +449,14 @@ export default function AdminPagosPage() {
       : 'N/A';
 
     const montoNumero = typeof pago.monto === 'string' ? parseFloat(pago.monto) : Number(pago.monto);
-    const precio = !isNaN(montoNumero) ? `$${montoNumero.toFixed(2)} USD` : 'N/A';
+    const precio = !isNaN(montoNumero) ? `${montoNumero.toFixed(2)}€` : 'N/A';
     
     // Calcular comisión (aproximación)
     const comision = montoNumero <= 100 ? montoNumero * 0.20 
       : montoNumero <= 200 ? montoNumero * 0.15 
       : montoNumero <= 300 ? montoNumero * 0.10 
       : montoNumero * 0.08;
-    const comisionFormateada = `$${comision.toFixed(2)} USD`;
+    const comisionFormateada = `${comision.toFixed(2)}€`;
 
     const tipoSesion = pago.tipo_atencion === 'en_linea'
       ? 'Sesión en Línea'

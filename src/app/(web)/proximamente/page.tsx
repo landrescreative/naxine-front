@@ -7,9 +7,16 @@ import Logo from "@/assets/PNG-01.png";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Próximamente",
+  title: "NAXINE – Marketplace digital de servicios profesionales",
   description:
-    "NAXINE es un marketplace digital con herramienta de accesibilidad, diseñado para contratar servicios profesionales en psicología, nutrición, coaching, fisioterapia y asesoría legal. Con sede en Madrid, promueve la innovación y la inclusión digital.",
+    "NAXINE es un marketplace digital español con herramienta de accesibilidad, diseñado para contratar servicios profesionales en psicología, nutrición, coaching, fisioterapia y asesoría legal. Con sede en Madrid, promueve la innovación y la inclusión digital.",
+  openGraph: {
+    title: "NAXINE – Marketplace digital de servicios profesionales",
+    description:
+      "NAXINE es un marketplace digital español con herramienta de accesibilidad, diseñado para contratar servicios profesionales en psicología, nutrición, coaching, fisioterapia y asesoría legal. Con sede en Madrid, promueve la innovación y la inclusión digital.",
+    type: "website",
+    locale: "es_ES",
+  },
 };
 
 export default function ProximamentePage() {

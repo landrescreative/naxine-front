@@ -84,7 +84,7 @@ export default function AdminSessionDetailPage() {
           : Number(cita.pago_monto))
       : null;
     const precio = montoNumero && !isNaN(montoNumero)
-      ? `$${montoNumero.toFixed(2)} USD`
+      ? `${montoNumero.toFixed(2)}€`
       : 'N/A';
 
     // Mapear estado
@@ -138,7 +138,7 @@ export default function AdminSessionDetailPage() {
       },
       pricing: {
         productPrice: precio,
-        taxes: "$0.00",
+        taxes: "0.00€",
         total: precio,
       },
       pago_monto: montoNumero || 0,

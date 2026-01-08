@@ -295,7 +295,7 @@ export class ProfessionalsService {
             nombre_servicio: precio.nombre_servicio || precio.nombre || "",
             descripcion: precio.descripcion || "",
             precio: precio.precio || 0,
-            moneda: precio.moneda || "MXN",
+            moneda: precio.moneda || "EUR",
             duracion: precio.duracion || precio.duration || undefined,
           }));
         }
@@ -577,7 +577,7 @@ export class ProfessionalsService {
                 "Servicio",
               descripcion: precio.descripcion ?? "",
               precio: typeof precio.precio === "number" ? precio.precio : Number(precio.precio) || 0,
-              moneda: precio.moneda || "MXN",
+              moneda: precio.moneda || "EUR",
               duracion:
                 precio.duracion ||
                 (precio.duracion_minutos ? `${precio.duracion_minutos} min` : undefined),

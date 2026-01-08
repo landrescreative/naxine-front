@@ -156,9 +156,9 @@ export const validatePassword = (
 // Utilidades para formateo
 export const formatCurrency = (
   amount: number,
-  currency: string = "USD"
+  currency: string = "EUR"
 ): string => {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat("es-ES", {
     style: "currency",
     currency,
   }).format(amount);

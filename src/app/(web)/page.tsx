@@ -10,9 +10,6 @@ import BenefitsSection from "@/components/ui/BenefitsSection";
 import AccesibilitySection from "@/components/ui/AccesibilitySection";
 import FAQSection from "@/components/ui/FAQSection";
 
-// API
-import { getServicios } from "@/services/api/servicios";
-
 // Forzar rendering dinámico para que el middleware se ejecute
 export const dynamic = "force-dynamic";
 
@@ -46,71 +43,84 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function Home() {
+// Lista estática de servicios con URLs que coinciden con los servicios de la plataforma
+const SERVICIOS_DESTACADOS = [
+  // Nutrición
+  { title: "Pérdida de peso", href: "/nutricion/perdida-de-peso" },
+  { title: "Nutrición deportiva", href: "/nutricion/deportiva" },
+  {
+    title: "TCAs (Trastornos de la conducta alimentaria)",
+    href: "/nutricion/tcas-trastornos-de-la-conducta-alimentaria",
+  },
+  { title: "Embarazo y lactancia", href: "/nutricion/embarazo-y-lactancia" },
+  { title: "SIBO y dieta FODMAP", href: "/nutricion/sibo-y-dieta-fodmap" },
+  { title: "Nutrición clínica", href: "/nutricion/nutricion-clinica" },
+  {
+    title: "Alergias e intolerancias",
+    href: "/nutricion/alergias-intolerancias",
+  },
+  { title: "Obesidad", href: "/nutricion/obesidad" },
+  // Psicología
+  { title: "Depresión", href: "/psicologia/depresion" },
+  { title: "Ansiedad", href: "/psicologia/ansiedad" },
+  { title: "Baja autoestima", href: "/psicologia/baja-autoestima" },
+  { title: "Terapia de pareja", href: "/psicologia/terapia-de-pareja" },
+  {
+    title: "Duelo: pérdida de un ser querido",
+    href: "/psicologia/duelo-perdida-de-un-ser-querido",
+  },
+  {
+    title: "Trauma y TEPT",
+    href: "/psicologia/trauma-y-tept-trastorno-de-estres-post-traumatico",
+  },
+  // Legal
+  { title: "Divorcio", href: "/legal/divorcio" },
+  { title: "Herencias", href: "/legal/herencias" },
+  { title: "Estafas inmobiliarias", href: "/legal/estafas-inmobiliarias" },
+  { title: "Nacionalidad española", href: "/legal/nacionalidad-espanola" },
+  // Fisioterapia
+  {
+    title: "Fisioterapia deportiva",
+    href: "/fisioterapia/fisioterapia-deportiva",
+  },
+  {
+    title: "Fisioterapia suelo pélvico",
+    href: "/fisioterapia/fisioterapia-suelo-pelvico",
+  },
+  {
+    title: "Fisioterapia neurológica",
+    href: "/fisioterapia/fisioterapia-neurologica",
+  },
+  {
+    title: "Fisioterapia cervical",
+    href: "/fisioterapia/fisioterapia-cervical",
+  },
+  {
+    title: "Rehabilitación general",
+    href: "/fisioterapia/rehabilitacion-general",
+  },
+  // Logopedia
+  { title: "Trastornos del habla", href: "/logopedia/trastornos-del-habla" },
+  { title: "Trastornos auditivos", href: "/logopedia/trastornos-auditivos" },
+  {
+    title: "Trastornos del lenguaje",
+    href: "/logopedia/trastornos-del-lenguaje",
+  },
+  // Desarrollo personal
+  { title: "Liderazgo", href: "/desarrollo-personal/liderazgo" },
+  {
+    title: "Habilidades sociales",
+    href: "/desarrollo-personal/habilidades-sociales",
+  },
+  {
+    title: "Hablar en público",
+    href: "/desarrollo-personal/hablar-en-publico",
+  },
+];
+
+export default function Home() {
   // Proteger esta ruta en producción (redirige a /proximamente)
   ProductionGuard("/");
-  
-  // Cargar servicios dinámicamente desde el backend
-  const serviciosRes = await getServicios({ soloActivos: true });
-  const servicios = serviciosRes.success ? serviciosRes.data || [] : [];
-
-  // Seleccionar imagen según el nombre del servicio usando assets de /public
-  const IMAGE_POOL: string[] = [
-    "/DIETA PARA ADELGAZAR.png",
-    "/DIETA DIABETES.png",
-    "/DIETA COLESTEROL_.png",
-    "/TERAPIA PARA DEPRESION.png",
-    "/TERAPIA DE PAREJA (2).png",
-    "/DIVORCIO EXPRESS ONLINE.png",
-    "/ASESORIA LEGAL HERENCIAS.png",
-    "/FISIOTERAPIA A DOMICILIO.png",
-    "/ansiedad.png",
-    "/Servicios Desktop.png",
-  ];
-
-  const getImageForService = (name: string, index: number): string => {
-    const n = name.toLowerCase();
-    if (n.includes("ansiedad")) return "/ansiedad.png";
-    if (n.includes("depres")) return "/TERAPIA PARA DEPRESION.png";
-    if (n.includes("pareja")) return "/TERAPIA DE PAREJA (2).png";
-    if (n.includes("divorcio")) return "/DIVORCIO EXPRESS ONLINE.png";
-    if (n.includes("herencia")) return "/ASESORIA LEGAL HERENCIAS.png";
-    if (n.includes("fisioter")) return "/FISIOTERAPIA A DOMICILIO.png";
-    if (n.includes("diabet")) return "/DIETA DIABETES.png";
-    if (n.includes("colesterol")) return "/DIETA COLESTEROL_.png";
-    if (n.includes("peso") || n.includes("adelgaz")) return "/DIETA PARA ADELGAZAR.png";
-    if (n.includes("deport")) return "/DIETA DIABETES.png";
-    // Fallback: asignación cíclica desde el pool para que todos tengan imagen
-    return IMAGE_POOL[index % IMAGE_POOL.length];
-  };
-
-  const generateSlug = (text: string) =>
-    (text || "")
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "") || "servicio";
-
-  // Mapear a las tarjetas esperadas por ServicesSection
-  const items =
-    servicios.map((s, idx) => {
-      const specialtySource =
-        (s as any).slug_especialidad ||
-        s.nombre_especialidad ||
-        (s as any).especialidad ||
-        "";
-      const specialtySlug = specialtySource ? generateSlug(specialtySource) : "";
-      const serviceSource = (s as any).slug || s.nombre_servicio || (s as any).nombre;
-      const serviceSlug = generateSlug(serviceSource || `servicio-${idx + 1}`);
-      const hrefBase = specialtySlug ? `/${specialtySlug}` : "/servicios";
-
-      return {
-        title: s.nombre_servicio,
-        image: getImageForService(s.nombre_servicio || "", idx),
-        href: `${hrefBase}/${serviceSlug}`,
-      };
-    }) || [];
 
   return (
     <div className="overflow-x-hidden">
@@ -120,7 +130,7 @@ export default async function Home() {
         title="SERVICIOS DESTACADOS"
         className=""
       />
-      <ServicesSection items={items} />
+      <ServicesSection items={SERVICIOS_DESTACADOS} />
       <SeparatorSection
         subtitle="PROCESO"
         title="¿CÓMO FUNCIONA?"

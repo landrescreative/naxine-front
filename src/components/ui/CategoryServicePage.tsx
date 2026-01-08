@@ -207,7 +207,7 @@ export default function CategoryServicePage({
                 typeof precio.precio === "number"
                   ? precio.precio
                   : Number(precio.precio) || 0,
-              moneda: precio.moneda || "MXN",
+              moneda: precio.moneda || "EUR",
               duracion:
                 precio.duracion ||
                 (precio.duracion_minutos

@@ -70,7 +70,7 @@ export default function ProfessionalCard({
         {/* Price */}
         <div className="pt-2">
           <span className="text-xl font-bold text-primary">
-            Desde ${professional.price}
+            Desde {professional.price}€
           </span>
         </div>
       </div>

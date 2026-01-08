@@ -95,49 +95,49 @@ export default function AdminSesionesPage() {
   // Función para mapear cita de la API al formato de la UI
   const mapCitaToSession = (cita: Cita): SessionDisplay => {
     const fechaInicio = new Date(cita.fecha_inicio);
-    const fechaFormateada = fechaInicio.toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
+    const fechaFormateada = fechaInicio.toLocaleDateString("es-ES", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
     });
-    const horaFormateada = fechaInicio.toLocaleTimeString('es-ES', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
+    const horaFormateada = fechaInicio.toLocaleTimeString("es-ES", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
     });
 
     // Determinar el tipo de sesión basado en el número de cita o tipo de atención
-    const tipoSesion = cita.tipo_atencion === 'en_linea' 
-      ? 'Sesión en Línea' 
-      : cita.tipo_atencion === 'a_domicilio'
-      ? 'Sesión a Domicilio'
-      : 'Sesión Presencial';
+    const tipoSesion =
+      cita.tipo_atencion === "en_linea"
+        ? "Sesión en Línea"
+        : cita.tipo_atencion === "a_domicilio"
+        ? "Sesión a Domicilio"
+        : "Sesión Presencial";
 
     // Formatear precio - convertir a número si es string o null/undefined
-    const montoNumero = cita.pago_monto 
-      ? (typeof cita.pago_monto === 'string' 
-          ? parseFloat(cita.pago_monto) 
-          : Number(cita.pago_monto))
+    const montoNumero = cita.pago_monto
+      ? typeof cita.pago_monto === "string"
+        ? parseFloat(cita.pago_monto)
+        : Number(cita.pago_monto)
       : null;
-    const precio = montoNumero && !isNaN(montoNumero)
-      ? `$${montoNumero.toFixed(2)} USD`
-      : 'N/A';
+    const precio =
+      montoNumero && !isNaN(montoNumero) ? `${montoNumero.toFixed(2)}€` : "N/A";
 
     // Mapear estado
     let status = cita.estado;
     let statusColor = "bg-gray-100 text-gray-800";
-    
-    if (cita.estado === 'pendiente') {
-      status = 'Pendiente';
+
+    if (cita.estado === "pendiente") {
+      status = "Pendiente";
       statusColor = "bg-orange-100 text-orange-800";
-    } else if (cita.estado === 'confirmada' || cita.estado === 'activa') {
-      status = 'Activo';
+    } else if (cita.estado === "confirmada" || cita.estado === "activa") {
+      status = "Activo";
       statusColor = "bg-green-100 text-green-800";
-    } else if (cita.estado === 'cancelada') {
-      status = 'Cancelada';
+    } else if (cita.estado === "cancelada") {
+      status = "Cancelada";
       statusColor = "bg-red-100 text-red-800";
-    } else if (cita.estado === 'completada') {
-      status = 'Completada';
+    } else if (cita.estado === "completada") {
+      status = "Completada";
       statusColor = "bg-blue-100 text-blue-800";
     }
 
@@ -147,9 +147,9 @@ export default function AdminSesionesPage() {
       specialty: "Nutriología", // TODO: Obtener especialidad del profesional
       date: fechaFormateada,
       time: horaFormateada,
-      sessionNumber: String(cita.id_cita).padStart(8, '0'),
+      sessionNumber: String(cita.id_cita).padStart(8, "0"),
       price: precio,
-      professional: cita.profesional_nombre || 'Profesional desconocido',
+      professional: cita.profesional_nombre || "Profesional desconocido",
       status,
       statusColor,
     };
@@ -169,10 +169,10 @@ export default function AdminSesionesPage() {
 
       // Aplicar filtro de estado si está activo
       const estadosActivos: string[] = [];
-      if (filters.status.activo) estadosActivos.push('confirmada', 'activa');
-      if (filters.status.pendiente) estadosActivos.push('pendiente');
-      if (filters.status.cancelada) estadosActivos.push('cancelada');
-      
+      if (filters.status.activo) estadosActivos.push("confirmada", "activa");
+      if (filters.status.pendiente) estadosActivos.push("pendiente");
+      if (filters.status.cancelada) estadosActivos.push("cancelada");
+
       if (estadosActivos.length > 0) {
         // Si hay múltiples estados, necesitamos hacer múltiples llamadas o filtrar en el frontend
         // Por ahora, usamos el primero o hacemos la llamada sin filtro y filtramos después
@@ -184,10 +184,16 @@ export default function AdminSesionesPage() {
       console.log("[AdminSesionesPage] Respuesta completa:", response);
       console.log("[AdminSesionesPage] response.success:", response.success);
       console.log("[AdminSesionesPage] response.data:", response.data);
-      console.log("[AdminSesionesPage] response.data (JSON):", JSON.stringify(response.data, null, 2));
+      console.log(
+        "[AdminSesionesPage] response.data (JSON):",
+        JSON.stringify(response.data, null, 2)
+      );
 
       if (response.success && response.data) {
-        console.log("[AdminSesionesPage] Keys de response.data:", Object.keys(response.data));
+        console.log(
+          "[AdminSesionesPage] Keys de response.data:",
+          Object.keys(response.data)
+        );
 
         let citas: any[] = Array.isArray(response.data.citas)
           ? response.data.citas
@@ -198,10 +204,7 @@ export default function AdminSesionesPage() {
         if (citas.length === 0) {
           const legacyData = response.data as any;
 
-          if (
-            legacyData?.data?.citas &&
-            Array.isArray(legacyData.data.citas)
-          ) {
+          if (legacyData?.data?.citas && Array.isArray(legacyData.data.citas)) {
             citas = legacyData.data.citas;
             paginacion = legacyData.data.paginacion || paginacion;
             console.log(
@@ -214,10 +217,7 @@ export default function AdminSesionesPage() {
               "[AdminSesionesPage] Usando legacy array directo, cantidad:",
               citas.length
             );
-          } else if (
-            legacyData?.data &&
-            Array.isArray(legacyData.data)
-          ) {
+          } else if (legacyData?.data && Array.isArray(legacyData.data)) {
             citas = legacyData.data;
             console.log(
               "[AdminSesionesPage] Usando legacy data[] como array, cantidad:",
@@ -241,8 +241,8 @@ export default function AdminSesionesPage() {
 
         // Verificar que citas sea un array
         if (!Array.isArray(citas)) {
-          console.error('Las citas no son un array:', citas);
-          setError('Error: formato de respuesta inválido');
+          console.error("Las citas no son un array:", citas);
+          setError("Error: formato de respuesta inválido");
           setSessions([]);
           return;
         }
@@ -251,7 +251,7 @@ export default function AdminSesionesPage() {
 
         // Filtrar por múltiples estados en el frontend si es necesario
         if (estadosActivos.length > 0) {
-          citasFiltradas = citasFiltradas.filter(cita => 
+          citasFiltradas = citasFiltradas.filter((cita) =>
             estadosActivos.includes(cita.estado)
           );
         }
@@ -259,13 +259,15 @@ export default function AdminSesionesPage() {
         // Filtrar por rango de ingresos si está configurado
         if (filters.income.min || filters.income.max) {
           const min = filters.income.min ? parseFloat(filters.income.min) : 0;
-          const max = filters.income.max ? parseFloat(filters.income.max) : Infinity;
-          citasFiltradas = citasFiltradas.filter(cita => {
+          const max = filters.income.max
+            ? parseFloat(filters.income.max)
+            : Infinity;
+          citasFiltradas = citasFiltradas.filter((cita) => {
             // Convertir pago_monto a número si es necesario
-            const monto = cita.pago_monto 
-              ? (typeof cita.pago_monto === 'string' 
-                  ? parseFloat(cita.pago_monto) 
-                  : Number(cita.pago_monto))
+            const monto = cita.pago_monto
+              ? typeof cita.pago_monto === "string"
+                ? parseFloat(cita.pago_monto)
+                : Number(cita.pago_monto)
               : 0;
             return !isNaN(monto) && monto >= min && monto <= max;
           });
@@ -274,10 +276,11 @@ export default function AdminSesionesPage() {
         // Filtrar por término de búsqueda
         if (searchTerm) {
           const term = searchTerm.toLowerCase();
-          citasFiltradas = citasFiltradas.filter(cita => 
-            cita.profesional_nombre?.toLowerCase().includes(term) ||
-            cita.cliente_nombre?.toLowerCase().includes(term) ||
-            String(cita.id_cita).includes(term)
+          citasFiltradas = citasFiltradas.filter(
+            (cita) =>
+              cita.profesional_nombre?.toLowerCase().includes(term) ||
+              cita.cliente_nombre?.toLowerCase().includes(term) ||
+              String(cita.id_cita).includes(term)
           );
         }
 
@@ -286,12 +289,12 @@ export default function AdminSesionesPage() {
         setSessions(sessionsMapped);
         setTotalSessions(paginacion.total || citasFiltradas.length);
       } else {
-        setError(response.error || 'Error al cargar las citas');
+        setError(response.error || "Error al cargar las citas");
         setSessions([]);
       }
     } catch (err) {
-      console.error('Error al cargar citas:', err);
-      setError('Error al cargar las citas. Por favor, intenta nuevamente.');
+      console.error("Error al cargar citas:", err);
+      setError("Error al cargar las citas. Por favor, intenta nuevamente.");
       setSessions([]);
     } finally {
       setLoading(false);
@@ -390,7 +393,9 @@ export default function AdminSesionesPage() {
                     <td colSpan={7} className="py-12 text-center">
                       <div className="flex items-center justify-center gap-2">
                         <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                        <span className="text-gray-600">Cargando sesiones...</span>
+                        <span className="text-gray-600">
+                          Cargando sesiones...
+                        </span>
                       </div>
                     </td>
                   </tr>
@@ -398,7 +403,9 @@ export default function AdminSesionesPage() {
                   <tr>
                     <td colSpan={7} className="py-12 text-center">
                       <div className="text-red-600">
-                        <p className="font-medium">Error al cargar las sesiones</p>
+                        <p className="font-medium">
+                          Error al cargar las sesiones
+                        </p>
                         <p className="text-sm mt-1">{error}</p>
                         <button
                           onClick={loadCitas}
@@ -417,63 +424,63 @@ export default function AdminSesionesPage() {
                   </tr>
                 ) : (
                   sessions.map((session) => (
-                  <tr key={session.id} className="hover:bg-gray-50">
-                    <td className="py-4 px-6">
-                      <div>
+                    <tr key={session.id} className="hover:bg-gray-50">
+                      <td className="py-4 px-6">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {session.session}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {session.specialty}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {session.date}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {session.time}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-6">
                         <div className="text-sm font-medium text-gray-900">
-                          {session.session}
+                          {session.sessionNumber}
                         </div>
-                        <div className="text-sm text-gray-500">
-                          {session.specialty}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div>
+                      </td>
+                      <td className="py-4 px-6">
                         <div className="text-sm font-medium text-gray-900">
-                          {session.date}
+                          {session.price}
                         </div>
-                        <div className="text-sm text-gray-500">
-                          {session.time}
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="text-sm font-medium text-primary">
+                          {session.professional}
                         </div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="text-sm font-medium text-gray-900">
-                        {session.sessionNumber}
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="text-sm font-medium text-gray-900">
-                        {session.price}
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="text-sm font-medium text-primary">
-                        {session.professional}
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${session.statusColor}`}
-                      >
-                        {session.status}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-2">
-                        <button className="text-gray-400 hover:text-gray-600">
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleEditSession(session.id)}
-                          className="text-gray-400 hover:text-gray-600"
+                      </td>
+                      <td className="py-4 px-6">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${session.statusColor}`}
                         >
-                          <Edit className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                          {session.status}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="flex items-center gap-2">
+                          <button className="text-gray-400 hover:text-gray-600">
+                            <Eye className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleEditSession(session.id)}
+                            className="text-gray-400 hover:text-gray-600"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
                   ))
                 )}
               </tbody>
@@ -483,40 +490,47 @@ export default function AdminSesionesPage() {
           {/* Pagination */}
           <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
             <div className="text-sm text-gray-600">
-              Mostrando {sessions.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}-
-              {Math.min(currentPage * pageSize, totalSessions)} de {totalSessions}
+              Mostrando{" "}
+              {sessions.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}-
+              {Math.min(currentPage * pageSize, totalSessions)} de{" "}
+              {totalSessions}
             </div>
             <div className="flex items-center space-x-2">
               <button
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                 disabled={currentPage === 1 || loading}
                 className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
-              {Array.from({ length: Math.min(5, Math.ceil(totalSessions / pageSize)) }, (_, i) => {
-                const page = i + 1;
-                return (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    disabled={loading}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium ${
-                      currentPage === page
-                        ? 'bg-primary text-white'
-                        : 'border border-gray-300 hover:bg-gray-50'
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
-                  >
-                    {page}
-                  </button>
-                );
-              })}
+              {Array.from(
+                { length: Math.min(5, Math.ceil(totalSessions / pageSize)) },
+                (_, i) => {
+                  const page = i + 1;
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      disabled={loading}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium ${
+                        currentPage === page
+                          ? "bg-primary text-white"
+                          : "border border-gray-300 hover:bg-gray-50"
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                      {page}
+                    </button>
+                  );
+                }
+              )}
               {Math.ceil(totalSessions / pageSize) > 5 && (
                 <span className="px-2 text-gray-500">...</span>
               )}
               <button
-                onClick={() => setCurrentPage(prev => prev + 1)}
-                disabled={currentPage >= Math.ceil(totalSessions / pageSize) || loading}
+                onClick={() => setCurrentPage((prev) => prev + 1)}
+                disabled={
+                  currentPage >= Math.ceil(totalSessions / pageSize) || loading
+                }
                 className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ChevronRight className="h-4 w-4" />

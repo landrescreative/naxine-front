@@ -10,7 +10,7 @@ interface PaymentRow {
     name: string; // e.g., "Carmen Leandra"
   };
   date: string; // e.g., "Dic 23, 2024"
-  amount: string; // e.g., "USD $12.00" or "Sube factura fiscal para ver monto"
+  amount: string; // e.g., "12.00€" or "Sube factura fiscal para ver monto"
   type: string; // e.g., "Primera consulta"
   status: "pending" | "confirmed" | "cancelled";
   url_comprobante_pago?: string | null;

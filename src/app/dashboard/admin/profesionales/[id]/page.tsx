@@ -3618,12 +3618,12 @@ export default function AdminProfessionalEditPage() {
                           : "Transacción");
                       const total =
                         typeof tx.amount === "number"
-                          ? `$${(tx.amount / 100).toFixed(2)}`
+                          ? `${(tx.amount / 100).toFixed(2)}€`
                           : typeof tx.monto === "number"
-                          ? `$${Number(tx.monto).toFixed(2)}`
+                          ? `${Number(tx.monto).toFixed(2)}€`
                           : typeof tx.total === "number"
-                          ? `$${Number(tx.total).toFixed(2)}`
-                          : tx.total || tx.amount || tx.monto || "$0.00";
+                          ? `${Number(tx.total).toFixed(2)}€`
+                          : tx.total || tx.amount || tx.monto || "0.00€";
                       const status =
                         tx.status ||
                         tx.estado ||

@@ -146,7 +146,7 @@ export default function PagosPage() {
       const monto = typeof pago.monto === "string" 
         ? parseFloat(pago.monto) 
         : pago.monto;
-      const montoFormateado = `USD $${monto.toFixed(2)}`;
+      const montoFormateado = `${monto.toFixed(2)}€`;
 
       // Obtener nombre del profesional
       const nombreProfesional = pago.profesional_nombre

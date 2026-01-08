@@ -1,13 +1,12 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { motion, useInView } from "framer-motion";
-import ServiceCard from "./ServiceCard";
-import { StaticImageData } from "next/image";
+import Image from "next/image";
+import Link from "next/link";
 
 type ServiceItem = {
   title: string;
-  image: string | StaticImageData;
   href?: string;
 };
 
@@ -16,6 +15,197 @@ type ServicesSectionProps = {
   className?: string;
 };
 
+// Función para obtener el icono correcto según el servicio
+const getIconForService = (serviceName: string): string => {
+  const name = serviceName.toLowerCase();
+
+  // Nutrición
+  if (
+    name.includes("dieta") ||
+    name.includes("nutrici") ||
+    name.includes("alimenta") ||
+    name.includes("fodmap") ||
+    name.includes("colesterol") ||
+    name.includes("sibo") ||
+    name.includes("diabetes") ||
+    name.includes("adelgaz") ||
+    name.includes("embarazo") ||
+    name.includes("lactancia") ||
+    name.includes("tca") ||
+    name.includes("alergia") ||
+    name.includes("intolerancia") ||
+    name.includes("peso") ||
+    name.includes("obesidad") ||
+    name.includes("deportiva") ||
+    name.includes("vegano") ||
+    name.includes("vegetariano")
+  ) {
+    return "/assets/iconos/NUTRICION.webp";
+  }
+
+  // Legal
+  if (
+    name.includes("abogad") ||
+    name.includes("legal") ||
+    name.includes("divorcio") ||
+    name.includes("herencia") ||
+    name.includes("estafa") ||
+    name.includes("inmobiliaria") ||
+    name.includes("inmueble") ||
+    name.includes("nacionalidad") ||
+    name.includes("trámite") ||
+    name.includes("defensa") ||
+    name.includes("contrato") ||
+    name.includes("alquiler") ||
+    name.includes("arrendamiento") ||
+    name.includes("compraventa") ||
+    name.includes("comunidad") ||
+    name.includes("propietario") ||
+    name.includes("hipoteca") ||
+    name.includes("testamento") ||
+    name.includes("sucesión") ||
+    name.includes("laboral") ||
+    name.includes("despido") ||
+    name.includes("indemnización")
+  ) {
+    return "/assets/iconos/LEGAL.webp";
+  }
+
+  // Logopedia
+  if (
+    name.includes("logoped") ||
+    name.includes("habla") ||
+    name.includes("auditivo") ||
+    name.includes("lenguaje") ||
+    name.includes("comunicación") ||
+    name.includes("tartamud") ||
+    name.includes("dislexia") ||
+    name.includes("afasia") ||
+    name.includes("fonación") ||
+    name.includes("voz") ||
+    name.includes("deglución")
+  ) {
+    return "/assets/iconos/LOGOPEDA.webp";
+  }
+
+  // Fisioterapia
+  if (
+    name.includes("fisio") ||
+    name.includes("pélvico") ||
+    name.includes("cervical") ||
+    name.includes("rehabilita") ||
+    name.includes("muscular") ||
+    name.includes("articular") ||
+    name.includes("lumbar") ||
+    name.includes("espalda") ||
+    name.includes("masaje") ||
+    name.includes("osteopatía") ||
+    name.includes("traumatolog")
+  ) {
+    return "/assets/iconos/FISIOTERAPEUTA.webp";
+  }
+
+  // Coaching / Desarrollo Personal
+  if (
+    name.includes("coaching") ||
+    name.includes("liderazgo") ||
+    name.includes("habilidades sociales") ||
+    name.includes("hablar en público") ||
+    name.includes("desarrollo personal") ||
+    name.includes("motivación") ||
+    name.includes("productividad") ||
+    name.includes("objetivos") ||
+    name.includes("mentoría")
+  ) {
+    return "/assets/iconos/COACHING_DESARROLLO PERSONAL.webp";
+  }
+
+  // Psicología (fallback)
+  if (
+    name.includes("terapi") ||
+    name.includes("psicol") ||
+    name.includes("depresi") ||
+    name.includes("ansiedad") ||
+    name.includes("estrés") ||
+    name.includes("crisis") ||
+    name.includes("pareja") ||
+    name.includes("duelo") ||
+    name.includes("autoestima") ||
+    name.includes("emocional") ||
+    name.includes("fobia") ||
+    name.includes("trauma") ||
+    name.includes("adicción") ||
+    name.includes("obsesivo") ||
+    name.includes("bipolar") ||
+    name.includes("trastorno")
+  ) {
+    return "/assets/iconos/PSICOLOGIA.webp";
+  }
+
+  // Default fallback
+  return "/assets/iconos/PSICOLOGIA.webp";
+};
+
+// Componente de tarjeta con icono - Diseño unificado violeta
+function ServiceIconCard({
+  title,
+  href = "#",
+  className = "",
+}: {
+  title: string;
+  href?: string;
+  className?: string;
+}) {
+  const icon = getIconForService(title);
+
+  return (
+    <article
+      className={`group relative flex flex-col items-center justify-between p-5 sm:p-6 rounded-2xl bg-white border border-violet-100 shadow-sm hover:shadow-lg hover:border-violet-200 transition-all duration-300 overflow-hidden ${className}`}
+      aria-label={title}
+    >
+      {/* Subtle violet gradient overlay on hover */}
+      <div className="absolute inset-0 bg-gradient-to-br from-violet-50/0 to-violet-100/0 group-hover:from-violet-50/50 group-hover:to-violet-100/30 transition-all duration-300 rounded-2xl pointer-events-none" />
+
+      {/* Icon container with violet accent */}
+      <div className="relative z-10 flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 mb-4 rounded-2xl bg-gradient-to-br from-violet-50 to-violet-100/80 border border-violet-100 group-hover:border-violet-200 group-hover:scale-105 transition-all duration-300 pointer-events-none">
+        <Image
+          src={icon}
+          alt=""
+          width={48}
+          height={48}
+          className="w-10 h-10 sm:w-12 sm:h-12 object-contain"
+        />
+      </div>
+
+      {/* Title */}
+      <h3 className="relative z-10 text-center text-sm sm:text-base font-semibold text-gray-800 leading-tight mb-4 line-clamp-2 min-h-[2.5rem] group-hover:text-violet-900 transition-colors duration-200 pointer-events-none">
+        {title}
+      </h3>
+
+      {/* CTA Button - Brand violet */}
+      <Link
+        href={href}
+        className="relative z-20 inline-flex items-center justify-center gap-1.5 w-full rounded-xl bg-primary hover:bg-primary/90 px-4 py-2.5 text-sm font-medium text-white shadow-md hover:shadow-lg transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30 focus-visible:ring-offset-2"
+        onClick={(e) => e.stopPropagation()}
+      >
+        Ver más
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          className="w-4 h-4 transition-transform group-hover:translate-x-0.5"
+        >
+          <path
+            fillRule="evenodd"
+            d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z"
+            clipRule="evenodd"
+          />
+        </svg>
+      </Link>
+    </article>
+  );
+}
+
 export default function ServicesSection({
   items,
   className = "",
@@ -23,126 +213,70 @@ export default function ServicesSection({
   const scrollRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const startXRef = useRef(0);
-  const scrollStartRef = useRef(0);
-  const velocityRef = useRef(0);
-  const lastXRef = useRef(0);
-  const rafRef = useRef<number | null>(null);
-  const activePointerRef = useRef<number | null>(null);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [colWidth, setColWidth] = useState(0);
-  const [gapX, setGapX] = useState(24); // default ~ gap-6
+  const [scrollProgress, setScrollProgress] = useState(0);
   const [numPages, setNumPages] = useState(1);
-  const [containerWidth, setContainerWidth] = useState(0);
 
-  // Hook para detectar cuando la sección está en el viewport
   const isInView = useInView(sectionRef, {
     once: true,
     margin: "-100px 0px -100px 0px",
   });
 
-  // medir ancho de columna y separación para los dots/scroll
+  // Calculate number of pages based on content
   useEffect(() => {
-    const measure = () => {
-      if (!gridRef.current || !scrollRef.current) return;
-      const firstCard = gridRef.current.querySelector<HTMLElement>("article");
-      if (firstCard) setColWidth(firstCard.offsetWidth);
-      const styles = window.getComputedStyle(gridRef.current);
-      const gap = parseFloat(styles.columnGap || "24");
-      const gapValue = isNaN(gap) ? 24 : gap;
-      setGapX(gapValue);
-      const cw = scrollRef.current.clientWidth;
-      setContainerWidth(cw);
-      const totalWidth = scrollRef.current.scrollWidth;
-      const pages = Math.min(3, Math.max(1, Math.ceil(totalWidth / cw)));
-      setNumPages(pages);
+    const calculatePages = () => {
+      if (!scrollRef.current) return;
+      const scrollWidth = scrollRef.current.scrollWidth;
+      const clientWidth = scrollRef.current.clientWidth;
+      const maxScroll = scrollWidth - clientWidth;
+
+      if (maxScroll <= 0) {
+        setNumPages(1);
+      } else {
+        // Calculate pages based on how many "screens" of content we have
+        const pages = Math.ceil(scrollWidth / clientWidth);
+        setNumPages(pages);
+      }
     };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
+
+    calculatePages();
+    window.addEventListener("resize", calculatePages);
+    return () => window.removeEventListener("resize", calculatePages);
   }, [items.length]);
 
-  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+  // Handle scroll and update progress
+  const handleScroll = useCallback(() => {
     if (!scrollRef.current) return;
-    activePointerRef.current = event.pointerId;
-    event.currentTarget.setPointerCapture(event.pointerId);
-    setIsDragging(true);
-    startXRef.current = event.clientX;
-    scrollStartRef.current = scrollRef.current.scrollLeft;
-    lastXRef.current = event.clientX;
-    velocityRef.current = 0;
-    if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
+    const scrollWidth = scrollRef.current.scrollWidth;
+    const clientWidth = scrollRef.current.clientWidth;
+    const scrollLeft = scrollRef.current.scrollLeft;
+    const maxScroll = scrollWidth - clientWidth;
+
+    if (maxScroll <= 0) {
+      setScrollProgress(0);
+    } else {
+      const progress = scrollLeft / maxScroll;
+      setScrollProgress(Math.min(1, Math.max(0, progress)));
     }
-  };
-
-  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (
-      !isDragging ||
-      !scrollRef.current ||
-      activePointerRef.current !== event.pointerId
-    ) {
-      return;
-    }
-    event.preventDefault();
-    const deltaX = event.clientX - startXRef.current;
-    scrollRef.current.scrollLeft = scrollStartRef.current - deltaX;
-
-    // calcular velocidad para inercia
-    const dx = event.clientX - lastXRef.current;
-    velocityRef.current = dx; // px por frame (aprox)
-    lastXRef.current = event.clientX;
-  };
-
-  const endDrag = () => {
-    if (!scrollRef.current) {
-      setIsDragging(false);
-      return;
-    }
-    setIsDragging(false);
-    activePointerRef.current = null;
-
-    // inercia al soltar
-    const friction = 0.93; // 0-1, más bajo = se detiene antes
-    const step = () => {
-      if (!scrollRef.current) return;
-      if (Math.abs(velocityRef.current) < 0.2) {
-        rafRef.current = null;
-        return;
-      }
-      scrollRef.current.scrollLeft -= velocityRef.current;
-      velocityRef.current *= friction;
-      rafRef.current = requestAnimationFrame(step);
-    };
-
-    // solo aplica si hubo cierto movimiento
-    if (Math.abs(velocityRef.current) > 0.5) {
-      rafRef.current = requestAnimationFrame(step);
-    }
-  };
-
-  const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (activePointerRef.current !== event.pointerId) return;
-    event.currentTarget.releasePointerCapture(event.pointerId);
-    endDrag();
-  };
-
-  const handlePointerLeave = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (activePointerRef.current !== event.pointerId) return;
-    event.currentTarget.releasePointerCapture(event.pointerId);
-    endDrag();
-  };
-
-  useEffect(() => {
-    return () => {
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-      }
-    };
   }, []);
 
+  // Get active page index based on scroll progress
+  const activeIndex = Math.min(
+    numPages - 1,
+    Math.round(scrollProgress * (numPages - 1))
+  );
+
+  // Scroll to specific page
+  const scrollToIndex = (index: number) => {
+    if (!scrollRef.current) return;
+    const scrollWidth = scrollRef.current.scrollWidth;
+    const clientWidth = scrollRef.current.clientWidth;
+    const maxScroll = scrollWidth - clientWidth;
+
+    const targetScroll = (index / (numPages - 1)) * maxScroll;
+    scrollRef.current.scrollTo({ left: targetScroll, behavior: "smooth" });
+  };
+
+  // Handle wheel scroll
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -160,28 +294,7 @@ export default function ServicesSection({
     return () => {
       el.removeEventListener("wheel", handleWheel);
     };
-  }, [items.length]);
-
-  const handleScroll = () => {
-    if (!scrollRef.current || colWidth === 0) return;
-    const idx = Math.round(scrollRef.current.scrollLeft / (colWidth + gapX));
-    const maxIdx = Math.max(
-      0,
-      Math.ceil(scrollRef.current.scrollWidth / (containerWidth || 1)) - 1
-    );
-    const clamped = Math.max(0, Math.min(Math.min(numPages - 1, maxIdx), idx));
-    setActiveIndex(clamped);
-  };
-
-  const scrollToIndex = (index: number) => {
-    if (!scrollRef.current) return;
-    const perPage = containerWidth;
-    const target = Math.min(
-      scrollRef.current.scrollWidth - perPage,
-      index * perPage
-    );
-    scrollRef.current.scrollTo({ left: target, behavior: "smooth" });
-  };
+  }, []);
 
   return (
     <section
@@ -191,35 +304,27 @@ export default function ServicesSection({
       <div className="relative">
         <div
           ref={scrollRef}
-          className={`overflow-x-auto overscroll-x-contain hide-scrollbar snap-x snap-mandatory scroll-smooth ${
-            isDragging ? "cursor-grabbing select-none" : "cursor-grab"
-          }`}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerLeave={handlePointerLeave}
-          onPointerCancel={handlePointerLeave}
+          className="overflow-x-auto overscroll-x-contain hide-scrollbar snap-x snap-mandatory scroll-smooth"
           onScroll={handleScroll}
         >
           <div
             ref={gridRef}
-            className="grid grid-rows-2 grid-flow-col px-4 sm:px-6 lg:px-8 gap-x-5 gap-y-6 sm:gap-x-8 sm:gap-y-8 md:gap-x-10 md:gap-y-10 auto-cols-[80vw] sm:auto-cols-[minmax(240px,280px)] md:auto-cols-[minmax(260px,320px)] lg:auto-cols-[minmax(300px,360px)]"
+            className="grid grid-rows-2 grid-flow-col px-4 sm:px-6 lg:px-8 gap-x-4 gap-y-4 sm:gap-x-5 sm:gap-y-5 md:gap-x-6 md:gap-y-6 auto-cols-[160px] sm:auto-cols-[180px] md:auto-cols-[200px] lg:auto-cols-[220px]"
             role="list"
             aria-label="Servicios"
           >
             {items.map((item, index) => {
-              // Calcular la fila y columna para el delay escalonado
-              const row = Math.floor(index / 2); // 2 columnas por fila
+              const row = Math.floor(index / 2);
               const col = index % 2;
-              const delay = (row * 2 + col) * 0.1; // Delay escalonado
+              const delay = (row * 2 + col) * 0.08;
 
               return (
                 <motion.div
                   key={`${item.title}-${index}`}
                   initial={{
-                    scale: 0.8,
+                    scale: 0.85,
                     opacity: 0,
-                    y: 20,
+                    y: 15,
                   }}
                   animate={
                     isInView
@@ -229,49 +334,54 @@ export default function ServicesSection({
                           y: 0,
                         }
                       : {
-                          scale: 0.8,
+                          scale: 0.85,
                           opacity: 0,
-                          y: 20,
+                          y: 15,
                         }
                   }
                   transition={{
-                    duration: 0.6,
+                    duration: 0.5,
                     ease: [0.25, 0.46, 0.45, 0.94],
                     delay: delay,
                   }}
                   className="w-full snap-start"
                 >
-                  <ServiceCard
+                  <ServiceIconCard
                     title={item.title}
-                    image={item.image}
                     href={item.href}
-                    className="w-full"
+                    className="w-full h-full min-h-[200px] sm:min-h-[220px]"
                   />
                 </motion.div>
               );
             })}
           </div>
         </div>
-        {/* indicadores de posición */}
-        <div className="mt-4 flex items-center justify-center gap-2">
-          {Array.from({ length: numPages }).map((_, i) => (
-            <button
-              key={i}
-              aria-label={`Ir a página ${i + 1}`}
-              className={`h-2 w-2 rounded-full transition-colors ${
-                i === activeIndex ? "bg-primary" : "bg-gray-300"
-              }`}
-              onClick={() => scrollToIndex(i)}
-            />
-          ))}
-        </div>
+
+        {/* Indicadores de posición mejorados */}
+        {numPages > 1 && (
+          <div className="mt-6 flex items-center justify-center gap-2">
+            {Array.from({ length: numPages }).map((_, i) => (
+              <button
+                key={i}
+                aria-label={`Ir a página ${i + 1}`}
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  i === activeIndex
+                    ? "w-6 bg-primary"
+                    : "w-2 bg-gray-300 hover:bg-gray-400"
+                }`}
+                onClick={() => scrollToIndex(i)}
+              />
+            ))}
+          </div>
+        )}
+
         <style jsx global>{`
           .hide-scrollbar {
-            -ms-overflow-style: none; /* IE/Edge */
-            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none;
+            scrollbar-width: none;
           }
           .hide-scrollbar::-webkit-scrollbar {
-            display: none; /* Chrome/Safari */
+            display: none;
           }
         `}</style>
       </div>

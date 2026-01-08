@@ -8,7 +8,7 @@ interface PurpleSectionProps {
 }
 
 export default function PurpleSection({ title, subtitle }: PurpleSectionProps) {
-  const videoSrc = "/hero-background.mp4";
+  const videoSrc = "/video_hero_optimized (2).mp4";
 
   return (
     <section className="relative w-full overflow-hidden bg-black px-4 sm:px-6 md:px-10 lg:px-16 py-20 md:py-28">

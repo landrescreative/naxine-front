@@ -147,7 +147,7 @@ export default function SessionDetailsPage({ params }: PageProps) {
                   <div className="font-semibold text-gray-900">
                     {appointmentDetails.product.name}
                   </div>
-                  <div>${appointmentDetails.product.price} USD</div>
+                  <div>{appointmentDetails.product.price}€</div>
                   <div>{appointmentDetails.product.description}</div>
                   <div>{appointmentDetails.product.category}</div>
                 </div>
@@ -221,15 +221,15 @@ export default function SessionDetailsPage({ params }: PageProps) {
               <div className="grid grid-cols-2 gap-y-2">
                 <div className="text-gray-500">Precio del Producto:</div>
                 <div className="text-right font-semibold text-gray-900">
-                  ${appointmentDetails.payment.subtotal} USD
+                  {appointmentDetails.payment.subtotal}€
                 </div>
                 <div className="text-gray-500">Impuestos:</div>
                 <div className="text-right">
-                  ${appointmentDetails.payment.taxes}
+                  {appointmentDetails.payment.taxes}€
                 </div>
                 <div className="text-gray-900 font-semibold">Total:</div>
                 <div className="text-right font-semibold text-gray-900">
-                  ${appointmentDetails.payment.total}
+                  {appointmentDetails.payment.total}€
                 </div>
               </div>
             </div>

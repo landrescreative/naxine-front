@@ -38,6 +38,14 @@ export const metadata: Metadata = {
   authors: [{ name: "NAXINE" }],
   creator: "NAXINE",
   publisher: "NAXINE",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon.ico", type: "image/x-icon" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/favicon.ico",
+  },
   formatDetection: {
     email: false,
     address: false,

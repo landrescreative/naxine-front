@@ -567,6 +567,41 @@ export const handleApiError = (error: ApiError | string): string => {
 };
 
 // Función para verificar conexión con la API
+// Maneja correctamente respuestas 503 del endpoint /health que aún contienen datos válidos
 export const testApiConnection = async (): Promise<ApiResponse<any>> => {
-  return apiClient.get("/health");
+  const API_BASE_URL =
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+  const url = `${API_BASE_URL}/health`;
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    const data = await response.json();
+
+    // El endpoint /health puede devolver 503 cuando servicios secundarios fallan,
+    // pero el body aún contiene información válida del estado de la plataforma
+    if (data && typeof data === "object" && "status" in data) {
+      return {
+        success: true,
+        data,
+      };
+    }
+
+    // Si no tiene el formato esperado, tratarlo como error
+    return {
+      success: false,
+      error: `Respuesta inesperada del endpoint /health`,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "No se pudo contactar el endpoint /health",
+    };
+  }
 };

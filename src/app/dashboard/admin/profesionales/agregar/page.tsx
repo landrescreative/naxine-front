@@ -335,7 +335,7 @@ export default function AgregarProfesionalPage() {
                 descripcion: "", // opcional
                 precio: precioNum,
                 duracion: duracionStr,
-                moneda: "MXN",
+                moneda: "EUR",
                 modalidad: modalidadGlobal, // el backend puede sobreescribir si requiere por-paquete
                 activo: true,
               });

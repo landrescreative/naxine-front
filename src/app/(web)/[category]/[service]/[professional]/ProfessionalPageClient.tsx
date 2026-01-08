@@ -608,7 +608,8 @@ export default function ProfessionalPageClient({
   // Extraer horarios disponibles del profesional filtrados por tipo de atención seleccionado
   const horariosDisponibles = useMemo(() => {
     // Cambiar estructura para soportar múltiples rangos por día
-    const horarios: { [key: number]: Array<{ desde: string; hasta: string }> } = {};
+    const horarios: { [key: number]: Array<{ desde: string; hasta: string }> } =
+      {};
 
     // Si hay horarios cargados (ya filtrados por tipo de atención), usarlos
     if (horariosCargados.length > 0) {
@@ -633,12 +634,12 @@ export default function ProfessionalPageClient({
           if (!horarios[diaIndex]) {
             horarios[diaIndex] = [];
           }
-          
+
           // Verificar si el rango ya existe para evitar duplicados
           const rangoExiste = horarios[diaIndex].some(
             (r) => r.desde === desde && r.hasta === hasta
           );
-          
+
           if (!rangoExiste) {
             horarios[diaIndex].push({ desde, hasta });
           }
@@ -887,33 +888,34 @@ export default function ProfessionalPageClient({
                   const year = date.getFullYear();
                   const month = date.getMonth();
                   const day = date.getDate();
-                const slotDateTimeUTC = crearFechaEspanaUTC(
-                  year,
-                  month,
-                  day,
-                  hour,
-                  minute
-                );
-                const slotEndUTC = new Date(
-                  slotDateTimeUTC.getTime() + duracionMinutos * 60000
-                );
-
-                const isOccupied = existingAppointments.some((apt) => {
-                  // Usar dateTimeUTC si está disponible, sino normalizar dateTime
-                  const aptStart =
-                    apt.dateTimeUTC || normalizeDateToUTC(apt.dateTime);
-                  const aptEnd = new Date(
-                    aptStart.getTime() +
-                      (apt.duration || duracionMinutos) * 60000
+                  const slotDateTimeUTC = crearFechaEspanaUTC(
+                    year,
+                    month,
+                    day,
+                    hour,
+                    minute
+                  );
+                  const slotEndUTC = new Date(
+                    slotDateTimeUTC.getTime() + duracionMinutos * 60000
                   );
 
-                  // Verificar solapamiento
-                  return (
-                    (slotDateTimeUTC >= aptStart && slotDateTimeUTC < aptEnd) ||
-                    (slotEndUTC > aptStart && slotEndUTC <= aptEnd) ||
-                    (slotDateTimeUTC <= aptStart && slotEndUTC >= aptEnd)
-                  );
-                });
+                  const isOccupied = existingAppointments.some((apt) => {
+                    // Usar dateTimeUTC si está disponible, sino normalizar dateTime
+                    const aptStart =
+                      apt.dateTimeUTC || normalizeDateToUTC(apt.dateTime);
+                    const aptEnd = new Date(
+                      aptStart.getTime() +
+                        (apt.duration || duracionMinutos) * 60000
+                    );
+
+                    // Verificar solapamiento
+                    return (
+                      (slotDateTimeUTC >= aptStart &&
+                        slotDateTimeUTC < aptEnd) ||
+                      (slotEndUTC > aptStart && slotEndUTC <= aptEnd) ||
+                      (slotDateTimeUTC <= aptStart && slotEndUTC >= aptEnd)
+                    );
+                  });
 
                   if (!isOccupied) {
                     hasAvailableSlots = true;
@@ -922,7 +924,7 @@ export default function ProfessionalPageClient({
 
                   currentTime += duracionMinutos;
                 }
-                
+
                 // Si ya encontramos un slot disponible, salir del loop de rangos
                 if (hasAvailableSlots) break;
               }
@@ -1143,104 +1145,109 @@ export default function ProfessionalPageClient({
         const hasta = timeToMinutes(horario.hasta);
         let currentTime = desde;
 
-      while (currentTime + duracionMinutos <= hasta) {
-        const slotTime = minutesToTime(currentTime);
-        const hour = Math.floor(currentTime / 60);
-        const minute = currentTime % 60;
+        while (currentTime + duracionMinutos <= hasta) {
+          const slotTime = minutesToTime(currentTime);
+          const hour = Math.floor(currentTime / 60);
+          const minute = currentTime % 60;
 
-        // Crear fecha UTC interpretando la hora como hora de España
-        const year = date.getFullYear();
-        const month = date.getMonth();
-        const day = date.getDate();
-        const slotDateTimeUTC = crearFechaEspanaUTC(
-          year,
-          month,
-          day,
-          hour,
-          minute
-        );
-        const slotEndUTC = new Date(
-          slotDateTimeUTC.getTime() + duracionMinutos * 60000
-        );
-
-        // Validación: Si es hoy, filtrar horas que ya pasaron
-        let isPastTime = false;
-        if (isToday) {
-          // Obtener hora actual en España
-          const now = new Date();
-          const nowInSpain = new Date(
-            now.toLocaleString("en-US", { timeZone: "Europe/Madrid" })
+          // Crear fecha UTC interpretando la hora como hora de España
+          const year = date.getFullYear();
+          const month = date.getMonth();
+          const day = date.getDate();
+          const slotDateTimeUTC = crearFechaEspanaUTC(
+            year,
+            month,
+            day,
+            hour,
+            minute
           );
-          const nowMinutes =
-            nowInSpain.getHours() * 60 + nowInSpain.getMinutes();
+          const slotEndUTC = new Date(
+            slotDateTimeUTC.getTime() + duracionMinutos * 60000
+          );
 
-          // El slot está en el pasado si sus minutos son menores a los minutos actuales
-          isPastTime = currentTime < nowMinutes;
-
-          if (isPastTime) {
-            const nowHour = Math.floor(nowMinutes / 60);
-            const nowMin = nowMinutes % 60;
-            console.log(
-              `[ProfessionalPageClient] Slot ${slotTime} filtrado porque ya pasó (hora actual en España: ${nowHour}:${nowMin
-                .toString()
-                .padStart(2, "0")})`
+          // Validación: Si es hoy, filtrar horas que ya pasaron
+          let isPastTime = false;
+          if (isToday) {
+            // Obtener hora actual en España
+            const now = new Date();
+            const nowInSpain = new Date(
+              now.toLocaleString("en-US", { timeZone: "Europe/Madrid" })
             );
+            const nowMinutes =
+              nowInSpain.getHours() * 60 + nowInSpain.getMinutes();
+
+            // El slot está en el pasado si sus minutos son menores a los minutos actuales
+            isPastTime = currentTime < nowMinutes;
+
+            if (isPastTime) {
+              const nowHour = Math.floor(nowMinutes / 60);
+              const nowMin = nowMinutes % 60;
+              console.log(
+                `[ProfessionalPageClient] Slot ${slotTime} filtrado porque ya pasó (hora actual en España: ${nowHour}:${nowMin
+                  .toString()
+                  .padStart(2, "0")})`
+              );
+            }
           }
-        }
 
-        const isOccupied = existingAppointments.some((apt) => {
-          // Usar dateTimeUTC si está disponible, sino normalizar dateTime
-          const aptStart = apt.dateTimeUTC || normalizeDateToUTC(apt.dateTime);
-          const aptEnd = new Date(
-            aptStart.getTime() + (apt.duration || duracionMinutos) * 60000
-          );
-
-          // Verificar solapamiento: dos intervalos se solapan si:
-          // - El inicio del slot está dentro del intervalo de la cita, O
-          // - El fin del slot está dentro del intervalo de la cita, O
-          // - El slot contiene completamente la cita
-          const hasOverlap =
-            (slotDateTimeUTC >= aptStart && slotDateTimeUTC < aptEnd) ||
-            (slotEndUTC > aptStart && slotEndUTC <= aptEnd) ||
-            (slotDateTimeUTC <= aptStart && slotEndUTC >= aptEnd);
-
-          if (hasOverlap) {
-            console.log(
-              `[ProfessionalPageClient] 🔴 Slot OCUPADO: ${slotTime} (${slotDateTimeUTC.toISOString()}) se solapa con cita ${
-                apt.id
-              } (${aptStart.toISOString()} - ${aptEnd.toISOString()})`
+          const isOccupied = existingAppointments.some((apt) => {
+            // Usar dateTimeUTC si está disponible, sino normalizar dateTime
+            const aptStart =
+              apt.dateTimeUTC || normalizeDateToUTC(apt.dateTime);
+            const aptEnd = new Date(
+              aptStart.getTime() + (apt.duration || duracionMinutos) * 60000
             );
-            console.log(`[ProfessionalPageClient] Detalles del solapamiento:`, {
-              slotStart: slotDateTimeUTC.toISOString(),
-              slotEnd: slotEndUTC.toISOString(),
-              aptStart: aptStart.toISOString(),
-              aptEnd: aptEnd.toISOString(),
-              aptDuration: apt.duration || duracionMinutos,
-              condition1:
-                slotDateTimeUTC >= aptStart && slotDateTimeUTC < aptEnd,
-              condition2: slotEndUTC > aptStart && slotEndUTC <= aptEnd,
-              condition3: slotDateTimeUTC <= aptStart && slotEndUTC >= aptEnd,
+
+            // Verificar solapamiento: dos intervalos se solapan si:
+            // - El inicio del slot está dentro del intervalo de la cita, O
+            // - El fin del slot está dentro del intervalo de la cita, O
+            // - El slot contiene completamente la cita
+            const hasOverlap =
+              (slotDateTimeUTC >= aptStart && slotDateTimeUTC < aptEnd) ||
+              (slotEndUTC > aptStart && slotEndUTC <= aptEnd) ||
+              (slotDateTimeUTC <= aptStart && slotEndUTC >= aptEnd);
+
+            if (hasOverlap) {
+              console.log(
+                `[ProfessionalPageClient] 🔴 Slot OCUPADO: ${slotTime} (${slotDateTimeUTC.toISOString()}) se solapa con cita ${
+                  apt.id
+                } (${aptStart.toISOString()} - ${aptEnd.toISOString()})`
+              );
+              console.log(
+                `[ProfessionalPageClient] Detalles del solapamiento:`,
+                {
+                  slotStart: slotDateTimeUTC.toISOString(),
+                  slotEnd: slotEndUTC.toISOString(),
+                  aptStart: aptStart.toISOString(),
+                  aptEnd: aptEnd.toISOString(),
+                  aptDuration: apt.duration || duracionMinutos,
+                  condition1:
+                    slotDateTimeUTC >= aptStart && slotDateTimeUTC < aptEnd,
+                  condition2: slotEndUTC > aptStart && slotEndUTC <= aptEnd,
+                  condition3:
+                    slotDateTimeUTC <= aptStart && slotEndUTC >= aptEnd,
+                }
+              );
+            }
+
+            return hasOverlap;
+          });
+
+          // Solo agregar el slot si no es una hora pasada
+          if (!isPastTime) {
+            slots.push({
+              time: `${Math.floor(currentTime / 60)
+                .toString()
+                .padStart(2, "0")}:${(currentTime % 60)
+                .toString()
+                .padStart(2, "0")}`,
+              displayTime: slotTime,
+              available: !isOccupied,
             });
           }
 
-          return hasOverlap;
-        });
-
-        // Solo agregar el slot si no es una hora pasada
-        if (!isPastTime) {
-          slots.push({
-            time: `${Math.floor(currentTime / 60)
-              .toString()
-              .padStart(2, "0")}:${(currentTime % 60)
-              .toString()
-              .padStart(2, "0")}`,
-            displayTime: slotTime,
-            available: !isOccupied,
-          });
+          currentTime += duracionMinutos;
         }
-
-        currentTime += duracionMinutos;
-      }
       });
     }
 
@@ -2005,8 +2012,11 @@ export default function ProfessionalPageClient({
                       USD: "$",
                       EUR: "€",
                     };
-                    const simbolo = simbolos[moneda] || "$";
-                    return `${simbolo}${precio.toFixed(2)}`;
+                    const simbolo = simbolos[moneda] || "€";
+                    // Para EUR el símbolo va después, para otras monedas antes
+                    return moneda === "EUR"
+                      ? `${precio.toFixed(2)}€`
+                      : `${simbolo}${precio.toFixed(2)}`;
                   };
 
                   // Extraer duración de la descripción si no está disponible

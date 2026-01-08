@@ -136,24 +136,39 @@ export async function getPlatformDiagnostics(): Promise<PlatformDiagnostics> {
 
   const healthData: Record<string, any> = backendData ?? {};
 
+  // Servicios del endpoint /health del backend
+  const backendServices: Record<string, any> = healthData?.services ?? {};
+
+  // El backend puede responder con status: "operational", "degraded", o "down"
+  // "degraded" significa que servicios no críticos tienen problemas pero la plataforma funciona
   const backendStatus = normalizeStatus(
     backendResponse.success ? healthData?.status ?? "operational" : "down"
   );
 
+  // Si pudimos conectar al backend, asumimos que podemos obtener el estado real de los servicios
+  const backendIsReachable = backendResponse.success;
+
+  // Buscar estado de la base de datos en services.database.status (estructura real del backend)
   const databaseStatus = normalizeStatus(
-    healthData?.database?.status ??
+    backendServices?.database?.status ??
+      healthData?.database?.status ??
       healthData?.db?.status ??
       healthData?.databaseStatus ??
       healthData?.dbStatus,
-    backendStatus === "operational" ? "operational" : "unknown"
+    // Si el backend respondió exitosamente, la DB probablemente funciona aunque no tengamos el dato explícito
+    backendIsReachable ? "operational" : "unknown"
   );
+
+  // Obtener latencia de la base de datos si está disponible
+  const dbLatencyMs = backendServices?.database?.latencyMs ?? null;
 
   const apiLatencyMs =
     Number(
       healthData?.metrics?.responseTimeMs ??
         healthData?.metrics?.latency ??
         healthData?.responseTime ??
-        healthData?.latency
+        healthData?.latency ??
+        dbLatencyMs
     ) || null;
 
   const uptime =
@@ -179,73 +194,53 @@ export async function getPlatformDiagnostics(): Promise<PlatformDiagnostics> {
     process.env.NODE_ENV === "production" ? "unknown" : "operational"
   );
 
-  const hasSupabase =
-    !!process.env.NEXT_PUBLIC_SUPABASE_URL || !!process.env.SUPABASE_URL;
-  const hasCloudinary =
-    !!process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ||
-    !!process.env.CLOUDINARY_CLOUD_NAME;
-  const hasS3 =
-    !!process.env.NEXT_PUBLIC_AWS_S3_BUCKET ||
-    !!process.env.AWS_S3_BUCKET ||
-    !!process.env.AWS_S3_BUCKET_NAME ||
-    !!process.env.S3_BUCKET ||
-    !!process.env.NEXT_PUBLIC_S3_BUCKET ||
-    !!process.env.AWS_BUCKET;
+  // Obtener estado real de servicios del backend si están disponibles
+  const backendStorageService = backendServices?.storage;
+  const backendEmailService = backendServices?.emails;
+  const backendPaymentService = backendServices?.payments;
 
-  const rawStorageProvider =
-    process.env.NEXT_PUBLIC_MEDIA_PROVIDER ||
-    process.env.MEDIA_PROVIDER ||
-    process.env.STORAGE_PROVIDER ||
-    "";
-  const normalizedStorageProvider = rawStorageProvider.toLowerCase();
-
+  // Storage: preferir datos del backend
+  const storageStatus: ServiceHealth = backendStorageService?.status
+    ? normalizeStatus(backendStorageService.status)
+    : "unknown";
   const storageProvider =
-    (hasSupabase && "Supabase") ||
-    (hasCloudinary && "Cloudinary") ||
-    (hasS3 && "AWS S3") ||
-    (normalizedStorageProvider.includes("supabase") && "Supabase") ||
-    (normalizedStorageProvider.includes("cloudinary") && "Cloudinary") ||
-    (normalizedStorageProvider.includes("s3") ||
-    normalizedStorageProvider.includes("aws")
-      ? "AWS S3"
-      : normalizedStorageProvider
-      ? normalizedStorageProvider
-          .split(" ")
-          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(" ")
-      : null);
-  const storageStatus: ServiceHealth = storageProvider
+    backendStorageService?.name ||
+    (!!process.env.NEXT_PUBLIC_SUPABASE_URL && "Supabase") ||
+    (!!process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME && "Cloudinary") ||
+    (!!process.env.NEXT_PUBLIC_AWS_S3_BUCKET && "AWS S3") ||
+    null;
+  const storageDetail =
+    backendStorageService?.detail ||
+    (storageProvider
+      ? `Proveedor configurado: ${storageProvider}.`
+      : "No hay proveedor público definido en variables de entorno.");
+
+  // Email: preferir datos del backend (puede estar "down" pero sigue funcionando el resto de la plataforma)
+  const emailStatus: ServiceHealth = backendEmailService?.status
+    ? normalizeStatus(backendEmailService.status)
+    : "unknown";
+  const emailProvider =
+    backendEmailService?.name ||
+    (!!process.env.RESEND_API_KEY && "Resend") ||
+    (!!process.env.SENDGRID_API_KEY && "SendGrid") ||
+    null;
+  const emailDetail =
+    backendEmailService?.detail ||
+    (emailProvider
+      ? `Integración activa con ${emailProvider}.`
+      : "Sin claves de proveedor detectadas.");
+
+  // Payments: preferir datos del backend
+  const paymentStatus: ServiceHealth = backendPaymentService?.status
+    ? normalizeStatus(backendPaymentService.status)
+    : process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
     ? "operational"
     : "unknown";
-
-  const hasResend =
-    !!process.env.RESEND_API_KEY || !!process.env.NEXT_PUBLIC_RESEND_API_KEY;
-  const hasSendgrid =
-    !!process.env.SENDGRID_API_KEY ||
-    !!process.env.NEXT_PUBLIC_SENDGRID_API_KEY ||
-    !!process.env.SENDGRID_KEY;
-
-  const rawEmailProvider =
-    process.env.NEXT_PUBLIC_EMAIL_PROVIDER ||
-    process.env.EMAIL_PROVIDER ||
-    "";
-  const normalizedEmailProvider = rawEmailProvider.toLowerCase();
-
-  const emailProvider =
-    (hasResend && "Resend") ||
-    (hasSendgrid && "SendGrid") ||
-    (normalizedEmailProvider.includes("sendgrid") && "SendGrid") ||
-    (normalizedEmailProvider.includes("resend") && "Resend") ||
-    (normalizedEmailProvider
-      ? normalizedEmailProvider
-          .split(" ")
-          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(" ")
-      : null);
-  const emailStatus: ServiceHealth = emailProvider ? "operational" : "unknown";
-
-  const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-  const paymentStatus: ServiceHealth = stripeKey ? "operational" : "unknown";
+  const paymentDetail =
+    backendPaymentService?.detail ||
+    (process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+      ? "Stripe cuenta con clave pública configurada."
+      : "Stripe no está configurado (NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY).");
 
   const stats: StatCardInfo[] = [
     {
@@ -271,8 +266,10 @@ export async function getPlatformDiagnostics(): Promise<PlatformDiagnostics> {
       label: "Latencia promedio de API",
       value: apiLatencyMs ? `${apiLatencyMs.toFixed(0)} ms` : "N/D",
       helper:
-        backendStatus === "operational"
-          ? "Respuesta correcta del endpoint /health."
+        backendIsReachable
+          ? backendStatus === "degraded"
+            ? "Backend responde. Algunos servicios secundarios tienen problemas."
+            : "Respuesta correcta del endpoint /health."
           : backendResponse.error || "Sin respuesta del backend.",
     },
     {
@@ -300,10 +297,12 @@ export async function getPlatformDiagnostics(): Promise<PlatformDiagnostics> {
       name: "Base de datos principal",
       status: databaseStatus,
       detail:
+        backendServices?.database?.detail ??
         healthData?.database?.message ??
         (databaseStatus === "operational"
           ? "Conexión estable reportada por la API."
           : "Sin confirmación del estado actual."),
+      latencyMs: dbLatencyMs,
     },
     {
       id: "vercel",
@@ -317,33 +316,34 @@ export async function getPlatformDiagnostics(): Promise<PlatformDiagnostics> {
       id: "storage",
       name: "Almacenamiento de medios",
       status: storageStatus,
-      detail: storageProvider
-        ? `Proveedor configurado: ${storageProvider}.`
-        : "No hay proveedor público definido en variables de entorno.",
+      detail: storageDetail,
+      latencyMs: backendStorageService?.latencyMs ?? null,
     },
     {
       id: "emails",
       name: "Notificaciones por correo",
       status: emailStatus,
-      detail: emailProvider
-        ? `Integración activa con ${emailProvider}.`
-        : "Sin claves de proveedor detectadas.",
+      detail: emailDetail,
+      latencyMs: backendEmailService?.latencyMs ?? null,
     },
     {
       id: "payments",
       name: "Procesamiento de pagos",
       status: paymentStatus,
-      detail: stripeKey
-        ? "Stripe cuenta con clave pública configurada."
-        : "Stripe no está configurado (NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY).",
+      detail: paymentDetail,
+      latencyMs: backendPaymentService?.latencyMs ?? null,
     },
   ];
+
+  // Determinar si los servicios core (sin contar emails) están operativos
+  const coreServicesOperational =
+    databaseStatus === "operational" && backendStatus !== "down";
 
   const functions: FunctionDiagnosticInfo[] = [
     {
       id: "auth",
       name: "Autenticación y roles",
-      status: backendStatus,
+      status: coreServicesOperational ? "operational" : "down",
       description:
         "Verificación de sesiones, login y control de acceso para clientes, profesionales y administradores.",
       lastUpdated: checkedAt,
@@ -351,7 +351,7 @@ export async function getPlatformDiagnostics(): Promise<PlatformDiagnostics> {
     {
       id: "bookings",
       name: "Reservas y citas",
-      status: backendStatus === "operational" ? "operational" : "degraded",
+      status: coreServicesOperational ? "operational" : "degraded",
       description:
         "Agenda, calendarios y sincronización con Google Calendar/Meet.",
       lastUpdated: checkedAt,
@@ -360,7 +360,7 @@ export async function getPlatformDiagnostics(): Promise<PlatformDiagnostics> {
       id: "payments-fn",
       name: "Pagos y facturación",
       status:
-        backendStatus === "operational" && paymentStatus === "operational"
+        coreServicesOperational && paymentStatus === "operational"
           ? "operational"
           : paymentStatus === "unknown"
           ? "unknown"
@@ -380,7 +380,7 @@ export async function getPlatformDiagnostics(): Promise<PlatformDiagnostics> {
     {
       id: "support",
       name: "Soporte y tickets",
-      status: backendStatus,
+      status: coreServicesOperational ? "operational" : "degraded",
       description:
         "Formulario de soporte, inbox de tickets y alertas para el equipo.",
       lastUpdated: checkedAt,
