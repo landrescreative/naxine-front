@@ -23,9 +23,9 @@ function VerifyCodeForm() {
   const email = rawEmail.trim().toLowerCase();
 
   useEffect(() => {
-    // Si no hay email, redirigir al registro
+    // Si no hay email, redirigir al inicio de sesión
     if (!email) {
-      router.push("/registro");
+      router.push("/iniciar-sesion");
     }
   }, [email, router]);
 
@@ -44,44 +44,58 @@ function VerifyCodeForm() {
     const normalizedEmail = email.trim().toLowerCase();
 
     try {
-      const response = await authService.verifyCode(normalizedEmail, code.trim());
+      const response = await authService.verifyCode(
+        normalizedEmail,
+        code.trim()
+      );
 
       if (response.success && response.data) {
         // Verificar si la respuesta incluye datos de autenticación (usuario y token)
         const backendResponse = response.data as any;
         const actualData = backendResponse.data || backendResponse;
-        
-        console.log('[VerifyCodePage] Respuesta del backend:', actualData);
-        console.log('[VerifyCodePage] Mensaje del backend:', backendResponse.message);
-        
+
+        console.log("[VerifyCodePage] Respuesta del backend:", actualData);
+        console.log(
+          "[VerifyCodePage] Mensaje del backend:",
+          backendResponse.message
+        );
+
         // Verificar si es un profesional pendiente de aprobación
-        if (actualData.profesional && actualData.profesional.estado_aprobacion === "pendiente") {
+        if (
+          actualData.profesional &&
+          actualData.profesional.estado_aprobacion === "pendiente"
+        ) {
           // Mostrar mensaje de pendiente de aprobación
           setIsVerified(true);
           setPendingApproval(true);
-          setApprovalMessage(backendResponse.message || actualData.profesional.mensaje || "Tu solicitud está pendiente de aprobación por un administrador.");
-          // Redirigir al login después de mostrar el mensaje
-          setTimeout(() => {
-            router.push("/iniciar-sesion");
-          }, 5000);
+          setApprovalMessage(
+            backendResponse.message ||
+              actualData.profesional.mensaje ||
+              "Tu solicitud está pendiente de aprobación por un administrador."
+          );
+          // NO redirigir - mantener al usuario en esta pantalla
           return;
         }
-        
+
         // Si hay token y usuario, iniciar sesión automáticamente
         if (actualData.token && (actualData.usuario || actualData.user)) {
           // Mapear la respuesta del backend al formato del frontend
           const roleMap: Record<string, "client" | "professional" | "admin"> = {
-            "cliente": "client",
-            "profesional": "professional",
-            "admin": "admin",
-            "administracion": "admin",
+            cliente: "client",
+            profesional: "professional",
+            admin: "admin",
+            administracion: "admin",
           };
 
           const userData = {
-            id: String(actualData.usuario?.id_usuario || actualData.user?.id || ""),
+            id: String(
+              actualData.usuario?.id_usuario || actualData.user?.id || ""
+            ),
             email: actualData.usuario?.email || actualData.user?.email || email,
             name: actualData.usuario?.nombre || actualData.user?.name || "",
-            role: roleMap[actualData.usuario?.rol || actualData.user?.role || ""] || "client",
+            role:
+              roleMap[actualData.usuario?.rol || actualData.user?.role || ""] ||
+              "client",
             token: actualData.token || "",
             refreshToken: actualData.refreshToken,
           };
@@ -89,7 +103,7 @@ function VerifyCodeForm() {
           // Guardar en localStorage e iniciar sesión
           localStorage.setItem("user", JSON.stringify(userData));
           window.dispatchEvent(new CustomEvent("userLogin"));
-          
+
           setIsVerified(true);
           // Redirigir al dashboard después de iniciar sesión
           setTimeout(() => {
@@ -103,10 +117,14 @@ function VerifyCodeForm() {
           }, 2000);
         }
       } else {
-        setError(response.error || "Código inválido. Por favor, intenta de nuevo.");
+        setError(
+          response.error || "Código inválido. Por favor, intenta de nuevo."
+        );
       }
     } catch (err) {
-      setError("Ocurrió un error al verificar el código. Por favor, intenta de nuevo.");
+      setError(
+        "Ocurrió un error al verificar el código. Por favor, intenta de nuevo."
+      );
       console.error("Error en verificación:", err);
     } finally {
       setLoading(false);
@@ -116,29 +134,36 @@ function VerifyCodeForm() {
   const handleResendCode = async () => {
     setIsResending(true);
     setError("");
-    
+
     // Asegurar que el email esté normalizado
     const normalizedEmail = email.trim().toLowerCase();
-    
+
     if (!normalizedEmail) {
       setError("No se puede reenviar el código sin un email válido");
       setIsResending(false);
       return;
     }
-    
+
     try {
-      const response = await authService.resendVerificationCode(normalizedEmail);
-      
+      const response = await authService.resendVerificationCode(
+        normalizedEmail
+      );
+
       if (response.success) {
         // Mostrar mensaje de éxito
         setError("");
         // Podríamos mostrar un mensaje de éxito temporal aquí
         alert("Código reenviado. Por favor revisa tu correo.");
       } else {
-        setError(response.error || "Error al reenviar el código. Por favor, intenta de nuevo.");
+        setError(
+          response.error ||
+            "Error al reenviar el código. Por favor, intenta de nuevo."
+        );
       }
     } catch (err) {
-      setError("Ocurrió un error al reenviar el código. Por favor, intenta de nuevo.");
+      setError(
+        "Ocurrió un error al reenviar el código. Por favor, intenta de nuevo."
+      );
       console.error("Error al reenviar código:", err);
     } finally {
       setIsResending(false);
@@ -174,11 +199,13 @@ function VerifyCodeForm() {
                 <h1 className="text-3xl font-bold text-gray-800 mb-4">
                   Solicitud Pendiente
                 </h1>
-                <p className="text-gray-600 mb-8" role="status" aria-live="polite">
-                  {approvalMessage || "Tu solicitud está pendiente de aprobación por un administrador. Te notificaremos por email cuando tu cuenta sea aprobada y puedas acceder a la plataforma."}
-                </p>
-                <p className="text-sm text-gray-500">
-                  Redirigiendo al inicio de sesión...
+                <p
+                  className="text-gray-600 mb-8"
+                  role="status"
+                  aria-live="polite"
+                >
+                  {approvalMessage ||
+                    "Tu solicitud está pendiente de aprobación por un administrador. Te notificaremos por email cuando tu cuenta sea aprobada y puedas acceder a la plataforma."}
                 </p>
               </>
             ) : (
@@ -201,28 +228,31 @@ function VerifyCodeForm() {
                 <h1 className="text-3xl font-bold text-gray-800 mb-4">
                   ¡Código verificado!
                 </h1>
-                <p className="text-gray-600 mb-8" role="status" aria-live="polite">
-                  Tu código ha sido verificado correctamente. Iniciando sesión...
+                <p
+                  className="text-gray-600 mb-8"
+                  role="status"
+                  aria-live="polite"
+                >
+                  Tu código ha sido verificado correctamente. Iniciando
+                  sesión...
                 </p>
               </>
             )}
           </div>
         </div>
 
-        {/* Right Side - Professional Image */}
-        <div className="flex flex-1 relative">
-          <div className="relative w-full h-full flex items-center lg:items-start justify-center p-2">
-            <div className="sticky top-4 w-full">
-              <div className="w-11/12 h-[400px] lg:h-[600px] relative rounded-3xl overflow-hidden">
-                <Image
-                  src="/smk_Snapchat-Picture.webp"
-                  alt="Profesional"
-                  fill
-                  className="object-cover"
-                  priority
-                  unoptimized
-                />
-              </div>
+        {/* Right Side - Logo */}
+        <div className="flex flex-1 relative bg-gradient-to-br from-primary/5 to-primary/10">
+          <div className="relative w-full h-full flex items-center justify-center p-8">
+            <div className="w-full max-w-md">
+              <Image
+                src="/PNG-01.png"
+                alt="Naxine Logo"
+                width={400}
+                height={160}
+                className="w-full h-auto"
+                priority
+              />
             </div>
           </div>
         </div>
@@ -262,7 +292,8 @@ function VerifyCodeForm() {
               Verificar código
             </h1>
             <p className="text-gray-600" id={instructionId}>
-              Un código de verificación ha sido enviado a <strong>{email}</strong>
+              Un código de verificación ha sido enviado a{" "}
+              <strong>{email}</strong>
             </p>
           </div>
 
@@ -379,20 +410,18 @@ function VerifyCodeForm() {
         </div>
       </div>
 
-      {/* Right Side - Professional Image */}
-      <div className="flex flex-1 relative">
-        <div className="relative w-full h-full flex items-center lg:items-start justify-center p-2">
-          <div className="sticky top-4 w-full">
-            <div className="w-11/12 h-[400px] lg:h-[600px] relative rounded-3xl overflow-hidden shadow-2xl">
-              <Image
-                src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=800&h=600&fit=crop&crop=face"
-                alt="Profesional"
-                fill
-                className="object-cover"
-                priority
-                unoptimized
-              />
-            </div>
+      {/* Right Side - Logo */}
+      <div className="flex flex-1 relative bg-gradient-to-br from-primary/5 to-primary/10">
+        <div className="relative w-full h-full flex items-center justify-center p-8">
+          <div className="w-full max-w-md">
+            <Image
+              src="/PNG-01.png"
+              alt="Naxine Logo"
+              width={400}
+              height={160}
+              className="w-full h-auto"
+              priority
+            />
           </div>
         </div>
       </div>
@@ -402,14 +431,16 @@ function VerifyCodeForm() {
 
 export default function VerifyCodePage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando...</p>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-gray-600">Cargando...</p>
+          </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <VerifyCodeForm />
     </Suspense>
   );
