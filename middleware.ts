@@ -9,7 +9,7 @@ import type { NextRequest } from "next/server";
  * ENTORNOS:
  * - PRODUCCIÓN (naxine.com - APP_ENV=production):
  *   - SOLO 2 rutas visibles: /proximamente y /registro-profesional
- *   - Todas las demás rutas redirigen a /proximamente
+ *   - Todas las demás rutas redirigen a /registro-profesional
  *
  * - STAGING/PRUEBAS (prueba.naxine.com - APP_ENV=staging):
  *   - Todas las páginas son públicas y funcionan normalmente
@@ -54,11 +54,11 @@ export function middleware(request: NextRequest) {
       pathname.startsWith(route)
     );
 
-    // Si es la raíz (/), redirigir a /proximamente
+    // Si es la raíz (/), redirigir a /registro-profesional
     if (pathname === "/") {
-      const proximamenteUrl = new URL("/proximamente", request.url);
-      const redirect = NextResponse.redirect(proximamenteUrl);
-      redirect.headers.set("x-redirect-reason", "root-to-proximamente");
+      const registroUrl = new URL("/registro-profesional", request.url);
+      const redirect = NextResponse.redirect(registroUrl);
+      redirect.headers.set("x-redirect-reason", "root-to-registro-profesional");
       return redirect;
     }
 
@@ -68,8 +68,8 @@ export function middleware(request: NextRequest) {
       !isAllowedRoute &&
       !pathname.startsWith("/dashboard")
     ) {
-      const proximamenteUrl = new URL("/proximamente", request.url);
-      const redirect = NextResponse.redirect(proximamenteUrl);
+      const registroUrl = new URL("/registro-profesional", request.url);
+      const redirect = NextResponse.redirect(registroUrl);
       redirect.headers.set("x-redirect-reason", `blocked-route: ${pathname}`);
       redirect.headers.set("x-is-system-route", isSystemRoute.toString());
       redirect.headers.set("x-is-allowed-route", isAllowedRoute.toString());

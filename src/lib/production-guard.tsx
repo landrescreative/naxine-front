@@ -2,7 +2,7 @@
  * Production Guard - Componente y utilidad para proteger rutas en producción
  * 
  * En modo producción (APP_ENV=production), solo /proximamente y /registro-profesional
- * son accesibles. Todas las demás rutas redirigen a /proximamente.
+ * son accesibles. Todas las demás rutas redirigen a /registro-profesional.
  */
 
 import { redirect } from "next/navigation";
@@ -26,7 +26,7 @@ export function isRouteAllowedInProduction(pathname: string): boolean {
 
 /**
  * Guard para Server Components
- * Redirige a /proximamente si estamos en producción y la ruta no está permitida
+ * Redirige a /registro-profesional si estamos en producción y la ruta no está permitida
  * 
  * Uso en cualquier página:
  * ```tsx
@@ -58,8 +58,8 @@ export function ProductionGuard(currentPath?: string) {
     return;
   }
 
-  // Redirigir a /proximamente
-  redirect("/proximamente");
+  // Redirigir a /registro-profesional
+  redirect("/registro-profesional");
 }
 
 /**
