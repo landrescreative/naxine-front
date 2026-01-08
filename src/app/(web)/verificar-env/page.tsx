@@ -3,6 +3,8 @@
  * Eliminar después de verificar que todo funciona
  */
 
+import Link from "next/link";
+
 export default function VerificarEnvPage() {
   const appEnv = process.env.NEXT_PUBLIC_APP_ENV;
   const nodeEnv = process.env.NODE_ENV;
@@ -83,12 +85,12 @@ export default function VerificarEnvPage() {
         </div>
 
         <div className="mt-6 text-center">
-          <a
+          <Link
             href="/"
             className="text-blue-600 hover:underline text-sm"
           >
             ← Volver al inicio
-          </a>
+          </Link>
         </div>
 
         <div className="mt-4 text-xs text-gray-500 text-center">
