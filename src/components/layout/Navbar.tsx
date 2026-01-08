@@ -533,21 +533,14 @@ export default function Navbar() {
                           </>
                         ) : (
                           <>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                closeUserMenu();
-                                router.push("/iniciar-sesion");
-                              }}
-                              className="w-full flex items-center space-x-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors"
-                              aria-label="Iniciar sesion"
-                              title="Iniciar sesion"
+                            <a
+                              href="/iniciar-sesion"
+                              onClick={closeUserMenu}
+                              className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors"
                             >
                               <LogIn className="h-5 w-5" aria-hidden="true" />
-                              <span className="text-sm font-medium">
-                                Iniciar sesion
-                              </span>
-                            </button>
+                              Iniciar sesion
+                            </a>
                             <Link
                               href="/registro"
                               onClick={closeUserMenu}
@@ -673,18 +666,13 @@ export default function Navbar() {
                   </>
                 ) : (
                   <>
-                    <button
-                      type="button"
-                      onClick={() => router.push("/iniciar-sesion")}
+                    <a
+                      href="/iniciar-sesion"
                       className="flex items-center space-x-2 text-gray-800 hover:text-gray-600 transition-colors px-3 py-2"
-                      aria-label="Iniciar sesion"
-                      title="Iniciar sesion"
                     >
                       <User className="h-5 w-5" aria-hidden="true" />
-                      <span className="text-sm font-medium">
-                        Iniciar sesion
-                      </span>
-                    </button>
+                      Iniciar sesion
+                    </a>
                     <div className="h-6 w-px bg-gray-300"></div>
                     <Link
                       href="/registro-profesional"
