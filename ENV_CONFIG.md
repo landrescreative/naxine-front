@@ -2,6 +2,38 @@
 
 Este documento explica cómo configurar las variables de entorno para el frontend de Naxine.
 
+## 🎯 Comportamiento por Entorno
+
+El comportamiento de la aplicación se controla con la variable `NEXT_PUBLIC_APP_ENV`:
+
+### 🚀 PRODUCCIÓN (naxine.com)
+**Configuración:** `NEXT_PUBLIC_APP_ENV=production`
+
+El middleware activa el **modo "Próximamente"**:
+- ✅ Página principal: `/proximamente`
+- ✅ **SOLO 2 rutas visibles:**
+  - `/proximamente` - Página de próximamente
+  - `/registro-profesional` - Registro de profesionales
+- ❌ **Todas las demás rutas redirigen a `/proximamente`** (incluyendo login, dashboard, servicios, etc.)
+
+### 🧪 STAGING/PRUEBAS (prueba.naxine.com)
+**Configuración:** `NEXT_PUBLIC_APP_ENV=staging`
+
+Funcionalidad completa para pruebas:
+- ✅ Todas las páginas son públicas y funcionan normalmente
+- ✅ Todas las rutas accesibles (servicios, contacto, etc.)
+- 🔒 Dashboard protegido con autenticación
+- ✅ Perfecto para probar funcionalidades antes de desplegar a producción
+
+### 💻 DESARROLLO LOCAL (localhost)
+**Configuración:** `NEXT_PUBLIC_APP_ENV=development` (o sin configurar)
+
+- ✅ Todas las páginas funcionan normalmente
+- ✅ `/proximamente` existe pero no tiene funcionalidad especial
+- 🔒 Dashboard protegido con autenticación
+
+> **💡 Nota:** Si `NEXT_PUBLIC_APP_ENV` no está definido, se asume `development` (comportamiento completo).
+
 ## 🚀 Inicio Rápido
 
 ### Para Desarrollo Local
@@ -41,11 +73,16 @@ Crea un archivo `.env.local` en la raíz del proyecto (`naxine-front/`) con las 
 **Archivo:** `.env.local` (en la raíz de `naxine-front/`)
 
 ```env
+# Entorno de la aplicación (controla el comportamiento del middleware)
+# development = funcionalidad completa (valor por defecto si no se define)
+NEXT_PUBLIC_APP_ENV=development
+
 # API Configuration - CONECTA A TU API LOCAL
 NEXT_PUBLIC_API_URL=http://localhost:3000/api
 NEXT_PUBLIC_FRONTEND_URL=http://localhost:3001
 NEXT_PUBLIC_BACKEND_URL=http://localhost:3000
 NEXT_PUBLIC_API_TIMEOUT=15000
+NEXT_PUBLIC_SITE_URL=http://localhost:3001
 
 # Stripe (usar keys de prueba)
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxx
@@ -58,19 +95,49 @@ SENDGRID_TO_EMAIL=admin@tudominio.com  # Email donde se recibirán las solicitud
 ```
 
 **⚠️ Importante:** 
+- `NEXT_PUBLIC_APP_ENV=development` activa la funcionalidad completa
+- Todas las páginas funcionan normalmente en desarrollo
 - Asegúrate de que tu API local esté corriendo en el puerto 3000
 - Si cambias el puerto de la API, actualiza `NEXT_PUBLIC_API_URL` y `NEXT_PUBLIC_BACKEND_URL`
 
-### 🌐 Producción (Vercel)
+### 🌐 Staging/Pruebas - prueba.naxine.com (Vercel)
 
-**Configuración:** Panel de Vercel → Settings → Environment Variables
+**Configuración:** Panel de Vercel → Settings → Environment Variables → Preview/Development
 
 ```env
+# Entorno de la aplicación - STAGING = funcionalidad completa para pruebas
+NEXT_PUBLIC_APP_ENV=staging
+
+# API Configuration - CONECTA A TU API DE PRUEBAS
+NEXT_PUBLIC_API_URL=https://api-prueba.tudominio.com/api
+NEXT_PUBLIC_FRONTEND_URL=https://prueba.naxine.com
+NEXT_PUBLIC_BACKEND_URL=https://api-prueba.tudominio.com
+NEXT_PUBLIC_API_TIMEOUT=15000
+NEXT_PUBLIC_SITE_URL=https://prueba.naxine.com
+
+# Stripe (usar keys de prueba)
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxx
+
+# SendGrid
+SENDGRID_API_KEY=SG.xxxxxxxxxxxxx
+SENDGRID_FROM_EMAIL=noreply@tudominio.com
+SENDGRID_TO_EMAIL=admin@tudominio.com
+```
+
+### 🚀 Producción - naxine.com (Vercel)
+
+**Configuración:** Panel de Vercel → Settings → Environment Variables → Production
+
+```env
+# Entorno de la aplicación - PRODUCTION = modo "Próximamente"
+NEXT_PUBLIC_APP_ENV=production
+
 # API Configuration - CONECTA A TU API EN AWS
 NEXT_PUBLIC_API_URL=https://api.tudominio.com/api
 NEXT_PUBLIC_FRONTEND_URL=https://tudominio.com
 NEXT_PUBLIC_BACKEND_URL=https://api.tudominio.com
 NEXT_PUBLIC_API_TIMEOUT=15000
+NEXT_PUBLIC_SITE_URL=https://tudominio.com
 
 # Stripe (usar keys de producción)
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_xxxxxxxxxxxxx
@@ -83,6 +150,8 @@ SENDGRID_TO_EMAIL=admin@tudominio.com  # Email donde se recibirán las solicitud
 ```
 
 **⚠️ Importante:**
+- `NEXT_PUBLIC_APP_ENV=production` activa el modo "Próximamente"
+- Solo `/proximamente` y `/registro-profesional` serán accesibles
 - Reemplaza `tudominio.com` con tu dominio real
 - Estas variables se configuran en Vercel, NO en un archivo `.env.local`
 
@@ -132,10 +201,91 @@ Si quieres ver qué URL está usando el frontend, puedes agregar temporalmente e
 console.log('API URL:', process.env.NEXT_PUBLIC_API_URL);
 ```
 
-## 🔄 Cambiar entre Desarrollo y Producción
+## 🌐 Configuración de Dominios en Vercel
 
-- **Desarrollo:** Usa `.env.local` con `http://localhost:3000/api`
-- **Producción:** Vercel usa las variables configuradas en su panel (automáticamente usa la API de AWS)
+### Configurar Dos Entornos en Vercel
 
-No necesitas cambiar nada manualmente al desplegar. Vercel usará las variables de entorno que configuraste en su panel.
+Vercel permite tener múltiples entornos con diferentes dominios:
+
+#### 1. **Entorno de Producción** (naxine.com)
+1. Ve a tu proyecto en Vercel → **Settings** → **Domains**
+2. Agrega el dominio: `naxine.com`
+3. Ve a **Settings** → **Environment Variables**
+4. Agrega las variables con el **Environment**: `Production`
+5. **Importante:** Establece `NEXT_PUBLIC_APP_ENV=production`
+
+#### 2. **Entorno de Staging/Pruebas** (prueba.naxine.com)
+1. Ve a **Settings** → **Domains**
+2. Agrega el dominio: `prueba.naxine.com`
+3. Asigna este dominio al branch `staging` o `develop` (o crea un branch específico)
+4. Ve a **Settings** → **Environment Variables**
+5. Agrega las variables con el **Environment**: `Preview` (y opcionalmente específico para el branch)
+6. **Importante:** Establece `NEXT_PUBLIC_APP_ENV=staging`
+
+### Estructura de Branches Recomendada
+
+```
+main (o master)
+  ↓ deploys to → naxine.com (APP_ENV=production)
+  
+staging (o develop)
+  ↓ deploys to → prueba.naxine.com (APP_ENV=staging)
+```
+
+### Resumen de Variables por Entorno
+
+| Variable | Production (naxine.com) | Preview/Staging (prueba.naxine.com) |
+|----------|-------------------------|-------------------------------------|
+| `NEXT_PUBLIC_APP_ENV` | `production` | `staging` |
+| `NEXT_PUBLIC_API_URL` | API de producción | API de pruebas |
+| `NEXT_PUBLIC_FRONTEND_URL` | `https://naxine.com` | `https://prueba.naxine.com` |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Live key | Test key |
+
+## 🔄 Flujo de Trabajo
+
+### Desarrollo Local
+```bash
+npm run dev
+# Todas las funcionalidades disponibles
+```
+
+### Desplegar a Pruebas (prueba.naxine.com)
+```bash
+git checkout staging
+git merge develop
+git push origin staging
+# Vercel despliega automáticamente a prueba.naxine.com
+# Todas las funcionalidades disponibles para probar
+```
+
+### Desplegar a Producción (naxine.com)
+```bash
+git checkout main
+git merge staging
+git push origin main
+# Vercel despliega automáticamente a naxine.com
+# Solo /proximamente y /registro-profesional visibles
+```
+
+## 🧪 Probar el Modo Producción Localmente
+
+Si quieres probar cómo se verá la plataforma en producción (con el modo "Próximamente" activado):
+
+```bash
+# 1. Construir la aplicación en modo producción
+npm run build
+
+# 2. Iniciar el servidor en modo producción
+npm start
+```
+
+Esto establecerá `NODE_ENV=production` y:
+- La página principal (`/`) redirigirá a `/proximamente`
+- Solo `/proximamente` y `/registro-profesional` serán accesibles
+- Todas las demás rutas públicas redirigirán a `/proximamente`
+
+Para volver al modo desarrollo:
+```bash
+npm run dev
+```
 

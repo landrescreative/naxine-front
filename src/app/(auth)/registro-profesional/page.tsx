@@ -542,6 +542,12 @@ export default function RegisterProfessionalPage() {
         field: "modalidades",
         error: "Debes seleccionar al menos una modalidad de atención",
       };
+    if (!formData.accesibleMovilidad)
+      return {
+        field: "accesibleMovilidad",
+        error:
+          "Debes indicar si tu consulta es accesible para personas con movilidad reducida",
+      };
 
     // 2. Validaciones condicionales de dirección
     if (
@@ -808,6 +814,11 @@ export default function RegisterProfessionalPage() {
 
     if (!formData.ciudad.trim()) {
       newErrors.ciudad = "La ciudad es requerida";
+    }
+
+    if (!formData.accesibleMovilidad) {
+      newErrors.accesibleMovilidad =
+        "Debes indicar si tu consulta es accesible para personas con movilidad reducida";
     }
 
     // Validar horarios según las modalidades seleccionadas
@@ -1838,6 +1849,9 @@ export default function RegisterProfessionalPage() {
               >
                 Correo electrónico profesional{" "}
                 <span className="text-red-500">*</span>
+                <span className="text-xs text-gray-500 ml-2">
+                  (Será visible en tu futura ficha pública)
+                </span>
               </label>
               <input
                 type="email"
@@ -2248,11 +2262,8 @@ export default function RegisterProfessionalPage() {
             {/* 17. Accesible para movilidad reducida */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                ¿Tu consulta es accesible para personas con movilidad reducida?
-                <span className="text-xs text-gray-500 ml-2">
-                  (Completa esta información únicamente en caso de ofrecer
-                  servicio presencial)
-                </span>
+                ¿Tu consulta es accesible para personas con movilidad reducida?{" "}
+                <span className="text-red-500">*</span>
               </label>
               <div className="space-y-2">
                 {["Sí", "No"].map((opcion) => (
@@ -2266,6 +2277,7 @@ export default function RegisterProfessionalPage() {
                       value={opcion}
                       checked={formData.accesibleMovilidad === opcion}
                       onChange={handleInputChange}
+                      required
                       className="w-4 h-4 text-primary border-gray-300 focus:ring-primary"
                       disabled={!!successMsg}
                     />
