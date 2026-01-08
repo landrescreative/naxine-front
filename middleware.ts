@@ -27,12 +27,11 @@ export function middleware(request: NextRequest) {
   const appEnv = process.env.NEXT_PUBLIC_APP_ENV || "development";
   const isProductionMode = appEnv === "production";
 
-  // DEBUG: Logs temporales (eliminar después de verificar)
-  console.log("🔍 Middleware ejecutándose:", {
-    pathname,
-    appEnv,
-    isProductionMode,
-  });
+  // DEBUG: Headers personalizados para verificar ejecución del middleware
+  const response = NextResponse.next();
+  response.headers.set("x-middleware-executed", "true");
+  response.headers.set("x-app-env", appEnv);
+  response.headers.set("x-is-production", isProductionMode.toString());
 
   // ========================================
   // CONTROL DE ACCESO EN MODO PRODUCCIÓN
@@ -55,18 +54,12 @@ export function middleware(request: NextRequest) {
       pathname.startsWith(route)
     );
 
-    // DEBUG: Logs temporales
-    console.log("🔒 Modo producción activo:", {
-      isSystemRoute,
-      isAllowedRoute,
-      shouldRedirect: !isSystemRoute && !isAllowedRoute,
-    });
-
     // Si es la raíz (/), redirigir a /proximamente
     if (pathname === "/") {
-      console.log("🔄 Redirigiendo desde raíz a /proximamente");
       const proximamenteUrl = new URL("/proximamente", request.url);
-      return NextResponse.redirect(proximamenteUrl);
+      const redirect = NextResponse.redirect(proximamenteUrl);
+      redirect.headers.set("x-redirect-reason", "root-to-proximamente");
+      return redirect;
     }
 
     // Si no es ruta de sistema, no es ruta permitida, y no es dashboard, redirigir
@@ -75,9 +68,12 @@ export function middleware(request: NextRequest) {
       !isAllowedRoute &&
       !pathname.startsWith("/dashboard")
     ) {
-      console.log("🔄 Redirigiendo a /proximamente desde:", pathname);
       const proximamenteUrl = new URL("/proximamente", request.url);
-      return NextResponse.redirect(proximamenteUrl);
+      const redirect = NextResponse.redirect(proximamenteUrl);
+      redirect.headers.set("x-redirect-reason", `blocked-route: ${pathname}`);
+      redirect.headers.set("x-is-system-route", isSystemRoute.toString());
+      redirect.headers.set("x-is-allowed-route", isAllowedRoute.toString());
+      return redirect;
     }
   }
 
@@ -100,7 +96,9 @@ export function middleware(request: NextRequest) {
     // La validación real del token y verificación de roles se hace en el backend
   }
 
-  return NextResponse.next();
+  // Agregar headers a todas las respuestas para debugging
+  response.headers.set("x-pathname", pathname);
+  return response;
 }
 
 export const config = {
