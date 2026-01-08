@@ -12,6 +12,9 @@ import FAQSection from "@/components/ui/FAQSection";
 // API
 import { getServicios } from "@/services/api/servicios";
 
+// Forzar rendering dinámico para que el middleware se ejecute
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Inicio",
   description:

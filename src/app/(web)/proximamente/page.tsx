@@ -3,6 +3,9 @@ import Image from "next/image";
 import { Mail, Phone, MapPin } from "lucide-react";
 import Logo from "@/assets/PNG-01.png";
 
+// Forzar rendering dinámico para que el middleware se ejecute
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Próximamente",
   description:

@@ -5,6 +5,9 @@
 
 import Link from "next/link";
 
+// Forzar rendering dinámico para que el middleware se ejecute
+export const dynamic = "force-dynamic";
+
 export default function VerificarEnvPage() {
   const appEnv = process.env.NEXT_PUBLIC_APP_ENV;
   const nodeEnv = process.env.NODE_ENV;
