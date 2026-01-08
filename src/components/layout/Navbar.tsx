@@ -269,18 +269,17 @@ export default function Navbar() {
   // Necesitamos mapear las especialidades hardcodeadas para incluir specialtyId
   const SERVICE_CATEGORIES_TO_USE: (ServiceCategory & {
     specialtyId?: string;
-  })[] =
-    loadingSpecialties
-      ? [] // Mientras carga, no mostrar ninguna categoría (se mostrará skeleton)
-      : backendSpecialties.length > 0
-      ? backendSpecialties.map((cat) => ({
-          ...cat,
-          specialtyId: cat.specialtyId,
-        }))
-      : SERVICE_CATEGORIES.map((cat) => ({
-          ...cat,
-          specialtyId: cat.key, // Usar key como ID para las hardcodeadas
-        }));
+  })[] = loadingSpecialties
+    ? [] // Mientras carga, no mostrar ninguna categoría (se mostrará skeleton)
+    : backendSpecialties.length > 0
+    ? backendSpecialties.map((cat) => ({
+        ...cat,
+        specialtyId: cat.specialtyId,
+      }))
+    : SERVICE_CATEGORIES.map((cat) => ({
+        ...cat,
+        specialtyId: cat.key, // Usar key como ID para las hardcodeadas
+      }));
 
   // Función para manejar el hover sobre una especialidad
   const handleSpecialtyHover = async (
@@ -481,16 +480,17 @@ export default function Navbar() {
                     isUserMenuOpen
                       ? "bg-gray-100 ring-1 ring-gray-200 rounded-lg"
                       : ""
-                  } text-gray-800 hover:text-gray-600 focus:outline-none p-2 transition-colors`}
+                  } text-gray-800 hover:text-gray-600 focus:outline-none p-2 transition-colors flex items-center gap-1`}
                   aria-expanded={isUserMenuOpen}
                   aria-controls="mobile-user-menu"
-                  aria-label="Menu de usuario"
+                  aria-label="Menú usuario"
                 >
                   {isUserMenuOpen ? (
-                    <X className="h-6 w-6" aria-hidden="true" />
+                    <X className="h-5 w-5" aria-hidden="true" />
                   ) : (
-                    <User className="h-6 w-6" aria-hidden="true" />
+                    <User className="h-5 w-5" aria-hidden="true" />
                   )}
+                  <span className="text-xs font-medium">Menú</span>
                 </a>
 
                 {/* Menú desplegable de usuario */}
@@ -538,10 +538,12 @@ export default function Navbar() {
                               href="/iniciar-sesion"
                               onClick={closeUserMenu}
                               className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors"
-                              aria-label="Iniciar sesion"
+                              aria-label="Iniciar sesión"
                             >
                               <LogIn className="h-5 w-5" aria-hidden="true" />
-                              <span className="text-sm font-medium">Iniciar sesion</span>
+                              <span className="text-sm font-medium">
+                                Iniciar sesión
+                              </span>
                             </Link>
                             <Link
                               href="/registro"
@@ -549,7 +551,10 @@ export default function Navbar() {
                               className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors"
                               aria-label="Regístrate como Usuario"
                             >
-                              <UserPlus className="h-5 w-5" aria-hidden="true" />
+                              <UserPlus
+                                className="h-5 w-5"
+                                aria-hidden="true"
+                              />
                               <span className="text-sm font-medium">
                                 Regístrate como Usuario
                               </span>
@@ -560,7 +565,10 @@ export default function Navbar() {
                               className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors"
                               aria-label="Regístrate como Profesional"
                             >
-                              <Briefcase className="h-5 w-5" aria-hidden="true" />
+                              <Briefcase
+                                className="h-5 w-5"
+                                aria-hidden="true"
+                              />
                               <span className="text-sm font-medium">
                                 Regístrate como Profesional
                               </span>
@@ -574,10 +582,10 @@ export default function Navbar() {
               </div>
 
               {/* Logo - Centro */}
-              <Link 
-                href="/" 
+              <Link
+                href="/"
                 className="flex items-center space-x-2"
-                aria-label="Logo Naxine - Pagina principal"
+                aria-label="Naxine"
               >
                 <div className="flex items-center">
                   <Image
@@ -589,7 +597,6 @@ export default function Navbar() {
                     priority
                   />
                 </div>
-                <span className="sr-only">Logo Naxine Pagina principal Inicio</span>
               </Link>
 
               {/* Menú hamburguesa - Derecha */}
@@ -599,16 +606,17 @@ export default function Navbar() {
                   e.preventDefault();
                   toggleMobileMenu();
                 }}
-                className="text-gray-800 hover:text-gray-600 focus:outline-none p-2"
+                className="text-gray-800 hover:text-gray-600 focus:outline-none p-2 flex items-center gap-1"
                 aria-expanded={isMobileMenuOpen}
                 aria-controls="mobile-primary-menu"
-                aria-label="Menu principal"
+                aria-label="Menú principal"
               >
                 {isMobileMenuOpen ? (
-                  <X className="h-6 w-6" aria-hidden="true" />
+                  <X className="h-5 w-5" aria-hidden="true" />
                 ) : (
-                  <Menu className="h-6 w-6" aria-hidden="true" />
+                  <Menu className="h-5 w-5" aria-hidden="true" />
                 )}
+                <span className="text-xs font-medium">Menú</span>
               </a>
             </div>
 
@@ -627,19 +635,20 @@ export default function Navbar() {
                     isDesktopMenuOpen
                       ? "bg-gray-100 ring-1 ring-gray-200 rounded-lg"
                       : ""
-                  } text-gray-800 hover:text-gray-600 focus:outline-none p-2 transition-colors`}
+                  } text-gray-800 hover:text-gray-600 focus:outline-none p-2 transition-colors flex items-center gap-1`}
                   aria-expanded={isDesktopMenuOpen}
                   aria-controls="desktop-primary-menu"
-                  aria-label="Menu de navegacion"
+                  aria-label="Menú"
                 >
-                  <Menu className="h-6 w-6" aria-hidden="true" />
+                  <Menu className="h-5 w-5" aria-hidden="true" />
+                  <span className="text-sm font-medium">Menú</span>
                 </a>
 
                 {/* Logo */}
-                <Link 
-                  href="/" 
+                <Link
+                  href="/"
                   className="flex items-center space-x-2"
-                  aria-label="Logo Naxine - Pagina principal"
+                  aria-label="Naxine"
                 >
                   <div className="flex items-center">
                     <Image
@@ -651,7 +660,6 @@ export default function Navbar() {
                       priority
                     />
                   </div>
-                  <span className="sr-only">Logo Naxine Pagina principal Inicio</span>
                 </Link>
               </div>
 
@@ -681,10 +689,12 @@ export default function Navbar() {
                     <Link
                       href="/iniciar-sesion"
                       className="flex items-center space-x-2 text-gray-800 hover:text-gray-600 transition-colors px-3 py-2"
-                      aria-label="Iniciar sesion"
+                      aria-label="Iniciar sesión"
                     >
                       <LogIn className="h-5 w-5" aria-hidden="true" />
-                      <span className="text-sm font-medium">Iniciar sesion</span>
+                      <span className="text-sm font-medium">
+                        Iniciar sesión
+                      </span>
                     </Link>
                     <div className="h-6 w-px bg-gray-300"></div>
                     <Link
@@ -800,112 +810,112 @@ export default function Navbar() {
                   Servicios
                 </h3>
                 <div className="space-y-1">
-                  {loadingSpecialties ? (
-                    // Skeleton para móvil mientras cargan las categorías
-                    Array.from({ length: 5 }).map((_, idx) => (
-                      <div
-                        key={`mobile-skeleton-${idx}`}
-                        className="px-3 py-2 rounded-lg"
-                      >
-                        <div className="flex items-center space-x-3">
-                          <div className="h-5 w-5 bg-gray-200 rounded animate-pulse"></div>
-                          <div className="h-4 bg-gray-200 rounded animate-pulse flex-1"></div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    SERVICE_CATEGORIES_TO_USE.map((category) => {
-                    const Icon = category.Icon;
-                    const displayKey = category.specialtyId || category.key;
-                    const displayItems =
-                      servicesBySpecialty[displayKey] &&
-                      servicesBySpecialty[displayKey].length > 0
-                        ? servicesBySpecialty[displayKey]
-                        : category.items;
-
-                    return (
-                      <div key={category.key} className="rounded-lg">
-                        <a
-                          href="#"
-                          onClick={async (e) => {
-                            e.preventDefault();
-                            const newState =
-                              openMobileCategory === category.key
-                                ? null
-                                : category.key;
-                            setOpenMobileCategory(newState);
-
-                            // Cargar servicios cuando se expande la categoría
-                            if (newState === category.key) {
-                              const idToLoad =
-                                category.specialtyId || category.key;
-                              await handleSpecialtyHover(
-                                idToLoad,
-                                category.specialtyId || undefined
-                              );
-                            }
-                          }}
-                          className="w-full flex items-center justify-between px-3 py-2 text-gray-800 hover:text-purple-600 hover:bg-gray-50 rounded-lg transition-colors"
-                          aria-expanded={openMobileCategory === category.key}
-                          aria-controls={`mobile-category-panel-${category.key}`}
+                  {loadingSpecialties
+                    ? // Skeleton para móvil mientras cargan las categorías
+                      Array.from({ length: 5 }).map((_, idx) => (
+                        <div
+                          key={`mobile-skeleton-${idx}`}
+                          className="px-3 py-2 rounded-lg"
                         >
-                          <span className="flex items-center space-x-3">
-                            <Icon className="h-5 w-5" aria-hidden="true" />
-                            <span className="text-sm font-medium">
-                              {category.title}
-                            </span>
-                          </span>
-                          <ChevronDown
-                            className={`h-4 w-4 transition-transform ${
-                              openMobileCategory === category.key
-                                ? "rotate-180"
-                                : "rotate-0"
-                            }`}
-                            aria-hidden="true"
-                          />
-                        </a>
-                        {openMobileCategory === category.key && (
-                          <div
-                            className="pl-9 pr-3 pb-2 space-y-1"
-                            id={`mobile-category-panel-${category.key}`}
-                            role="menu"
-                            aria-label={`Servicios de ${category.title}`}
-                          >
-                            {isLoadingServices(
-                              category.specialtyId || category.key
-                            ) ? (
-                              <div className="px-2 py-1 text-sm text-gray-500">
-                                Cargando servicios...
-                              </div>
-                            ) : displayItems.length > 0 ? (
-                              displayItems.map((item, idx) => {
-                                const itemKey =
-                                  (item as any).id ||
-                                  item.href ||
-                                  `mobile-item-${idx}`;
-                                return (
-                                  <Link
-                                    key={itemKey}
-                                    href={item.href}
-                                    onClick={closeMobileMenu}
-                                    className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
-                                    role="menuitem"
-                                  >
-                                    {item.label}
-                                  </Link>
-                                );
-                              })
-                            ) : (
-                              <div className="px-2 py-1 text-sm text-gray-500">
-                                No hay servicios disponibles
+                          <div className="flex items-center space-x-3">
+                            <div className="h-5 w-5 bg-gray-200 rounded animate-pulse"></div>
+                            <div className="h-4 bg-gray-200 rounded animate-pulse flex-1"></div>
+                          </div>
+                        </div>
+                      ))
+                    : SERVICE_CATEGORIES_TO_USE.map((category) => {
+                        const Icon = category.Icon;
+                        const displayKey = category.specialtyId || category.key;
+                        const displayItems =
+                          servicesBySpecialty[displayKey] &&
+                          servicesBySpecialty[displayKey].length > 0
+                            ? servicesBySpecialty[displayKey]
+                            : category.items;
+
+                        return (
+                          <div key={category.key} className="rounded-lg">
+                            <a
+                              href="#"
+                              onClick={async (e) => {
+                                e.preventDefault();
+                                const newState =
+                                  openMobileCategory === category.key
+                                    ? null
+                                    : category.key;
+                                setOpenMobileCategory(newState);
+
+                                // Cargar servicios cuando se expande la categoría
+                                if (newState === category.key) {
+                                  const idToLoad =
+                                    category.specialtyId || category.key;
+                                  await handleSpecialtyHover(
+                                    idToLoad,
+                                    category.specialtyId || undefined
+                                  );
+                                }
+                              }}
+                              className="w-full flex items-center justify-between px-3 py-2 text-gray-800 hover:text-purple-600 hover:bg-gray-50 rounded-lg transition-colors"
+                              aria-expanded={
+                                openMobileCategory === category.key
+                              }
+                              aria-controls={`mobile-category-panel-${category.key}`}
+                            >
+                              <span className="flex items-center space-x-3">
+                                <Icon className="h-5 w-5" aria-hidden="true" />
+                                <span className="text-sm font-medium">
+                                  {category.title}
+                                </span>
+                              </span>
+                              <ChevronDown
+                                className={`h-4 w-4 transition-transform ${
+                                  openMobileCategory === category.key
+                                    ? "rotate-180"
+                                    : "rotate-0"
+                                }`}
+                                aria-hidden="true"
+                              />
+                            </a>
+                            {openMobileCategory === category.key && (
+                              <div
+                                className="pl-9 pr-3 pb-2 space-y-1"
+                                id={`mobile-category-panel-${category.key}`}
+                                role="menu"
+                                aria-label={`Servicios de ${category.title}`}
+                              >
+                                {isLoadingServices(
+                                  category.specialtyId || category.key
+                                ) ? (
+                                  <div className="px-2 py-1 text-sm text-gray-500">
+                                    Cargando servicios...
+                                  </div>
+                                ) : displayItems.length > 0 ? (
+                                  displayItems.map((item, idx) => {
+                                    const itemKey =
+                                      (item as any).id ||
+                                      item.href ||
+                                      `mobile-item-${idx}`;
+                                    return (
+                                      <Link
+                                        key={itemKey}
+                                        href={item.href}
+                                        onClick={closeMobileMenu}
+                                        className="block px-2 py-1 text-sm text-gray-700 hover:text-purple-600"
+                                        role="menuitem"
+                                      >
+                                        {item.label}
+                                      </Link>
+                                    );
+                                  })
+                                ) : (
+                                  <div className="px-2 py-1 text-sm text-gray-500">
+                                    No hay servicios disponibles
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
-                        )}
-                      </div>
-                    );
-                  })
-                  )}
+                        );
+                      })}
                 </div>
               </div>
 
@@ -968,107 +978,108 @@ export default function Navbar() {
       <div className="hidden lg:block bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-6 gap-3 py-4">
-            {loadingSpecialties ? (
-              // Skeleton mientras cargan las categorías
-              Array.from({ length: 6 }).map((_, idx) => (
-                <div
-                  key={`skeleton-${idx}`}
-                  className="relative text-center pt-2"
-                >
-                  <div className="h-5 bg-gray-200 rounded animate-pulse mx-auto w-24"></div>
-                </div>
-              ))
-            ) : (
-              SERVICE_CATEGORIES_TO_USE.map(
-              ({ key, title, href, items, specialtyId }) => {
-                // Para mostrar items: usar specialtyId si existe (backend), sino key (hardcodeadas)
-                const displayKey = specialtyId || key;
-                const displayItems =
-                  servicesBySpecialty[displayKey] &&
-                  servicesBySpecialty[displayKey].length > 0
-                    ? servicesBySpecialty[displayKey]
-                    : items;
-
-                const isActive = activeDesktopCategory === displayKey;
-                return (
+            {loadingSpecialties
+              ? // Skeleton mientras cargan las categorías
+                Array.from({ length: 6 }).map((_, idx) => (
                   <div
-                    key={key}
+                    key={`skeleton-${idx}`}
                     className="relative text-center pt-2"
-                    onMouseEnter={() =>
-                      handleDesktopCategoryEnter(displayKey, specialtyId)
-                    }
-                    onMouseLeave={handleDesktopCategoryLeave}
                   >
-                    <a
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        // Toggle del menú al hacer click
-                        if (isActive) {
-                          setActiveDesktopCategory(null);
-                        } else {
-                          handleDesktopCategoryEnter(displayKey, specialtyId);
-                        }
-                      }}
-                      onFocus={() =>
-                        handleDesktopCategoryEnter(displayKey, specialtyId)
-                      }
-                      className="text-gray-800 hover:text-purple-600 focus:text-purple-600 text-sm font-medium transition-colors px-2 inline-block whitespace-nowrap focus:outline-none focus:underline"
-                      aria-expanded={isActive}
-                      aria-haspopup="true"
-                      aria-controls={`desktop-menu-${key}`}
-                    >
-                      {title}
-                    </a>
-                    <div
-                      id={`desktop-menu-${key}`}
-                      className={`transition-opacity duration-150 absolute top-full left-1/2 -translate-x-1/2 ${
-                        key === "legales" ? "w-80" : "w-72"
-                      } bg-white/90 backdrop-blur rounded-xl shadow-lg border border-gray-200/60 ring-1 ring-black/5 z-50 text-left mt-2 ${
-                        isActive
-                          ? "opacity-100 pointer-events-auto"
-                          : "opacity-0 pointer-events-none"
-                      }`}
-                      role="menu"
-                      aria-label={`Servicios de ${title}`}
-                    >
-                      <div className="py-2">
-                        {isLoadingServices(specialtyId || key) ? (
-                          <div className="px-4 py-2 text-sm text-gray-500">
-                            Cargando servicios...
-                          </div>
-                        ) : displayItems.length > 0 ? (
-                          displayItems.map((item, idx) => {
-                            const itemHref = item.href;
-                            const itemKey =
-                              (item as any).id || itemHref || `item-${idx}`;
-                            return (
-                              <Link
-                                key={itemKey}
-                                href={itemHref}
-                                onClick={() => {
-                                  setActiveDesktopCategory(null);
-                                  setIsDesktopMenuOpen(false);
-                                }}
-                                className="block px-4 py-2 text-gray-800 hover:bg-gray-50 hover:text-purple-600 focus:bg-gray-50 focus:text-purple-600 text-sm focus:outline-none"
-                                role="menuitem"
-                              >
-                                {item.label}
-                              </Link>
-                            );
-                          })
-                        ) : (
-                          <div className="px-4 py-2 text-sm text-gray-500">
-                            No hay servicios disponibles
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                    <div className="h-5 bg-gray-200 rounded animate-pulse mx-auto w-24"></div>
                   </div>
-                );
-              }
-            )
-            )}
+                ))
+              : SERVICE_CATEGORIES_TO_USE.map(
+                  ({ key, title, href, items, specialtyId }) => {
+                    // Para mostrar items: usar specialtyId si existe (backend), sino key (hardcodeadas)
+                    const displayKey = specialtyId || key;
+                    const displayItems =
+                      servicesBySpecialty[displayKey] &&
+                      servicesBySpecialty[displayKey].length > 0
+                        ? servicesBySpecialty[displayKey]
+                        : items;
+
+                    const isActive = activeDesktopCategory === displayKey;
+                    return (
+                      <div
+                        key={key}
+                        className="relative text-center pt-2"
+                        onMouseEnter={() =>
+                          handleDesktopCategoryEnter(displayKey, specialtyId)
+                        }
+                        onMouseLeave={handleDesktopCategoryLeave}
+                      >
+                        <a
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            // Toggle del menú al hacer click
+                            if (isActive) {
+                              setActiveDesktopCategory(null);
+                            } else {
+                              handleDesktopCategoryEnter(
+                                displayKey,
+                                specialtyId
+                              );
+                            }
+                          }}
+                          onFocus={() =>
+                            handleDesktopCategoryEnter(displayKey, specialtyId)
+                          }
+                          className="text-gray-800 hover:text-purple-600 focus:text-purple-600 text-sm font-medium transition-colors px-2 inline-block whitespace-nowrap focus:outline-none focus:underline"
+                          aria-expanded={isActive}
+                          aria-haspopup="true"
+                          aria-controls={`desktop-menu-${key}`}
+                        >
+                          {title}
+                        </a>
+                        <div
+                          id={`desktop-menu-${key}`}
+                          className={`transition-opacity duration-150 absolute top-full left-1/2 -translate-x-1/2 ${
+                            key === "legales" ? "w-80" : "w-72"
+                          } bg-white/90 backdrop-blur rounded-xl shadow-lg border border-gray-200/60 ring-1 ring-black/5 z-50 text-left mt-2 ${
+                            isActive
+                              ? "opacity-100 pointer-events-auto"
+                              : "opacity-0 pointer-events-none"
+                          }`}
+                          role="menu"
+                          aria-label={`Servicios de ${title}`}
+                        >
+                          <div className="py-2">
+                            {isLoadingServices(specialtyId || key) ? (
+                              <div className="px-4 py-2 text-sm text-gray-500">
+                                Cargando servicios...
+                              </div>
+                            ) : displayItems.length > 0 ? (
+                              displayItems.map((item, idx) => {
+                                const itemHref = item.href;
+                                const itemKey =
+                                  (item as any).id || itemHref || `item-${idx}`;
+                                return (
+                                  <Link
+                                    key={itemKey}
+                                    href={itemHref}
+                                    onClick={() => {
+                                      setActiveDesktopCategory(null);
+                                      setIsDesktopMenuOpen(false);
+                                    }}
+                                    className="block px-4 py-2 text-gray-800 hover:bg-gray-50 hover:text-purple-600 focus:bg-gray-50 focus:text-purple-600 text-sm focus:outline-none"
+                                    role="menuitem"
+                                  >
+                                    {item.label}
+                                  </Link>
+                                );
+                              })
+                            ) : (
+                              <div className="px-4 py-2 text-sm text-gray-500">
+                                No hay servicios disponibles
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                )}
           </div>
         </div>
       </div>
