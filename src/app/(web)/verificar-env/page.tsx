@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export default function VerificarEnvPage() {
   // Proteger esta ruta en producción
   ProductionGuard("/verificar-env");
-  
+
   const appEnv = process.env.NEXT_PUBLIC_APP_ENV;
   const nodeEnv = process.env.NODE_ENV;
 

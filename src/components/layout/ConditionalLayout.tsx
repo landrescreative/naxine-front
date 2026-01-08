@@ -14,17 +14,27 @@ export default function ConditionalLayout({
 }: ConditionalLayoutProps) {
   const pathname = usePathname();
 
+  // Verificar el entorno
+  const appEnv = process.env.NEXT_PUBLIC_APP_ENV || "development";
+  const isProductionMode = appEnv === "production";
+
   // Verificar si estamos en una ruta de dashboard
   const isDashboardRoute = pathname.startsWith("/dashboard/");
   // Zonas aisladas: admin
   const isAdminZone = pathname.startsWith("/admin");
 
-  if (isDashboardRoute || isAdminZone) {
-    // Para rutas de dashboard, solo mostrar el contenido
+  // En modo producción, NO mostrar navbar ni footer
+  // Solo mostrar el contenido de las páginas
+  if (isProductionMode) {
     return <>{children}</>;
   }
 
-  // Para el resto de rutas, mostrar navbar y footer
+  // Para rutas de dashboard o admin, solo mostrar el contenido
+  if (isDashboardRoute || isAdminZone) {
+    return <>{children}</>;
+  }
+
+  // Para el resto de rutas (desarrollo/staging), mostrar navbar y footer
   return (
     <>
       <Navbar />
