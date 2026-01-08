@@ -537,6 +537,7 @@ export default function Navbar() {
                               href="/iniciar-sesion"
                               onClick={closeUserMenu}
                               className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors"
+                              aria-label="Iniciar sesion"
                             >
                               <LogIn className="h-5 w-5" aria-hidden="true" />
                               <span className="text-sm font-medium">Iniciar sesion</span>
@@ -669,6 +670,7 @@ export default function Navbar() {
                     <Link
                       href="/iniciar-sesion"
                       className="flex items-center space-x-2 text-gray-800 hover:text-gray-600 transition-colors px-3 py-2"
+                      aria-label="Iniciar sesion"
                     >
                       <User className="h-5 w-5" aria-hidden="true" />
                       <span className="text-sm font-medium">Iniciar sesion</span>
@@ -812,9 +814,10 @@ export default function Navbar() {
 
                     return (
                       <div key={category.key} className="rounded-lg">
-                        <button
-                          type="button"
-                          onClick={async () => {
+                        <a
+                          href="#"
+                          onClick={async (e) => {
+                            e.preventDefault();
                             const newState =
                               openMobileCategory === category.key
                                 ? null
@@ -849,7 +852,7 @@ export default function Navbar() {
                             }`}
                             aria-hidden="true"
                           />
-                        </button>
+                        </a>
                         {openMobileCategory === category.key && (
                           <div
                             className="pl-9 pr-3 pb-2 space-y-1"
@@ -985,9 +988,10 @@ export default function Navbar() {
                     }
                     onMouseLeave={handleDesktopCategoryLeave}
                   >
-                    <button
-                      type="button"
-                      onClick={() => {
+                    <a
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
                         // Toggle del menú al hacer click
                         if (isActive) {
                           setActiveDesktopCategory(null);
@@ -1004,7 +1008,7 @@ export default function Navbar() {
                       aria-controls={`desktop-menu-${key}`}
                     >
                       {title}
-                    </button>
+                    </a>
                     <div
                       id={`desktop-menu-${key}`}
                       className={`transition-opacity duration-150 absolute top-full left-1/2 -translate-x-1/2 ${
