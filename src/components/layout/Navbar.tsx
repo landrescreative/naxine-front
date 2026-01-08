@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Menu,
@@ -235,6 +235,7 @@ export default function Navbar() {
   const [isVisible, setIsVisible] = useState(false);
   const { user, loading, logout } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
   const desktopMenuRef = useRef<HTMLDivElement>(null);
   const desktopMenuButtonRef = useRef<HTMLButtonElement>(null);
   const {
@@ -532,20 +533,21 @@ export default function Navbar() {
                           </>
                         ) : (
                           <>
-                            <Link
-                              href="/iniciar-sesion"
-                              onClick={closeUserMenu}
-                              className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors"
+                            <button
+                              type="button"
+                              onClick={() => {
+                                closeUserMenu();
+                                router.push("/iniciar-sesion");
+                              }}
+                              className="w-full flex items-center space-x-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors"
                               aria-label="Iniciar sesion"
                               title="Iniciar sesion"
-                              role="link"
-                              data-voice="Iniciar sesion"
                             >
                               <LogIn className="h-5 w-5" aria-hidden="true" />
                               <span className="text-sm font-medium">
                                 Iniciar sesion
                               </span>
-                            </Link>
+                            </button>
                             <Link
                               href="/registro"
                               onClick={closeUserMenu}
@@ -671,19 +673,18 @@ export default function Navbar() {
                   </>
                 ) : (
                   <>
-                    <Link
-                      href="/iniciar-sesion"
+                    <button
+                      type="button"
+                      onClick={() => router.push("/iniciar-sesion")}
                       className="flex items-center space-x-2 text-gray-800 hover:text-gray-600 transition-colors px-3 py-2"
                       aria-label="Iniciar sesion"
                       title="Iniciar sesion"
-                      role="link"
-                      data-voice="Iniciar sesion"
                     >
                       <User className="h-5 w-5" aria-hidden="true" />
                       <span className="text-sm font-medium">
                         Iniciar sesion
                       </span>
-                    </Link>
+                    </button>
                     <div className="h-6 w-px bg-gray-300"></div>
                     <Link
                       href="/registro-profesional"
