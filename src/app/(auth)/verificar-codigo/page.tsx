@@ -23,9 +23,9 @@ function VerifyCodeForm() {
   const email = rawEmail.trim().toLowerCase();
 
   useEffect(() => {
-    // Si no hay email, redirigir al inicio de sesión
+    // Si no hay email, redirigir al registro profesional
     if (!email) {
-      router.push("/iniciar-sesion");
+      router.push("/registro-profesional");
     }
   }, [email, router]);
 
