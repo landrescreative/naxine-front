@@ -537,10 +537,12 @@ export default function Navbar() {
                               onClick={closeUserMenu}
                               className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors"
                               aria-label="Iniciar sesión"
+                              title="Iniciar sesión"
+                              role="link"
                             >
                               <LogIn className="h-5 w-5" aria-hidden="true" />
                               <span className="text-sm font-medium">
-                                Iniciar Sesión
+                                Iniciar sesión
                               </span>
                             </Link>
                             <Link
@@ -672,10 +674,12 @@ export default function Navbar() {
                       href="/iniciar-sesion"
                       className="flex items-center space-x-2 text-gray-800 hover:text-gray-600 transition-colors px-3 py-2"
                       aria-label="Iniciar sesión"
+                      title="Iniciar sesión"
+                      role="link"
                     >
                       <User className="h-5 w-5" aria-hidden="true" />
                       <span className="text-sm font-medium">
-                        Iniciar Sesión
+                        Iniciar sesión
                       </span>
                     </Link>
                     <div className="h-6 w-px bg-gray-300"></div>
