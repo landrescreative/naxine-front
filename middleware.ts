@@ -27,6 +27,13 @@ export function middleware(request: NextRequest) {
   const appEnv = process.env.NEXT_PUBLIC_APP_ENV || "development";
   const isProductionMode = appEnv === "production";
 
+  // DEBUG: Logs temporales (eliminar después de verificar)
+  console.log("🔍 Middleware ejecutándose:", {
+    pathname,
+    appEnv,
+    isProductionMode,
+  });
+
   // ========================================
   // CONTROL DE ACCESO EN MODO PRODUCCIÓN
   // (Solo activo cuando APP_ENV=production)
@@ -48,8 +55,16 @@ export function middleware(request: NextRequest) {
       pathname.startsWith(route)
     );
 
+    // DEBUG: Logs temporales
+    console.log("🔒 Modo producción activo:", {
+      isSystemRoute,
+      isAllowedRoute,
+      shouldRedirect: !isSystemRoute && !isAllowedRoute,
+    });
+
     // Si es la raíz (/), redirigir a /proximamente
     if (pathname === "/") {
+      console.log("🔄 Redirigiendo desde raíz a /proximamente");
       const proximamenteUrl = new URL("/proximamente", request.url);
       return NextResponse.redirect(proximamenteUrl);
     }
@@ -60,6 +75,7 @@ export function middleware(request: NextRequest) {
       !isAllowedRoute &&
       !pathname.startsWith("/dashboard")
     ) {
+      console.log("🔄 Redirigiendo a /proximamente desde:", pathname);
       const proximamenteUrl = new URL("/proximamente", request.url);
       return NextResponse.redirect(proximamenteUrl);
     }
