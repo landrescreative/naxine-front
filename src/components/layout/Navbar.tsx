@@ -509,8 +509,9 @@ export default function Navbar() {
                               href={dashboardHref}
                               onClick={closeUserMenu}
                               className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors"
+                              aria-label="Mi panel"
                             >
-                              <User className="h-5 w-5" />
+                              <User className="h-5 w-5" aria-hidden="true" />
                               <span className="text-sm font-medium">
                                 Mi panel
                               </span>
@@ -521,8 +522,9 @@ export default function Navbar() {
                                 closeUserMenu();
                               }}
                               className="w-full text-left flex items-center space-x-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors"
+                              aria-label="Cerrar sesión"
                             >
-                              <X className="h-5 w-5" />
+                              <X className="h-5 w-5" aria-hidden="true" />
                               <span className="text-sm font-medium">
                                 Cerrar sesión
                               </span>
@@ -534,8 +536,9 @@ export default function Navbar() {
                               href="/iniciar-sesion"
                               onClick={closeUserMenu}
                               className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors"
+                              aria-label="Iniciar sesión"
                             >
-                              <LogIn className="h-5 w-5" />
+                              <LogIn className="h-5 w-5" aria-hidden="true" />
                               <span className="text-sm font-medium">
                                 Iniciar Sesión
                               </span>
@@ -544,8 +547,9 @@ export default function Navbar() {
                               href="/registro"
                               onClick={closeUserMenu}
                               className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors"
+                              aria-label="Regístrate como Usuario"
                             >
-                              <UserPlus className="h-5 w-5" />
+                              <UserPlus className="h-5 w-5" aria-hidden="true" />
                               <span className="text-sm font-medium">
                                 Regístrate como Usuario
                               </span>
@@ -554,8 +558,9 @@ export default function Navbar() {
                               href="/registro-profesional"
                               onClick={closeUserMenu}
                               className="flex items-center space-x-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors"
+                              aria-label="Regístrate como Profesional"
                             >
-                              <Briefcase className="h-5 w-5" />
+                              <Briefcase className="h-5 w-5" aria-hidden="true" />
                               <span className="text-sm font-medium">
                                 Regístrate como Profesional
                               </span>
@@ -647,15 +652,17 @@ export default function Navbar() {
                     <Link
                       href={dashboardHref}
                       className="flex items-center space-x-2 bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors"
+                      aria-label="Mi panel"
                     >
                       <span className="text-sm font-medium">Mi panel</span>
-                      <ArrowRight className="h-4 w-4" />
+                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
                     </Link>
                     <button
                       onClick={logout}
                       className="flex items-center space-x-2 text-gray-800 hover:text-gray-600 transition-colors px-3 py-2"
+                      aria-label="Cerrar sesión"
                     >
-                      <X className="h-5 w-5" />
+                      <X className="h-5 w-5" aria-hidden="true" />
                       <span className="text-sm font-medium">Cerrar sesión</span>
                     </button>
                   </>
@@ -664,8 +671,9 @@ export default function Navbar() {
                     <Link
                       href="/iniciar-sesion"
                       className="flex items-center space-x-2 text-gray-800 hover:text-gray-600 transition-colors px-3 py-2"
+                      aria-label="Iniciar sesión"
                     >
-                      <User className="h-5 w-5" />
+                      <User className="h-5 w-5" aria-hidden="true" />
                       <span className="text-sm font-medium">
                         Iniciar Sesión
                       </span>
@@ -674,18 +682,20 @@ export default function Navbar() {
                     <Link
                       href="/registro-profesional"
                       className="flex items-center space-x-2 bg-primary-foreground hover:bg-primary-foreground/80 text-white px-4 py-2 rounded-lg transition-colors"
+                      aria-label="Regístrate como profesional"
                     >
                       <span className="text-sm font-medium">
                         Regístrate como profesional
                       </span>
-                      <ArrowRight className="h-4 w-4" />
+                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
                     </Link>
                     <Link
                       href="/registro"
                       className="flex items-center space-x-2 bg-primary hover:bg-primary/80 text-white px-4 py-2 rounded-lg transition-colors"
+                      aria-label="Regístrate"
                     >
                       <span className="text-sm font-medium">Regístrate</span>
-                      <ArrowRight className="h-4 w-4" />
+                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
                     </Link>
                   </>
                 )}
