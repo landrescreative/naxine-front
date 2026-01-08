@@ -25,13 +25,14 @@ export const metadata: Metadata = {
 
 export default function ComoFunciona() {
   return (
-    <div>
+    <main aria-labelledby="como-funciona-title">
+      <h1 id="como-funciona-title" className="sr-only">Cómo funciona NAXINE</h1>
       <SeparatorSection
         subtitle="PROCESO"
         title="¿CÓMO FUNCIONA?"
         className=""
       />
       <HowItWorksSection />
-    </div>
+    </main>
   );
 }

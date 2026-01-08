@@ -39,7 +39,15 @@ export function middleware(request: NextRequest) {
   // ========================================
   if (isProductionMode) {
     // Lista de rutas permitidas en producción
-    const allowedRoutes = ["/proximamente", "/registro-profesional"];
+    const allowedRoutes = [
+      "/proximamente",
+      "/registro-profesional",
+      "/terminos-condiciones",
+      "/politica-privacidad",
+      "/politica-cookies",
+      "/politica-cancelacion",
+      "/terminos-condiciones-profesionales",
+    ];
 
     // Rutas de sistema que siempre deben estar permitidas
     const systemRoutes = ["/_next", "/api", "/favicon.ico", "/public"];

@@ -22,8 +22,8 @@ export default function UpcomingSessions({
   onViewDetails,
 }: UpcomingSessionsProps) {
   return (
-    <div className="space-y-4">
-      <h2 className="text-lg font-bold text-gray-900">Próximas Sesiones</h2>
+    <section className="space-y-4" aria-labelledby="upcoming-sessions-title">
+      <h2 id="upcoming-sessions-title" className="text-lg font-bold text-gray-900">Próximas Sesiones</h2>
 
       {/* Contenedor con scroll horizontal - barra oculta */}
       <style dangerouslySetInnerHTML={{
@@ -43,15 +43,17 @@ export default function UpcomingSessions({
           WebkitOverflowScrolling: 'touch',
         }}
       >
-        <div className="flex gap-4 min-w-max">
-        {sessions.map((session) => (
-          <div
+        <div className="flex gap-4 min-w-max" role="list" aria-label="Lista de próximas sesiones">
+        {sessions.map((session, index) => (
+          <article
             key={session.id}
-              className="relative rounded-[20px] sm:rounded-[28px] p-6 sm:p-8 pb-12 sm:pb-12 w-[280px] sm:w-96 flex-shrink-0"
+            className="relative rounded-[20px] sm:rounded-[28px] p-6 sm:p-8 pb-12 sm:pb-12 w-[280px] sm:w-96 flex-shrink-0"
             style={{ backgroundColor: "#DED9FF" }}
+            role="listitem"
+            aria-label={`Sesión ${index + 1}: ${session.professional} - ${session.specialty}`}
           >
             {/* Icon según tipo de atención */}
-            <div className="absolute -top-4 right-5">
+            <div className="absolute -top-4 right-5" aria-hidden="true">
               <div className={`w-16 h-16 rounded-full flex items-center justify-center shadow-sm ${
                 session.tipo_atencion === "presencial" 
                   ? "bg-blue-500" 
@@ -65,6 +67,7 @@ export default function UpcomingSessions({
                     className="w-8 h-8 text-white"
                     fill="currentColor"
                     viewBox="0 0 20 20"
+                    aria-hidden="true"
                   >
                     <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
                   </svg>
@@ -74,6 +77,7 @@ export default function UpcomingSessions({
                     className="w-8 h-8 text-white"
                     fill="currentColor"
                     viewBox="0 0 20 20"
+                    aria-hidden="true"
                   >
                     <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
                   </svg>
@@ -83,6 +87,7 @@ export default function UpcomingSessions({
                     className="w-8 h-8 text-white"
                     fill="currentColor"
                     viewBox="0 0 20 20"
+                    aria-hidden="true"
                   >
                     <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
                   </svg>
@@ -114,14 +119,15 @@ export default function UpcomingSessions({
                     }
                   }}
                 className="inline-block bg-primary hover:bg-primary/90 text-white text-xs sm:text-sm font-medium py-2 sm:py-2.5 px-6 sm:px-10 rounded-xl sm:rounded-2xl transition-colors absolute right-3 sm:right-5 bottom-4 sm:bottom-5"
+                aria-label={`Ver detalles de sesión con ${session.professional}`}
               >
                 Ver detalles
                 </button>
               </div>
-            </div>
+            </article>
           ))}
           </div>
       </div>
-    </div>
+    </section>
   );
 }

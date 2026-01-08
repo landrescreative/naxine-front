@@ -32,7 +32,15 @@ export default function WebTemplate({
     if (!isProductionMode) return;
 
     // Lista de rutas permitidas en producción
-    const allowedRoutes = ["/proximamente", "/registro-profesional"];
+    const allowedRoutes = [
+      "/proximamente",
+      "/registro-profesional",
+      "/terminos-condiciones",
+      "/politica-privacidad",
+      "/politica-cookies",
+      "/politica-cancelacion",
+      "/terminos-condiciones-profesionales",
+    ];
 
     // Verificar si la ruta actual está permitida
     const isAllowed = allowedRoutes.some((route) => pathname.startsWith(route));

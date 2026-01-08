@@ -29,7 +29,7 @@ export default function HeroSection() {
   }, []);
 
   return (
-    <div className="relative w-full min-h-screen flex items-center justify-center overflow-visible">
+    <section className="relative w-full min-h-screen flex items-center justify-center overflow-visible" aria-labelledby="hero-title">
       {/* Video de fondo */}
       <video
         autoPlay
@@ -59,6 +59,7 @@ export default function HeroSection() {
       <div className="relative z-10 flex flex-col items-center justify-center text-center px-4 sm:px-6 md:px-8 max-w-4xl mx-auto">
         {/* Título principal */}
         <h1
+          id="hero-title"
           className={`text-white text-3xl sm:text-4xl lg:text-5xl xl:text-5xl font-bold mb-4 leading-tight transition-all duration-800 ease-out delay-300 ${
             isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
           }`}
@@ -84,6 +85,6 @@ export default function HeroSection() {
           <ServiceSearchDropdown placeholder="Servicios de" />
         </div>
       </div>
-    </div>
+    </section>
   );
 }

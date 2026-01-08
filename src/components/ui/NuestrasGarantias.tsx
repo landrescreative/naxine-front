@@ -31,10 +31,11 @@ export default function NuestrasGarantias() {
           ease: [0.25, 0.46, 0.45, 0.94],
           delay: 0.1,
         }}
+        aria-hidden="true"
       >
         <img
           src={dotsSquare.src}
-          alt="Decorative pattern"
+          alt=""
           className="w-full h-full object-cover rounded-lg"
         />
       </motion.div>
@@ -50,10 +51,11 @@ export default function NuestrasGarantias() {
           ease: [0.25, 0.46, 0.45, 0.94],
           delay: 0.2,
         }}
+        aria-hidden="true"
       >
         <img
           src={dotsTriangle.src}
-          alt="Decorative circle"
+          alt=""
           className="w-full h-full object-cover rounded-full"
         />
       </motion.div>
@@ -69,10 +71,11 @@ export default function NuestrasGarantias() {
           ease: [0.25, 0.46, 0.45, 0.94],
           delay: 0.3,
         }}
+        aria-hidden="true"
       >
         <img
           src={dotsCircle.src}
-          alt="Decorative shape"
+          alt=""
           className="w-full h-full object-cover rounded-lg"
         />
       </motion.div>
@@ -126,6 +129,7 @@ export default function NuestrasGarantias() {
               controls
               preload="metadata"
               playsInline
+              aria-label="Video explicativo de las garantías de NAXINE"
             >
               <source src="/Naxine_V1_Music.mp4" type="video/mp4" />
               Tu navegador no soporta la reproducción de video.

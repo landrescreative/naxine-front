@@ -212,28 +212,37 @@ export default function ServiceSearchDropdown({
     >
       <div className="relative flex-1 min-w-[260px]">
         <div className="relative">
-          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-primary/80">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-primary/80" aria-hidden="true">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"
               fill="currentColor"
               className="w-5 h-5"
+              aria-hidden="true"
             >
               <path d="M21.71 20.29l-3.4-3.39A7.92 7.92 0 0 0 19 11a8 8 0 1 0-8 8 7.92 7.92 0 0 0 5.9-2.69l3.39 3.4a1 1 0 0 0 1.42 0 1 1 0 0 0 0-1.42zM5 11a6 6 0 1 1 6 6 6 6 0 0 1-6-6z" />
             </svg>
           </span>
           <input
             type="text"
+            id="service-search-input"
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
               setHighlightIndex(null);
+              if (!isFocused) setIsFocused(true);
             }}
             onFocus={openSuggestions}
             onBlur={closeSuggestions}
             onKeyDown={handleKeyDown}
             placeholder={loading ? "Cargando..." : placeholder}
-            aria-label="Buscar servicios o especialidades"
+            aria-label="Buscar servicios"
+            aria-expanded={isFocused}
+            aria-controls="service-search-listbox"
+            aria-autocomplete="list"
+            aria-haspopup="listbox"
+            role="combobox"
+            autoComplete="off"
             disabled={loading}
             className={`w-full h-12 bg-white/95 backdrop-blur text-gray-800 pl-10 pr-4 rounded-md border border-white/60 shadow-sm transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-primary/30 focus:border-primary/70 focus:bg-white focus:shadow-lg hover:border-white text-base ${
               className.includes("rounded-xl") ? "rounded-xl" : ""
@@ -242,13 +251,18 @@ export default function ServiceSearchDropdown({
         </div>
 
         {isFocused && (
-          <div className="absolute z-20 mt-2 w-full bg-white shadow-lg rounded-md border border-gray-100 max-h-72 overflow-auto">
+          <div 
+            id="service-search-listbox"
+            role="listbox"
+            aria-label="Resultados de búsqueda"
+            className="absolute z-20 mt-2 w-full bg-white shadow-lg rounded-md border border-gray-100 max-h-72 overflow-auto"
+          >
             {loading && (
-              <div className="px-4 py-3 text-sm text-gray-500">Cargando...</div>
+              <div className="px-4 py-3 text-sm text-gray-500" role="status">Cargando...</div>
             )}
 
             {!loading && filteredOptions.length === 0 && (
-              <div className="px-4 py-3 text-sm text-gray-500">
+              <div className="px-4 py-3 text-sm text-gray-500" role="status">
                 No encontramos resultados
               </div>
             )}
@@ -258,6 +272,9 @@ export default function ServiceSearchDropdown({
                 <button
                   key={`${option.slug}-${index}`}
                   type="button"
+                  role="option"
+                  aria-selected={index === highlightIndex}
+                  aria-label={`${option.label} - ${option.kind}${option.parentLabel ? ` de ${option.parentLabel}` : ''}`}
                   className={`w-full text-left px-4 py-3 flex flex-col gap-1 transition-colors ${
                     index === highlightIndex
                       ? "bg-primary/10 text-primary"
@@ -269,7 +286,7 @@ export default function ServiceSearchDropdown({
                   }}
                 >
                   <span className="font-medium">{option.label}</span>
-                  <span className="text-xs text-gray-500 flex items-center gap-2">
+                  <span className="text-xs text-gray-500 flex items-center gap-2" aria-hidden="true">
                     <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-700">
                       {option.kind}
                     </span>
@@ -286,6 +303,7 @@ export default function ServiceSearchDropdown({
           type="button"
           onClick={handleSubmit}
           disabled={!bestOption || loading}
+          aria-label="Buscar"
           className={`w-full sm:w-auto shrink-0 whitespace-nowrap min-w-[120px] font-semibold px-4 rounded-md transition-colors duration-200 text-sm md:text-base flex items-center justify-center gap-2 sm:h-12 ${
             bestOption && !loading
               ? "bg-white text-primary hover:bg-gray-100 cursor-pointer"
@@ -297,10 +315,11 @@ export default function ServiceSearchDropdown({
             viewBox="0 0 24 24"
             fill="currentColor"
             className="w-5 h-5"
+            aria-hidden="true"
           >
             <path d="M21.71 20.29l-3.4-3.39A7.92 7.92 0 0 0 19 11a8 8 0 1 0-8 8 7.92 7.92 0 0 0 5.9-2.69l3.39 3.4a1 1 0 0 0 1.42 0 1 1 0 0 0 0-1.42zM5 11a6 6 0 1 1 6 6 6 6 0 0 1-6-6z" />
           </svg>
-          Buscar
+          <span>Buscar</span>
         </button>
       )}
     </div>

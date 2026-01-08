@@ -256,7 +256,7 @@ export default function AdminSoportePage() {
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           {error && (
-            <div className="p-4 bg-red-50 border-b border-red-200">
+            <div className="p-4 bg-red-50 border-b border-red-200" role="alert" aria-live="assertive">
               <p className="text-sm text-red-800">{error}</p>
             </div>
           )}
@@ -283,7 +283,7 @@ export default function AdminSoportePage() {
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="w-12 py-4 px-6">
+                    <th scope="col" className="w-12 py-4 px-6">
                       <input
                         type="checkbox"
                         checked={
@@ -292,24 +292,25 @@ export default function AdminSoportePage() {
                         }
                         onChange={handleSelectAll}
                         className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                        aria-label="Seleccionar todos los tickets"
                       />
                     </th>
-                    <th className="text-left py-4 px-6 text-sm font-medium text-gray-900">
+                    <th scope="col" className="text-left py-4 px-6 text-sm font-medium text-gray-900">
                       Usuario
                     </th>
-                    <th className="text-left py-4 px-6 text-sm font-medium text-gray-900">
+                    <th scope="col" className="text-left py-4 px-6 text-sm font-medium text-gray-900">
                       Asunto
                     </th>
-                    <th className="text-left py-4 px-6 text-sm font-medium text-gray-900">
+                    <th scope="col" className="text-left py-4 px-6 text-sm font-medium text-gray-900">
                       Mensaje
                     </th>
-                    <th className="text-left py-4 px-6 text-sm font-medium text-gray-900">
+                    <th scope="col" className="text-left py-4 px-6 text-sm font-medium text-gray-900">
                       Fecha
                     </th>
-                    <th className="text-left py-4 px-6 text-sm font-medium text-gray-900">
+                    <th scope="col" className="text-left py-4 px-6 text-sm font-medium text-gray-900">
                       Estado
                     </th>
-                    <th className="text-left py-4 px-6 text-sm font-medium text-gray-900">
+                    <th scope="col" className="text-left py-4 px-6 text-sm font-medium text-gray-900">
                       Acción
                     </th>
                   </tr>
@@ -325,6 +326,7 @@ export default function AdminSoportePage() {
                             checked={selectedRows.includes(ticket.id_ticket)}
                             onChange={() => handleSelectRow(ticket.id_ticket)}
                             className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                            aria-label={`Seleccionar ticket ${ticket.id_ticket}`}
                           />
                         </td>
                         <td className="py-4 px-6">
@@ -364,8 +366,9 @@ export default function AdminSoportePage() {
                             onClick={() => handleViewTicket(ticket.id_ticket)}
                             className="text-gray-400 hover:text-gray-600"
                             disabled={loading}
+                            aria-label={`Ver detalles del ticket ${ticket.id_ticket}`}
                           >
-                            <Eye className="h-4 w-4" />
+                            <Eye className="h-4 w-4" aria-hidden="true" />
                           </button>
                         </td>
                       </tr>
@@ -387,8 +390,9 @@ export default function AdminSoportePage() {
                   onClick={prevPage}
                   disabled={currentOffset === 0 || loading}
                   className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="Página anterior"
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronLeft className="h-4 w-4" aria-hidden="true" />
                 </button>
                 <div className="flex items-center space-x-1">
                   {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
@@ -429,8 +433,9 @@ export default function AdminSoportePage() {
                   onClick={nextPage}
                   disabled={currentOffset + limit >= total || loading}
                   className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="Página siguiente"
                 >
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
                 </button>
               </div>
             </div>
@@ -473,8 +478,9 @@ export default function AdminSoportePage() {
                   <button
                     onClick={handleCloseModal}
                     className="text-gray-400 hover:text-gray-600 flex-shrink-0"
+                    aria-label="Cerrar modal"
                   >
-                    <X className="h-5 w-5" />
+                    <X className="h-5 w-5" aria-hidden="true" />
                   </button>
                 </div>
               </div>
