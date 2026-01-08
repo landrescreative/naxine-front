@@ -237,7 +237,7 @@ export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const desktopMenuRef = useRef<HTMLDivElement>(null);
-  const desktopMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const desktopMenuButtonRef = useRef<HTMLAnchorElement>(null);
   const {
     specialties: backendSpecialties,
     loading: loadingSpecialties,
@@ -471,26 +471,27 @@ export default function Navbar() {
             <div className="lg:hidden flex items-center justify-between w-full">
               {/* Menú de usuario - Izquierda */}
               <div className="relative">
-                <button
-                  onClick={toggleUserMenu}
+                <a
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    toggleUserMenu();
+                  }}
                   className={`${
                     isUserMenuOpen
                       ? "bg-gray-100 ring-1 ring-gray-200 rounded-lg"
                       : ""
                   } text-gray-800 hover:text-gray-600 focus:outline-none p-2 transition-colors`}
-                  type="button"
-                  aria-label={
-                    isUserMenuOpen ? "Cerrar menú de usuario" : "Abrir menú de usuario"
-                  }
                   aria-expanded={isUserMenuOpen}
                   aria-controls="mobile-user-menu"
+                  aria-label="Menu de usuario"
                 >
                   {isUserMenuOpen ? (
-                    <X className="h-6 w-6" />
+                    <X className="h-6 w-6" aria-hidden="true" />
                   ) : (
-                    <User className="h-6 w-6" />
+                    <User className="h-6 w-6" aria-hidden="true" />
                   )}
-                </button>
+                </a>
 
                 {/* Menú desplegable de usuario */}
                 <AnimatePresence>
@@ -573,7 +574,11 @@ export default function Navbar() {
               </div>
 
               {/* Logo - Centro */}
-              <Link href="/" className="flex items-center space-x-2">
+              <Link 
+                href="/" 
+                className="flex items-center space-x-2"
+                aria-label="Logo Naxine - Pagina principal"
+              >
                 <div className="flex items-center">
                   <Image
                     src={Logo}
@@ -584,53 +589,58 @@ export default function Navbar() {
                     priority
                   />
                 </div>
+                <span className="sr-only">Logo Naxine Pagina principal Inicio</span>
               </Link>
 
               {/* Menú hamburguesa - Derecha */}
-              <button
-                onClick={toggleMobileMenu}
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  toggleMobileMenu();
+                }}
                 className="text-gray-800 hover:text-gray-600 focus:outline-none p-2"
-                type="button"
-                aria-label={
-                  isMobileMenuOpen ? "Cerrar menú principal" : "Abrir menú principal"
-                }
                 aria-expanded={isMobileMenuOpen}
                 aria-controls="mobile-primary-menu"
+                aria-label="Menu principal"
               >
                 {isMobileMenuOpen ? (
-                  <X className="h-6 w-6" />
+                  <X className="h-6 w-6" aria-hidden="true" />
                 ) : (
-                  <Menu className="h-6 w-6" />
+                  <Menu className="h-6 w-6" aria-hidden="true" />
                 )}
-              </button>
+              </a>
             </div>
 
             {/* Layout desktop: Hamburguesa (izq), Logo (centro), Usuario (der) */}
             <div className="hidden lg:flex items-center justify-between w-full">
               {/* Menú hamburguesa - Izquierda */}
               <div className="flex items-center space-x-4">
-                <button
+                <a
+                  href="#"
                   ref={desktopMenuButtonRef}
-                  onClick={toggleDesktopMenu}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    toggleDesktopMenu();
+                  }}
                   className={`${
                     isDesktopMenuOpen
                       ? "bg-gray-100 ring-1 ring-gray-200 rounded-lg"
                       : ""
                   } text-gray-800 hover:text-gray-600 focus:outline-none p-2 transition-colors`}
-                  type="button"
-                  aria-label={
-                    isDesktopMenuOpen
-                      ? "Cerrar menú de navegación"
-                      : "Abrir menú de navegación"
-                  }
                   aria-expanded={isDesktopMenuOpen}
                   aria-controls="desktop-primary-menu"
+                  aria-label="Menu de navegacion"
                 >
-                  <Menu className="h-6 w-6" />
-                </button>
+                  <Menu className="h-6 w-6" aria-hidden="true" />
+                </a>
 
                 {/* Logo */}
-                <Link href="/" className="flex items-center space-x-2">
+                <Link 
+                  href="/" 
+                  className="flex items-center space-x-2"
+                  aria-label="Logo Naxine - Pagina principal"
+                >
                   <div className="flex items-center">
                     <Image
                       src={Logo}
@@ -641,6 +651,7 @@ export default function Navbar() {
                       priority
                     />
                   </div>
+                  <span className="sr-only">Logo Naxine Pagina principal Inicio</span>
                 </Link>
               </div>
 
@@ -672,7 +683,7 @@ export default function Navbar() {
                       className="flex items-center space-x-2 text-gray-800 hover:text-gray-600 transition-colors px-3 py-2"
                       aria-label="Iniciar sesion"
                     >
-                      <User className="h-5 w-5" aria-hidden="true" />
+                      <LogIn className="h-5 w-5" aria-hidden="true" />
                       <span className="text-sm font-medium">Iniciar sesion</span>
                     </Link>
                     <div className="h-6 w-px bg-gray-300"></div>
