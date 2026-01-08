@@ -72,7 +72,7 @@ export default function ProximamentePage() {
           <div className="flex items-center justify-center gap-2">
             <MapPin className="w-5 h-5 text-[#FF6B35]" />
             <a
-              href="https://maps.google.com/?q=Madrid,Spain"
+              href="https://maps.app.goo.gl/DjYCs5jqRUST2t4y9"
               target="_blank"
               rel="noopener noreferrer"
               className="text-[#0a51f2] hover:underline text-base md:text-lg"
