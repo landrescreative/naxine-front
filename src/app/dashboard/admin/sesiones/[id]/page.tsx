@@ -50,11 +50,25 @@ export default function AdminSessionDetailPage() {
         
         const response = await citasService.getCitaPorId(sessionId);
         
+        console.log('Respuesta completa del servicio:', response);
+        
         if (response.success && response.data) {
-          // El apiClient envuelve la respuesta
-          const citaData = response.data.cita;
+          // El apiClient devuelve: { success: true, data: { success: true, data: { cita: {...} } } }
+          // El backend devuelve: { success: true, data: { cita: {...} } }
+          // Por lo tanto, necesitamos acceder a response.data.data.cita
+          const backendData = response.data;
+          const citaData = backendData?.data?.cita || backendData?.cita || backendData;
+          
+          if (!citaData || !citaData.id_cita) {
+            console.error('No se encontró la cita en la respuesta:', response);
+            setError('No se pudo obtener la información de la cita');
+            return;
+          }
+          
+          console.log('Datos de la cita cargados:', citaData);
           setCita(citaData);
         } else {
+          console.error('Error en la respuesta:', response);
           setError(response.error || 'Error al cargar la sesión');
         }
       } catch (err) {
@@ -70,12 +84,35 @@ export default function AdminSessionDetailPage() {
 
   // Función para mapear datos de la cita al formato de la UI
   const mapCitaToSession = (cita: Cita) => {
-    const fechaInicio = new Date(cita.fecha_inicio);
+    if (!cita || !cita.fecha_inicio) {
+      console.error('Cita inválida o sin fecha_inicio:', cita);
+      return null;
+    }
+
+    let fechaInicio: Date;
+    try {
+      fechaInicio = new Date(cita.fecha_inicio);
+      if (isNaN(fechaInicio.getTime())) {
+        console.error('Fecha inválida:', cita.fecha_inicio);
+        fechaInicio = new Date(); // Fallback a fecha actual
+      }
+    } catch (error) {
+      console.error('Error al parsear fecha:', error);
+      fechaInicio = new Date(); // Fallback a fecha actual
+    }
+
     const fechaFormateada = fechaInicio.toLocaleDateString('es-ES', {
       day: 'numeric',
       month: 'long',
       year: 'numeric'
     });
+    
+    const horaFormateada = fechaInicio.toLocaleTimeString('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    
+    const fechaHoraCompleta = `${fechaFormateada} a las ${horaFormateada}`;
 
     // Formatear precio
     const montoNumero = cita.pago_monto 
@@ -115,7 +152,7 @@ export default function AdminSessionDetailPage() {
     return {
       id: cita.id_cita,
       orderNumber: String(cita.id_cita).padStart(8, '0'),
-      date: fechaFormateada,
+      date: fechaHoraCompleta,
       status,
       statusColor,
       product: {
@@ -146,7 +183,38 @@ export default function AdminSessionDetailPage() {
     };
   };
 
-  const session = cita ? mapCitaToSession(cita) : {
+  const session = cita ? (mapCitaToSession(cita) || {
+    id: sessionId,
+    orderNumber: String(sessionId).padStart(8, '0'),
+    date: "Fecha no disponible",
+    status: "Error",
+    statusColor: "bg-red-100 text-red-800",
+    product: {
+      name: "Error al cargar",
+      price: "N/A",
+      description: "No se pudieron cargar los datos de la cita",
+      specialty: "N/A",
+      icon: "⚠️",
+    },
+    paymentMethod: {
+      type: "N/A",
+      number: "****",
+      expiry: "N/A",
+      cardholder: "N/A",
+    },
+    client: {
+      name: "N/A",
+      email: "N/A",
+      phone: "N/A",
+    },
+    pricing: {
+      productPrice: "N/A",
+      taxes: "0.00€",
+      total: "N/A",
+    },
+    pago_monto: 0,
+    id_pago: undefined,
+  }) : {
     id: sessionId,
     orderNumber: "00000000",
     date: "Cargando...",
@@ -217,8 +285,11 @@ export default function AdminSessionDetailPage() {
         // Recargar los datos
         const citaResponse = await citasService.getCitaPorId(sessionId);
         if (citaResponse.success && citaResponse.data) {
-          const citaData = citaResponse.data.cita;
-          setCita(citaData);
+          const backendData = citaResponse.data;
+          const citaData = backendData?.data?.cita || backendData?.cita || backendData;
+          if (citaData && citaData.id_cita) {
+            setCita(citaData);
+          }
         }
         
         setIsRefundModalOpen(false);
@@ -297,8 +368,11 @@ export default function AdminSessionDetailPage() {
         // Recargar los datos
         const citaResponse = await citasService.getCitaPorId(sessionId);
         if (citaResponse.success && citaResponse.data) {
-          const citaData = citaResponse.data.cita;
-          setCita(citaData);
+          const backendData = citaResponse.data;
+          const citaData = backendData?.data?.cita || backendData?.cita || backendData;
+          if (citaData && citaData.id_cita) {
+            setCita(citaData);
+          }
         }
         
         setIsRescheduleModalOpen(false);

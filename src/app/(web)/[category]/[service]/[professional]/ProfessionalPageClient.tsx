@@ -1304,6 +1304,7 @@ export default function ProfessionalPageClient({
           if (citasData && citasData.length > 0) {
             // Convertir citas ocupadas al formato esperado por el componente
             // Normalizar fechas a UTC para comparación precisa
+            // Incluye tanto citas de la plataforma como eventos de Google Calendar
             const appointments = citasData.map((cita: any) => {
               const fechaInicioUTC = normalizeDateToUTC(cita.fecha_inicio);
               const fechaFinUTC = normalizeDateToUTC(cita.fecha_fin);
@@ -1311,35 +1312,74 @@ export default function ProfessionalPageClient({
                 (fechaFinUTC.getTime() - fechaInicioUTC.getTime()) / 60000
               );
 
+              // Generar ID único: usar id_cita si existe, sino usar id_evento_google o id_evento_outlook
+              let uniqueId = String(
+                cita.id_cita ||
+                  cita.id_evento_google ||
+                  cita.id_evento_outlook ||
+                  `event_${Date.now()}_${Math.random()}`
+              );
+
+              // Si el id_cita tiene prefijo (gc_ o oc_), usarlo directamente
+              if (
+                cita.id_cita &&
+                (cita.id_cita.toString().startsWith("gc_") ||
+                  cita.id_cita.toString().startsWith("oc_"))
+              ) {
+                uniqueId = String(cita.id_cita);
+              }
+
               return {
-                id: String(cita.id_cita),
+                id: uniqueId,
                 dateTime: fechaInicioUTC.toISOString(), // Guardar en formato ISO UTC
                 dateTimeUTC: fechaInicioUTC, // Guardar objeto Date UTC para comparación rápida
                 duration,
-                estado: cita.estado,
+                estado: cita.estado || "confirmada", // Los eventos de Google Calendar no tienen estado, usar 'confirmada' por defecto
+                fuente: cita.fuente || "plataforma", // Identificar si viene de Google Calendar, Outlook o plataforma
+                titulo: cita.titulo || null, // Título del evento (solo para eventos externos)
               };
             });
             setExistingAppointments(appointments);
+
+            // Log detallado para debugging
+            const citasPlataforma = appointments.filter(
+              (apt) => apt.fuente === "plataforma"
+            ).length;
+            const eventosGoogle = appointments.filter(
+              (apt) => apt.fuente === "google_calendar"
+            ).length;
+            const eventosOutlook = appointments.filter(
+              (apt) => apt.fuente === "outlook_calendar"
+            ).length;
+
             console.log(
-              `[ProfessionalPageClient] ✅ Citas ocupadas cargadas: ${appointments.length}`,
-              appointments.map((apt) => ({
-                id: apt.id,
-                dateTime: apt.dateTime,
-                dateTimeUTC: apt.dateTimeUTC?.toISOString(),
-                duration: apt.duration,
-                estado: apt.estado,
-                // Mostrar también en hora de España para referencia
-                fechaEspana: apt.dateTimeUTC
-                  ? new Date(apt.dateTimeUTC).toLocaleString("es-ES", {
-                      timeZone: "Europe/Madrid",
-                      year: "numeric",
-                      month: "2-digit",
-                      day: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
-                  : null,
-              }))
+              `[ProfessionalPageClient] ✅ Citas ocupadas cargadas: ${appointments.length} total`,
+              {
+                total: appointments.length,
+                de_plataforma: citasPlataforma,
+                de_google_calendar: eventosGoogle,
+                de_outlook_calendar: eventosOutlook,
+                detalles: appointments.map((apt) => ({
+                  id: apt.id,
+                  dateTime: apt.dateTime,
+                  dateTimeUTC: apt.dateTimeUTC?.toISOString(),
+                  duration: apt.duration,
+                  estado: apt.estado,
+                  fuente: apt.fuente,
+                  titulo: apt.titulo,
+                  // Mostrar también en hora de España para referencia
+                  fechaEspana: apt.dateTimeUTC
+                    ? new Date(apt.dateTimeUTC).toLocaleString("es-ES", {
+                        timeZone: "Europe/Madrid",
+                        year: "numeric",
+                        month: "2-digit",
+                        day: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : null,
+                })),
+              }
             );
           } else {
             console.warn(
@@ -1605,6 +1645,19 @@ export default function ProfessionalPageClient({
         typeof response.data
       );
 
+      // Verificar si hay un error de autenticación (401/403)
+      if (!response.success && response.errorDetails) {
+        const status = response.errorDetails.status;
+        if (status === 401 || status === 403) {
+          // Redirigir a la página de inicio de sesión con el redirect
+          router.push(
+            "/iniciar-sesion?redirect=" +
+              encodeURIComponent(window.location.pathname)
+          );
+          return;
+        }
+      }
+
       if (response.success && response.data) {
         // Verificar que la estructura de la respuesta sea correcta
         const data = response.data;
@@ -1713,7 +1766,21 @@ export default function ProfessionalPageClient({
           success: response.success,
           error: response.error,
           data: response.data,
+          errorDetails: response.errorDetails,
         });
+
+        // Verificar si es un error de autenticación
+        const status = response.errorDetails?.status;
+        if (status === 401 || status === 403) {
+          // Redirigir a la página de inicio de sesión
+          router.push(
+            "/iniciar-sesion?redirect=" +
+              encodeURIComponent(window.location.pathname)
+          );
+          return;
+        }
+
+        // Para otros errores, mostrar alert
         alert(
           response.error ||
             "Error al crear la cita. Por favor, intenta nuevamente."
@@ -1721,6 +1788,17 @@ export default function ProfessionalPageClient({
       }
     } catch (error: any) {
       console.error("Error creating appointment:", error);
+
+      // Verificar si el error es de autenticación
+      if (error?.status === 401 || error?.status === 403) {
+        router.push(
+          "/iniciar-sesion?redirect=" +
+            encodeURIComponent(window.location.pathname)
+        );
+        return;
+      }
+
+      // Para otros errores, mostrar alert
       alert(
         error.message ||
           "Error al crear la cita. Por favor, intenta nuevamente."

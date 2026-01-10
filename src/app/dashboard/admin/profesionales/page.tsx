@@ -158,10 +158,13 @@ function ConfirmationModal({
             <textarea
               value={reason || ""}
               onChange={(e) => onReasonChange?.(e.target.value)}
-              placeholder="Describe el motivo del rechazo..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary resize-none"
-              rows={3}
+              placeholder="Describe el motivo del rechazo. Este motivo será guardado y el profesional no podrá iniciar sesión..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 resize-none"
+              rows={4}
             />
+            <p className="mt-2 text-xs text-red-600">
+              ⚠️ El profesional no podrá iniciar sesión después de ser rechazado.
+            </p>
           </div>
         )}
         <div className="flex justify-end gap-3">
@@ -250,8 +253,17 @@ function DetailedStatusBadge({ professional }: { professional: AdminProfessional
   const tieneStripe = professional.tieneStripe || false;
   const tieneGoogleCalendar = professional.tieneGoogleCalendar || false;
 
+  // Estado 0: Rechazado por admin (prioridad más alta)
+  if (estadoAprobacion.toLowerCase() === "rechazado") {
+    return (
+      <span className={`${baseClasses} bg-red-100 text-red-800`} title="Profesional rechazado por administrador. No puede iniciar sesión.">
+        Rechazado
+      </span>
+    );
+  }
+
   // Estado 1: Pendiente de aprobación por admin
-  if (estadoAprobacion !== "aprobado") {
+  if (estadoAprobacion.toLowerCase() !== "aprobado") {
     return (
       <span className={`${baseClasses} bg-orange-100 text-orange-800`} title="Pendiente de aprobación por administrador">
         Pendiente de Aprobación
@@ -680,6 +692,7 @@ export default function AdminProfesionalesPage() {
         },
       // Información detallada del estado
       estadoAprobacion: estadoAprobacion.toLowerCase(),
+      motivoRechazo: backendProfessional.motivo_rechazo || undefined,
       tieneStripe: isStripeVerified,
       tieneGoogleCalendar: tieneGoogleCalendar,
     };
@@ -813,7 +826,7 @@ export default function AdminProfesionalesPage() {
       const response = await professionalsService.rejectProfessional(id, motivo);
       
       if (response.success) {
-        showToast("Profesional rechazado exitosamente", "success");
+        showToast("Profesional rechazado exitosamente. El profesional ya no podrá iniciar sesión.", "success");
         // Recargar la lista de profesionales
         const refreshResponse = await professionalsService.getAdminProfessionals();
         if (refreshResponse.success && refreshResponse.data) {
@@ -877,7 +890,7 @@ export default function AdminProfesionalesPage() {
     setConfirmModal({
       isOpen: true,
       title: "Rechazar Profesional",
-      message: `¿Estás seguro de que deseas rechazar a ${professional.name}? Debes proporcionar un motivo.`,
+      message: `¿Estás seguro de que deseas rechazar a ${professional.name}? Esta acción cambiará el estado del profesional a "rechazado" y no podrá iniciar sesión en la plataforma. Esta acción es irreversible. Debes proporcionar un motivo obligatorio.`,
       type: "danger",
       onConfirm: () => {
         if (!rejectReason.trim()) {
@@ -964,20 +977,20 @@ export default function AdminProfesionalesPage() {
 
   // Separar profesionales pendientes de los no pendientes
   // Pendientes: solo los que están pendientes de aprobación por el administrador
-  // (no incluye los que están aprobados pero les falta completar setup)
+  // (NO incluye rechazados ni aprobados)
   const pendingProfessionals = useMemo(() => {
     return filteredProfessionals.filter((p) => {
-      // Solo incluir si estadoAprobacion no es "aprobado"
       const estadoAprobacion = p.estadoAprobacion || "pendiente";
-      return estadoAprobacion.toLowerCase() !== "aprobado";
+      // Solo incluir si está pendiente (no aprobado ni rechazado)
+      return estadoAprobacion.toLowerCase() === "pendiente";
     });
   }, [filteredProfessionals]);
 
   const nonPendingProfessionals = useMemo(() => {
     return filteredProfessionals.filter((p) => {
-      // Incluir todos los aprobados (aunque les falte setup) y otros estados
       const estadoAprobacion = p.estadoAprobacion || "pendiente";
-      return estadoAprobacion.toLowerCase() === "aprobado";
+      // Incluir todos los aprobados (aunque les falte setup) y los rechazados
+      return estadoAprobacion.toLowerCase() === "aprobado" || estadoAprobacion.toLowerCase() === "rechazado";
     });
   }, [filteredProfessionals]);
 
@@ -1217,24 +1230,33 @@ export default function AdminProfesionalesPage() {
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => openApproveModal(professional)}
-                          disabled={processingId === professional.id}
-                          className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-green-700 bg-green-50 rounded hover:bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                          title="Aprobar profesional"
-                        >
-                          <CheckCircle className="h-3 w-3" />
-                          Aprobar
-                        </button>
-                        <button
-                          onClick={() => openRejectModal(professional)}
-                          disabled={processingId === professional.id}
-                          className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-700 bg-red-50 rounded hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                          title="Rechazar profesional"
-                        >
-                          <XCircle className="h-3 w-3" />
-                          Rechazar
-                        </button>
+                        {professional.estadoAprobacion?.toLowerCase() !== "rechazado" && (
+                          <>
+                            <button
+                              onClick={() => openApproveModal(professional)}
+                              disabled={processingId === professional.id}
+                              className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-green-700 bg-green-50 rounded hover:bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Aprobar profesional"
+                            >
+                              <CheckCircle className="h-3 w-3" />
+                              Aprobar
+                            </button>
+                            <button
+                              onClick={() => openRejectModal(professional)}
+                              disabled={processingId === professional.id}
+                              className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-700 bg-red-50 rounded hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Rechazar profesional"
+                            >
+                              <XCircle className="h-3 w-3" />
+                              Rechazar
+                            </button>
+                          </>
+                        )}
+                        {professional.estadoAprobacion?.toLowerCase() === "rechazado" && (
+                          <span className="text-xs text-gray-500 italic">
+                            Profesional rechazado
+                          </span>
+                        )}
                         <button
                           onClick={() => {
                             window.location.href = `/dashboard/admin/profesionales/${professional.id}`;

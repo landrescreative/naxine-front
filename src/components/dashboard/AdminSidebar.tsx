@@ -3,6 +3,9 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
+import { logger } from "@/lib/logger";
 import {
   Users,
   ChevronUp,
@@ -13,6 +16,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  LogOut,
 } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -26,6 +30,8 @@ export default function AdminSidebar({
 }: AdminSidebarProps) {
   const [isUsersExpanded, setIsUsersExpanded] = useState(true);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { logout } = useAuth();
+  const router = useRouter();
 
   const handleUsersClick = () => {
     if (!isCollapsed) {
@@ -249,6 +255,40 @@ export default function AdminSidebar({
         >
           <Settings className={`${isCollapsed ? "w-6 h-6" : "w-5 h-5"}`} aria-hidden="true" />
           {!isCollapsed && <span className="font-medium">Ajustes</span>}
+        </button>
+      </div>
+
+      {/* Cerrar Sesión Button */}
+      <div
+        className={`${
+          isCollapsed ? "px-2 py-4" : "px-4 py-4"
+        } border-t border-gray-200`}
+      >
+        <button
+          onClick={async () => {
+            try {
+              // Llamar al logout que hace la petición a la API y limpia la sesión
+              await logout();
+              // Redirigir a la página de inicio después del logout
+              router.push("/");
+            } catch (error) {
+              logger.error(
+                "Error durante el logout",
+                error,
+                "AdminSidebar"
+              );
+              // Aún así, redirigir a la página de inicio si hay error
+              router.push("/");
+            }
+          }}
+          className={`w-full flex items-center ${
+            isCollapsed ? "justify-center px-2" : "space-x-3 px-3"
+          } py-3 rounded-lg transition-colors bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700`}
+          title={isCollapsed ? "Cerrar Sesión" : undefined}
+          aria-label="Cerrar sesión"
+        >
+          <LogOut className={`${isCollapsed ? "w-6 h-6" : "w-5 h-5"}`} aria-hidden="true" />
+          {!isCollapsed && <span className="font-medium">Cerrar Sesión</span>}
         </button>
       </div>
     </nav>

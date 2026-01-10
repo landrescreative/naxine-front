@@ -167,14 +167,30 @@ export default function AdminValoracionesPage() {
     setModalSuccess(null);
     try {
       const response = await valoracionesService.getById(id);
+      console.log('[AdminValoracionesPage] Respuesta getById:', response);
+      
       if (response.success && response.data) {
-        const valoracion = response.data.valoracion;
+        // El apiClient devuelve: { success: true, data: { success: true, data: { valoracion: {...} } } }
+        // El backend devuelve: { success: true, data: { valoracion: {...} } }
+        const backendData = response.data;
+        const valoracion = backendData?.data?.valoracion || backendData?.valoracion || backendData;
+        
+        if (!valoracion || !valoracion.id_valoracion) {
+          console.error('[AdminValoracionesPage] No se encontró la valoración en la respuesta:', response);
+          setModalError("No se pudo obtener la información de la valoración");
+          setSelectedReview(null);
+          return;
+        }
+        
+        console.log('[AdminValoracionesPage] Valoración cargada:', valoracion);
         setSelectedReview(valoracion);
       } else {
+        console.error('[AdminValoracionesPage] Error en la respuesta:', response);
         setModalError(response.error || "Error al cargar la valoración");
         setSelectedReview(null);
       }
     } catch (error: any) {
+      console.error('[AdminValoracionesPage] Error al cargar valoración:', error);
       setModalError(error?.message || "Error al cargar la valoración.");
       setSelectedReview(null);
     } finally {
@@ -185,21 +201,40 @@ export default function AdminValoracionesPage() {
   const handleApproveReview = async () => {
     if (!selectedReview) return;
     try {
+      setModalError(null);
+      setModalSuccess(null);
       const resp = await valoracionesService.cambiarEstado(selectedReview.id_valoracion || selectedReview.id, 'aprobada');
+      console.log('[AdminValoracionesPage] Respuesta cambiarEstado (aprobada):', resp);
+      
       if (!resp.success) {
         setModalError(resp.error || 'No se pudo aprobar la reseña');
         return;
       }
+      
       setModalSuccess('Valoración aprobada correctamente');
-      // refrescar listado
+      
+      // Actualizar el estado local de la valoración
+      setSelectedReview({ ...selectedReview, estado: 'aprobada' });
+      
+      // Refrescar listado
       const offset = (page - 1) * pageSize;
       const refreshed = await valoracionesService.getAll({ limit: pageSize, offset });
       if (refreshed.success && refreshed.data) {
-        setItems(refreshed.data.valoraciones || []);
-        setTotal((refreshed.data.paginacion && refreshed.data.paginacion.total) || (refreshed.data.valoraciones || []).length || 0);
+        const backendData = refreshed.data;
+        const valoraciones = backendData?.data?.valoraciones || backendData?.valoraciones || [];
+        const paginacion = backendData?.data?.paginacion || backendData?.paginacion;
+        setItems(valoraciones);
+        setTotal(paginacion?.total || valoraciones.length || 0);
       }
-      setIsReviewModalOpen(false);
+      
+      // Cerrar modal después de 2 segundos
+      setTimeout(() => {
+        setIsReviewModalOpen(false);
+        setSelectedReview(null);
+        setModalSuccess(null);
+      }, 2000);
     } catch (e: any) {
+      console.error('[AdminValoracionesPage] Error al aprobar reseña:', e);
       setModalError(e?.message || 'Error al aprobar la reseña');
     }
   };
@@ -207,20 +242,40 @@ export default function AdminValoracionesPage() {
   const handleMarkInappropriate = async () => {
     if (!selectedReview) return;
     try {
+      setModalError(null);
+      setModalSuccess(null);
       const resp = await valoracionesService.cambiarEstado(selectedReview.id_valoracion || selectedReview.id, 'rechazada');
+      console.log('[AdminValoracionesPage] Respuesta cambiarEstado (rechazada):', resp);
+      
       if (!resp.success) {
         setModalError(resp.error || 'No se pudo marcar como inapropiada');
         return;
       }
+      
       setModalSuccess('Valoración marcada como inapropiada');
+      
+      // Actualizar el estado local de la valoración
+      setSelectedReview({ ...selectedReview, estado: 'rechazada' });
+      
+      // Refrescar listado
       const offset = (page - 1) * pageSize;
       const refreshed = await valoracionesService.getAll({ limit: pageSize, offset });
       if (refreshed.success && refreshed.data) {
-        setItems(refreshed.data.valoraciones || []);
-        setTotal((refreshed.data.paginacion && refreshed.data.paginacion.total) || (refreshed.data.valoraciones || []).length || 0);
+        const backendData = refreshed.data;
+        const valoraciones = backendData?.data?.valoraciones || backendData?.valoraciones || [];
+        const paginacion = backendData?.data?.paginacion || backendData?.paginacion;
+        setItems(valoraciones);
+        setTotal(paginacion?.total || valoraciones.length || 0);
       }
-      setIsReviewModalOpen(false);
+      
+      // Cerrar modal después de 2 segundos
+      setTimeout(() => {
+        setIsReviewModalOpen(false);
+        setSelectedReview(null);
+        setModalSuccess(null);
+      }, 2000);
     } catch (e: any) {
+      console.error('[AdminValoracionesPage] Error al marcar como inapropiada:', e);
       setModalError(e?.message || 'Error al marcar como inapropiada');
     }
   };
@@ -548,7 +603,7 @@ export default function AdminValoracionesPage() {
 
       {/* Review Details Modal */}
       <AnimatePresence>
-        {isReviewModalOpen && selectedReview && (
+        {isReviewModalOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -564,40 +619,78 @@ export default function AdminValoracionesPage() {
               className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 border border-primary/20"
             >
               {/* Header */}
-              <div className="p-6 border-b border-gray-200">
-                <h2 className="text-xl font-bold text-gray-900 mb-2">
-                  Detalles de la reseña
-                </h2>
-                <p className="text-sm text-gray-600">
-                  Puedes aprobar o desaprobar la reseña que ha dejado el
-                  cliente.
-                </p>
+              <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 mb-2">
+                    Detalles de la reseña
+                  </h2>
+                  <p className="text-sm text-gray-600">
+                    Puedes aprobar o desaprobar la reseña que ha dejado el
+                    cliente.
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setIsReviewModalOpen(false);
+                    setSelectedReview(null);
+                    setModalError(null);
+                    setModalSuccess(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
 
               {/* Content */}
               <div className="p-6">
-                {/* Reviewer and Professional Info */}
-                <div className="flex items-center justify-between mb-8 gap-16 px-4">
-                  {/* Reviewer */}
-                  <div className="flex items-center space-x-4">
-                    <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-orange-500 rounded-full flex items-center justify-center">
-                      <div className="w-12 h-12 bg-white/20 rounded-full"></div>
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-gray-900">
-                        {selectedReview.clientes_nombre || 'Cliente'}
-                      </h3>
-                      <p className="text-sm text-gray-500">Cliente</p>
+                {modalLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                      <p className="text-gray-600">Cargando valoración...</p>
                     </div>
                   </div>
+                ) : modalError ? (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <p className="text-red-600">{modalError}</p>
+                    <button
+                      onClick={() => {
+                        setIsReviewModalOpen(false);
+                        setModalError(null);
+                        setSelectedReview(null);
+                      }}
+                      className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                    >
+                      Cerrar
+                    </button>
+                  </div>
+                ) : modalSuccess ? (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <p className="text-green-600">{modalSuccess}</p>
+                  </div>
+                ) : selectedReview ? (
+                  <>
+                    {/* Reviewer and Professional Info */}
+                    <div className="flex items-center justify-between mb-8 gap-16 px-4">
+                      {/* Reviewer */}
+                      <div className="flex items-center space-x-4">
+                        <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-orange-500 rounded-full flex items-center justify-center">
+                          <div className="w-12 h-12 bg-white/20 rounded-full"></div>
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-bold text-gray-900">
+                            {selectedReview.clientes_nombre || 'Cliente'}
+                          </h3>
+                          <p className="text-sm text-gray-500">Cliente</p>
+                        </div>
+                      </div>
 
                   {/* Professional */}
                   <div className="flex items-center space-x-4">
-                    <img
-                      src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150&h=150&fit=crop&crop=face&auto=format&q=80"
-                      alt="Professional"
-                      className="w-16 h-16 rounded-full object-cover"
-                    />
+                    <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                      <div className="w-12 h-12 bg-white/20 rounded-full"></div>
+                    </div>
                     <div>
                       <h3 className="text-lg font-bold text-gray-900">
                         {selectedReview.profesional_nombre || 'Profesional'}
@@ -605,51 +698,71 @@ export default function AdminValoracionesPage() {
                       <p className="text-sm text-gray-500">Profesional</p>
                     </div>
                   </div>
-                </div>
+                    </div>
 
-                {/* Review Content */}
-                <div className="mb-6">
-                  <h4 className="text-lg font-bold text-gray-900 mb-3">
-                    Reseña
-                  </h4>
-                  <div className="bg-gray-100 rounded-lg p-4">
-                    <p className="text-gray-700 leading-relaxed">
-                      {selectedReview?.comentario || 'Sin mensaje'}
-                    </p>
+                    {/* Review Content */}
+                    <div className="mb-6">
+                      <h4 className="text-lg font-bold text-gray-900 mb-3">
+                        Reseña
+                      </h4>
+                      <div className="bg-gray-100 rounded-lg p-4">
+                        <p className="text-gray-700 leading-relaxed">
+                          {selectedReview?.comentario || 'Sin mensaje'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Rating */}
+                    <div className="mb-8">
+                      <div className="flex items-center space-x-1">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`h-6 w-6 ${
+                              i < Math.floor(selectedReview?.calificacion || 0)
+                                ? "text-yellow-400 fill-current"
+                                : "text-gray-300"
+                            }`}
+                          />
+                        ))}
+                        <span className="ml-2 text-sm text-gray-600">
+                          ({selectedReview?.calificacion || 0}/5)
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center justify-end space-x-4">
+                      <button
+                        onClick={handleMarkInappropriate}
+                        disabled={selectedReview.estado === 'rechazada'}
+                        className="px-6 py-3 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Marcar como inapropiado
+                      </button>
+                      <button
+                        onClick={handleApproveReview}
+                        disabled={selectedReview.estado === 'aprobada'}
+                        className="px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Aprobar Reseña
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-gray-600">No se pudo cargar la valoración</p>
+                    <button
+                      onClick={() => {
+                        setIsReviewModalOpen(false);
+                        setSelectedReview(null);
+                      }}
+                      className="mt-4 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+                    >
+                      Cerrar
+                    </button>
                   </div>
-                </div>
-
-                {/* Rating */}
-                <div className="mb-8">
-                  <div className="flex items-center space-x-1">
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`h-6 w-6 ${
-                          i < Math.floor(selectedReview?.calificacion || 0)
-                            ? "text-yellow-400 fill-current"
-                            : "text-gray-300"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex items-center justify-end space-x-4">
-                  <button
-                    onClick={handleMarkInappropriate}
-                    className="px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
-                  >
-                    Marcar como inapropiado
-                  </button>
-                  <button
-                    onClick={handleApproveReview}
-                    className="px-6 py-3 bg-primary/80 text-white rounded-lg font-medium hover:bg-primary/70 transition-colors"
-                  >
-                    Aprobar Reseña
-                  </button>
-                </div>
+                )}
               </div>
             </motion.div>
           </motion.div>

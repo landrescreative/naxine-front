@@ -284,6 +284,28 @@ export default function AdminSesionesPage() {
           );
         }
 
+        // Ordenar por fecha de creación (más recientes primero)
+        citasFiltradas.sort((a, b) => {
+          // Usar fecha_creacion, created_at, o fecha_inicio como fallback
+          const fechaA = a.fecha_creacion || a.created_at || a.fecha_inicio;
+          const fechaB = b.fecha_creacion || b.created_at || b.fecha_inicio;
+          
+          if (!fechaA && !fechaB) return 0;
+          if (!fechaA) return 1; // a va al final
+          if (!fechaB) return -1; // b va al final
+          
+          const dateA = new Date(fechaA).getTime();
+          const dateB = new Date(fechaB).getTime();
+          
+          // Si alguna fecha es inválida (NaN), ponerla al final
+          if (isNaN(dateA) && isNaN(dateB)) return 0;
+          if (isNaN(dateA)) return 1;
+          if (isNaN(dateB)) return -1;
+          
+          // Ordenar descendente (más recientes primero)
+          return dateB - dateA;
+        });
+
         // Mapear citas al formato de la UI
         const sessionsMapped = citasFiltradas.map(mapCitaToSession);
         setSessions(sessionsMapped);

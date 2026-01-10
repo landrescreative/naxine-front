@@ -19,6 +19,7 @@ export interface AdminProfessional {
   lastActive: string;
   // Información detallada del estado
   estadoAprobacion?: string; // "aprobado" | "pendiente" | "rechazado" | "suspendido"
+  motivoRechazo?: string; // Motivo del rechazo si el profesional fue rechazado
   tieneStripe?: boolean;
   tieneGoogleCalendar?: boolean;
   ultimaSesion?: string | null;

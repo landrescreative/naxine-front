@@ -175,6 +175,8 @@ export default function AdminProfessionalEditPage() {
     precio?: string;
     duracion?: string;
   }>({});
+  const [priceSaveSuccessVisible, setPriceSaveSuccessVisible] = useState(false);
+  const [priceSaveError, setPriceSaveError] = useState<string | null>(null);
 
   // Opciones de duración para precios
   const durationOptions = Array.from({ length: 7 }).map((_, i) => {
@@ -286,6 +288,7 @@ export default function AdminProfessionalEditPage() {
       },
       prices: backendProfessional.precios || null,
       estadoAprobacion: backendProfessional.estado_aprobacion || "pendiente",
+      motivoRechazo: backendProfessional.motivo_rechazo || undefined,
       tieneStripe: backendProfessional.tiene_stripe || false,
       tieneGoogleCalendar: backendProfessional.tiene_google_calendar || false,
       ultimaSesion: backendProfessional.ultima_sesion || null,
@@ -1078,6 +1081,7 @@ export default function AdminProfessionalEditPage() {
   // Price editing handlers
   const handleEditPrice = (priceIndex: number, price: any) => {
     setEditingPriceId(priceIndex);
+    setPriceSaveError(null); // Limpiar errores previos al iniciar edición
     const duracionMinutos = price.duracion_minutos || price.duracion;
     const duracionFormatted = duracionMinutos ? `${duracionMinutos} min` : "";
     setEditingPriceData({
@@ -1097,13 +1101,16 @@ export default function AdminProfessionalEditPage() {
   const handleSavePrice = async (priceIndex: number, originalPrice: any) => {
     if (!professionalIdProfesional) return;
 
+    // Limpiar errores previos
+    setPriceSaveError(null);
+
     try {
       const adminToken =
         typeof window !== "undefined"
           ? JSON.parse(window.localStorage.getItem("user") || "{}")?.token
           : null;
       if (!adminToken) {
-        alert("Token de administrador no disponible");
+        setPriceSaveError("Token de administrador no disponible");
         return;
       }
 
@@ -1113,7 +1120,7 @@ export default function AdminProfessionalEditPage() {
 
       const priceId = originalPrice.id_precio || originalPrice.id;
       if (!priceId) {
-        alert("No se pudo identificar el ID del precio");
+        setPriceSaveError("No se pudo identificar el ID del precio");
         return;
       }
 
@@ -1157,11 +1164,11 @@ export default function AdminProfessionalEditPage() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        alert(
+        const errorMessage =
           errorData?.message ||
-            errorData?.error ||
-            "Error al actualizar el precio"
-        );
+          errorData?.error ||
+          "Error al actualizar el precio";
+        setPriceSaveError(errorMessage);
         return;
       }
 
@@ -1195,10 +1202,17 @@ export default function AdminProfessionalEditPage() {
         setProfessional({ ...professional, prices: updatedPrices });
       }
 
+      // Mostrar notificación de éxito
+      setPriceSaveSuccessVisible(true);
+      setTimeout(() => {
+        setPriceSaveSuccessVisible(false);
+      }, 3000);
+
       setEditingPriceId(null);
       setEditingPriceData({});
     } catch (err: any) {
-      alert(err?.message || "Error al guardar el precio");
+      const errorMessage = err?.message || "Error al guardar el precio";
+      setPriceSaveError(errorMessage);
       console.error("Error al guardar precio:", err);
     }
   };
@@ -1206,6 +1220,7 @@ export default function AdminProfessionalEditPage() {
   const handleCancelPriceEdit = () => {
     setEditingPriceId(null);
     setEditingPriceData({});
+    setPriceSaveError(null);
   };
 
   const handleApprove = async () => {
@@ -1296,7 +1311,19 @@ export default function AdminProfessionalEditPage() {
     const tieneStripe = professional.tieneStripe || false;
     const tieneGoogleCalendar = professional.tieneGoogleCalendar || false;
 
-    // Si no está aprobado
+    // Si está rechazado
+    if (estadoAprobacion === "rechazado") {
+      return {
+        label: "Rechazado",
+        color: "red",
+        icon: XCircle,
+        description:
+          professional.motivoRechazo ||
+          "Profesional rechazado por administrador",
+      };
+    }
+
+    // Si no está aprobado (pero no rechazado)
     if (estadoAprobacion !== "aprobado") {
       return {
         label: "Pendiente de Aprobación",
@@ -1457,6 +1484,50 @@ export default function AdminProfessionalEditPage() {
         </div>
       )}
 
+      {/* Toast Notification for Price Save Success */}
+      {priceSaveSuccessVisible && (
+        <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top duration-300">
+          <div className="bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 min-w-[280px]">
+            <CheckCircle className="h-5 w-5 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="font-medium text-sm">Precio actualizado</p>
+              <p className="text-xs text-green-100">
+                El precio se ha guardado correctamente
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setPriceSaveSuccessVisible(false);
+              }}
+              className="text-green-100 hover:text-white transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification for Price Save Error */}
+      {priceSaveError && (
+        <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top duration-300">
+          <div className="bg-red-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 min-w-[280px]">
+            <XCircle className="h-5 w-5 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="font-medium text-sm">Error al guardar precio</p>
+              <p className="text-xs text-red-100">{priceSaveError}</p>
+            </div>
+            <button
+              onClick={() => {
+                setPriceSaveError(null);
+              }}
+              className="text-red-100 hover:text-white transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm py-6 -mx-6 px-6 mb-6 sticky top-0 z-40">
         <div className="flex items-center justify-between">
@@ -1475,6 +1546,8 @@ export default function AdminProfessionalEditPage() {
                         ? "bg-orange-100 text-orange-700"
                         : detailedStatus.color === "blue"
                         ? "bg-blue-100 text-blue-700"
+                        : detailedStatus.color === "red"
+                        ? "bg-red-100 text-red-700"
                         : "bg-gray-100 text-gray-700"
                     }`}
                   >
@@ -1489,6 +1562,24 @@ export default function AdminProfessionalEditPage() {
                   )}
                 </div>
               )}
+              {/* Mostrar motivo de rechazo si está rechazado */}
+              {professional &&
+                professional.estadoAprobacion?.toLowerCase() === "rechazado" &&
+                professional.motivoRechazo && (
+                  <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-red-900 mb-1">
+                          Motivo del Rechazo:
+                        </p>
+                        <p className="text-sm text-red-700 whitespace-pre-wrap">
+                          {professional.motivoRechazo}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
             </div>
             <div className="flex items-center gap-2 text-sm">
               <button
