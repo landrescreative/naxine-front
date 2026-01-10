@@ -99,6 +99,9 @@ export class UsersService {
       email?: string;
       fecha_nacimiento?: string;
       historial_medico?: string;
+      direccion?: string | null;
+      codigo_postal?: string | null;
+      ciudad?: string | null;
     }
   ): Promise<ApiResponse<any>> {
     // El endpoint del backend es /clientes/:id (sin /api porque ya está en el baseURL)

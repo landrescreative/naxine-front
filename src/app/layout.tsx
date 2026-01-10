@@ -133,6 +133,14 @@ export default function RootLayout({
             `,
           }}
         />
+        {/* CookieFirst - Solo se carga en producción o si está habilitado explícitamente */}
+        {process.env.NODE_ENV === "production" ||
+        process.env.NEXT_PUBLIC_ENABLE_COOKIEFIRST === "true" ? (
+          <Script
+            src="https://consent.cookiefirst.com/sites/naxine.com-f2340989-0123-4f18-b373-4c5aa72e2a78/consent.js"
+            strategy="afterInteractive"
+          />
+        ) : null}
       </body>
     </html>
   );

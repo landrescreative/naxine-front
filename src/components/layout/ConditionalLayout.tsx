@@ -2,7 +2,6 @@
 
 import { usePathname } from "next/navigation";
 import Navbar from "./Navbar";
-import GlobalCTA from "./GlobalCTA";
 import Footer from "./Footer";
 
 interface ConditionalLayoutProps {
@@ -39,7 +38,6 @@ export default function ConditionalLayout({
     <>
       <Navbar />
       {children}
-      <GlobalCTA />
       <Footer />
     </>
   );

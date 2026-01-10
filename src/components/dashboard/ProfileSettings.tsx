@@ -71,7 +71,8 @@ export default function ProfileSettings() {
         console.log("[ProfileSettings] Solicitando perfil del backend...");
       }
 
-      const response = await authService.getProfile();
+      // Usar el endpoint específico de clientes que incluye dirección y código postal
+      const response = await apiClient.get<any>("/clientes/me/perfil");
 
       if (process.env.NODE_ENV === "development") {
         console.log("[ProfileSettings] Respuesta del backend:", response);
@@ -208,13 +209,115 @@ export default function ProfileSettings() {
     setTempValue(profileData[field]);
   };
 
-  const handleSaveField = (field: keyof ProfileData) => {
-    setProfileData((prev) => ({
-      ...prev,
-      [field]: tempValue,
-    }));
-    setEditingField(null);
-    setTempValue("");
+  const handleSaveField = async (field: keyof ProfileData) => {
+    // Validar el campo antes de guardar
+    if (field === "email" && tempValue.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(tempValue.trim())) {
+        setError("Debe ser un email válido");
+        return;
+      }
+    }
+    
+    if (field === "name" && !tempValue.trim()) {
+      setError("El nombre es requerido");
+      return;
+    }
+
+    // Limpiar errores previos
+    setError(null);
+    
+    // Guardar automáticamente en el backend (NO actualizar estado local hasta confirmar éxito)
+    try {
+      setSaving(true);
+      
+      // Construir updateData con el valor actualizado del campo que se está guardando
+      const updatedProfileData = {
+        ...profileData,
+        [field]: tempValue.trim(),
+      };
+      
+      // El backend acepta nombre, email, dirección y código postal
+      const updateData: any = {
+        nombre: updatedProfileData.name.trim(),
+        email: updatedProfileData.email.trim(),
+      };
+
+      // Agregar dirección y código postal siempre
+      // Si el campo está vacío después de trim, enviar null, de lo contrario enviar el valor
+      const direccionValue = updatedProfileData.address?.trim();
+      const codigoPostalValue = updatedProfileData.postalCode?.trim();
+      
+      // Enviar siempre estos campos, incluso si están vacíos (para poder limpiarlos en la BD)
+      updateData.direccion = direccionValue && direccionValue.length > 0 ? direccionValue : null;
+      updateData.codigo_postal = codigoPostalValue && codigoPostalValue.length > 0 ? codigoPostalValue : null;
+
+      if (process.env.NODE_ENV === "development") {
+        console.log("[ProfileSettings] Guardando campo:", field, "con valor:", tempValue.trim());
+        console.log("[ProfileSettings] Datos a enviar:", updateData);
+      }
+
+      const profileResponse = await apiClient.put<any>("/clientes/me/perfil", updateData);
+
+      // Verificar que la respuesta sea exitosa ANTES de actualizar el estado
+      if (!profileResponse.success) {
+        throw new Error(profileResponse.error || "Error al actualizar el perfil");
+      }
+
+      // SOLO si el guardado fue exitoso, actualizar el estado local
+      setProfileData((prev) => ({
+        ...prev,
+        [field]: tempValue.trim(),
+      }));
+
+      // Actualizar originalProfileData para reflejar el cambio guardado
+      setOriginalProfileData((prev) => ({
+        ...prev,
+        [field]: tempValue.trim(),
+      }));
+
+      // Cerrar el modo de edición
+      setEditingField(null);
+      setTempValue("");
+
+      // Actualizar el usuario en localStorage
+      if (profileResponse.data?.usuario) {
+        const updatedUsuario = profileResponse.data.usuario;
+        const currentUserData = localStorage.getItem("user");
+        if (currentUserData) {
+          try {
+            const currentUser = JSON.parse(currentUserData);
+            const updatedName = updatedUsuario.nombre_completo || updatedUsuario.nombre || currentUser.name;
+            const updatedUser = {
+              ...currentUser,
+              name: updatedName,
+              email: updatedUsuario.email || currentUser.email,
+            };
+            localStorage.setItem("user", JSON.stringify(updatedUser));
+            window.dispatchEvent(new CustomEvent("userLogin"));
+          } catch (error) {
+            console.error("[ProfileSettings] Error actualizando usuario en localStorage:", error);
+          }
+        }
+      }
+
+      // Recargar el perfil desde el backend para reflejar los cambios actualizados
+      await loadProfile(false);
+
+      // Mostrar notificación de éxito SOLO si realmente se guardó
+      setShowSuccessNotification(true);
+      setTimeout(() => {
+        setShowSuccessNotification(false);
+      }, 5000);
+    } catch (err: any) {
+      console.error("[ProfileSettings] Error al guardar campo:", err);
+      // Mostrar error y NO actualizar el estado
+      setError(err.message || "Error al guardar el cambio. Intenta nuevamente.");
+      // Mantener el modo de edición abierto para que el usuario pueda corregir
+      // NO cerrar setEditingField ni setTempValue
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCancelEdit = () => {
@@ -242,18 +345,34 @@ export default function ProfileSettings() {
                 type={type}
                 value={tempValue}
                 onChange={(e) => setTempValue(e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleSaveField(field);
+                  } else if (e.key === "Escape") {
+                    handleCancelEdit();
+                  }
+                }}
+                disabled={saving}
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 autoFocus
               />
               <button
                 onClick={() => handleSaveField(field)}
-                className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors"
+                disabled={saving}
+                className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[40px]"
+                title="Guardar (Enter)"
               >
-                ✓
+                {saving ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                ) : (
+                  "✓"
+                )}
               </button>
               <button
                 onClick={handleCancelEdit}
-                className="px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors"
+                disabled={saving}
+                className="px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Cancelar (Esc)"
               >
                 ✕
               </button>
@@ -264,11 +383,13 @@ export default function ProfileSettings() {
                 type={type}
                 value={currentValue}
                 readOnly
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"
               />
               <button
                 onClick={() => handleEditField(field)}
-                className="px-3 py-2 bg-primary hover:bg-primary/90 text-white text-sm rounded-lg transition-colors"
+                disabled={saving}
+                className="px-3 py-2 bg-primary hover:bg-primary/90 text-white text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Editar"
               >
                 Editar
               </button>
@@ -312,19 +433,20 @@ export default function ProfileSettings() {
         }
 
         // Formato según las instrucciones del backend
-        // El endpoint /clientes/me/perfil espera 'nombre' (no nombre_completo)
+        // El endpoint /clientes/me/perfil acepta 'nombre', 'email', 'direccion' y 'codigo_postal'
         const updateData: any = {
           nombre: profileData.name.trim(),
           email: profileData.email.trim(),
         };
 
-        // Agregar campos adicionales si existen
-        if (profileData.address) {
-          updateData.direccion = profileData.address;
-        }
-        if (profileData.postalCode) {
-          updateData.codigo_postal = profileData.postalCode;
-        }
+        // Agregar dirección y código postal siempre
+        // Si el campo está vacío después de trim, enviar null, de lo contrario enviar el valor
+        const direccionValue = profileData.address?.trim();
+        const codigoPostalValue = profileData.postalCode?.trim();
+        
+        // Enviar siempre estos campos, incluso si están vacíos (para poder limpiarlos en la BD)
+        updateData.direccion = direccionValue && direccionValue.length > 0 ? direccionValue : null;
+        updateData.codigo_postal = codigoPostalValue && codigoPostalValue.length > 0 ? codigoPostalValue : null;
 
         if (process.env.NODE_ENV === "development") {
           console.log("[ProfileSettings] Actualizando perfil con datos:", updateData);
@@ -333,6 +455,7 @@ export default function ProfileSettings() {
         // Usar la ruta específica de clientes
         const profileResponse = await apiClient.put<any>("/clientes/me/perfil", updateData);
 
+        // Verificar que la respuesta sea exitosa ANTES de mostrar mensaje de éxito
         if (!profileResponse.success) {
           throw new Error(profileResponse.error || "Error al actualizar el perfil");
         }
@@ -340,6 +463,9 @@ export default function ProfileSettings() {
         if (process.env.NODE_ENV === "development") {
           console.log("[ProfileSettings] Respuesta del backend después de actualizar:", profileResponse);
         }
+
+        // Recargar el perfil desde el backend para reflejar los cambios actualizados
+        await loadProfile(false);
 
         // Actualizar el usuario en localStorage y contexto con los datos del backend
         if (profileResponse.data?.usuario) {
@@ -375,11 +501,10 @@ export default function ProfileSettings() {
           }
         }
 
-        // Recargar el perfil desde el backend para reflejar los cambios actualizados
-        await loadProfile(false);
       }
 
       // Cambiar contraseña si se proporcionó
+      let passwordChanged = false;
       if (passwordData.newPassword && passwordData.currentPassword) {
         if (passwordData.newPassword !== passwordData.confirmPassword) {
           setPasswordError("Las contraseñas no coinciden");
@@ -409,8 +534,11 @@ export default function ProfileSettings() {
         if (!passwordResponse.success) {
           setPasswordError(passwordResponse.error || "Error al cambiar la contraseña");
           setSaving(false);
-          return;
+          return; // Salir sin mostrar mensaje de éxito
         }
+
+        // Solo marcar como exitoso si realmente se cambió la contraseña
+        passwordChanged = true;
 
         // Limpiar campos de contraseña después de éxito
         setPasswordData({
@@ -424,18 +552,23 @@ export default function ProfileSettings() {
         }
       }
 
-      // Mostrar notificación de éxito solo si hubo cambios
-      if (hasProfileChanges || (passwordData.newPassword && passwordData.currentPassword)) {
+      // Mostrar notificación de éxito SOLO si realmente se guardaron cambios exitosamente
+      // (no mostrar si hubo errores)
+      if (hasProfileChanges || passwordChanged) {
         setShowSuccessNotification(true);
+        setError(null); // Limpiar errores si hay éxito
+        setPasswordError(null); // Limpiar errores de contraseña si hay éxito
 
-        // Ocultar notificación después de 3 segundos
+        // Ocultar notificación después de 5 segundos
         setTimeout(() => {
           setShowSuccessNotification(false);
-        }, 3000);
+        }, 5000);
       }
     } catch (err: any) {
       console.error("[ProfileSettings] Error al guardar perfil:", err);
+      // Mostrar error y NO mostrar mensaje de éxito
       setError(err.message || "Ocurrió un error al guardar los cambios. Intenta nuevamente.");
+      setShowSuccessNotification(false); // Asegurar que no se muestre mensaje de éxito si hay error
     } finally {
       setSaving(false);
     }
@@ -649,21 +782,28 @@ export default function ProfileSettings() {
 
       {/* Success Notification */}
       {showSuccessNotification && (
-        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 animate-in slide-in-from-top duration-300" role="status" aria-live="polite">
-          <div className="bg-primary text-white px-6 py-4 rounded-lg shadow-lg flex items-center space-x-4">
+        <div 
+          className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 transition-all duration-300 ease-out"
+          role="status" 
+          aria-live="polite"
+          style={{
+            animation: "slideDown 0.3s ease-out",
+          }}
+        >
+          <div className="bg-green-600 text-white px-6 py-4 rounded-lg shadow-2xl flex items-center space-x-4 border-2 border-green-500 min-w-[320px] max-w-md">
             <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center flex-shrink-0" aria-hidden="true">
-              <Check className="w-6 h-6 text-primary" />
+              <Check className="w-6 h-6 text-green-600" />
             </div>
-            <div className="flex flex-col">
-              <span className="font-medium text-sm">Cambios aplicados</span>
-              <span className="font-medium text-sm">correctamente.</span>
+            <div className="flex flex-col flex-1">
+              <span className="font-semibold text-base">¡Cambios guardados!</span>
+              <span className="text-sm text-green-50">Los cambios se han aplicado correctamente.</span>
             </div>
             <button
               onClick={() => setShowSuccessNotification(false)}
-              className="ml-2 text-white hover:text-gray-200 transition-colors flex-shrink-0"
+              className="ml-2 text-white hover:text-green-200 transition-colors flex-shrink-0 p-1 rounded-full hover:bg-green-700"
               aria-label="Cerrar notificación"
             >
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                 <path
                   fillRule="evenodd"
                   d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"

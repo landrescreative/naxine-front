@@ -136,6 +136,9 @@ export default function ProfesionalDashboard() {
           // Mapear citas al formato ApiAppointment
           const mappedAppointments: ApiAppointment[] = citasArray.map((cita: any) => {
             console.log("[ProfesionalDashboard] Procesando cita:", cita);
+            if (cita.tipo_atencion === "a_domicilio") {
+              console.log("[ProfesionalDashboard] Cita a domicilio - notas:", cita.notas);
+            }
             
             const monto = cita.pago_monto ? parseFloat(String(cita.pago_monto)) : 0;
             
@@ -390,6 +393,8 @@ export default function ProfesionalDashboard() {
             minute: "2-digit",
             hour12: true,
           }),
+          tipo_atencion: (appointment as any).tipo_atencion || null,
+          modality: appointment.modality || null,
         };
       });
   }, [appointments]);

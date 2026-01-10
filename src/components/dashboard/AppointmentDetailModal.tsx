@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { ApiAppointment } from "@/services/types/api";
 import { citasService } from "@/services/api/citas";
@@ -67,6 +67,9 @@ export default function AppointmentDetailModal({
   }>>([]);
   const [loadingHorarios, setLoadingHorarios] = useState(false);
   const [isRescheduling, setIsRescheduling] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const rescheduleSectionRef = useRef<HTMLDivElement>(null);
+  
   // Cerrar modal con ESC
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -251,6 +254,7 @@ export default function AppointmentDetailModal({
   useEffect(() => {
     if (!appointment) return;
     if (isRescheduleMode && profesionalId && tipoAtencion) {
+      console.log("[AppointmentDetailModal] Cargando horarios para profesional:", profesionalId, "tipo:", tipoAtencion);
       setLoadingHorarios(true);
       const fetchHorarios = async () => {
         try {
@@ -258,18 +262,72 @@ export default function AppointmentDetailModal({
             profesionalId,
             tipoAtencion
           );
-          if (response.success && response.data?.disponibilidad_horarios) {
-            setTodosLosHorarios(response.data.disponibilidad_horarios);
+          console.log("[AppointmentDetailModal] Respuesta de horarios:", response);
+          if (response.success && response.data) {
+            // El apiClient devuelve { success: true, data: {...} }
+            // El backend devuelve { success: true, data: { disponibilidad_horarios: [...] } }
+            // Entonces response.data es el objeto completo del backend
+            const backendData = response.data as any;
+            const horarios = backendData.data?.disponibilidad_horarios || backendData.disponibilidad_horarios;
+            
+            if (horarios && Array.isArray(horarios)) {
+              console.log("[AppointmentDetailModal] Horarios cargados:", horarios.length, horarios);
+              setTodosLosHorarios(horarios);
+            } else {
+              console.warn("[AppointmentDetailModal] No se encontraron horarios en la respuesta:", backendData);
+              setTodosLosHorarios([]);
+            }
+          } else {
+            console.warn("[AppointmentDetailModal] Respuesta no exitosa:", response);
+            setTodosLosHorarios([]);
           }
         } catch (error) {
-          console.error("Error al cargar horarios:", error);
+          console.error("[AppointmentDetailModal] Error al cargar horarios:", error);
+          setTodosLosHorarios([]);
         } finally {
           setLoadingHorarios(false);
         }
       };
       fetchHorarios();
+    } else {
+      // Limpiar horarios cuando se sale del modo reagendamiento
+      if (!isRescheduleMode) {
+        setTodosLosHorarios([]);
+      }
     }
   }, [appointment, isRescheduleMode, profesionalId, tipoAtencion]);
+
+  // Scroll hacia la sección de reagendamiento cuando se activa el modo
+  useEffect(() => {
+    if (isRescheduleMode && contentRef.current && rescheduleSectionRef.current) {
+      // Función para hacer scroll dentro del contenedor
+      const scrollToSection = () => {
+        if (!contentRef.current || !rescheduleSectionRef.current) return;
+        
+        const container = contentRef.current;
+        const section = rescheduleSectionRef.current;
+        
+        // Calcular la posición de la sección relativa al contenedor
+        const containerTop = container.getBoundingClientRect().top;
+        const sectionTop = section.getBoundingClientRect().top;
+        const currentScrollTop = container.scrollTop;
+        
+        // Calcular el offset necesario para posicionar la sección al inicio del contenedor visible
+        const offset = sectionTop - containerTop + currentScrollTop;
+        
+        // Hacer scroll con un pequeño margen superior
+        container.scrollTo({ 
+          top: Math.max(0, offset - 20), 
+          behavior: 'smooth' 
+        });
+      };
+
+      // Intentar hacer scroll con múltiples delays para asegurar que el DOM esté actualizado
+      setTimeout(scrollToSection, 50);
+      setTimeout(scrollToSection, 150);
+      setTimeout(scrollToSection, 300);
+    }
+  }, [isRescheduleMode]);
 
   // Cargar citas ocupadas del mes
   useEffect(() => {
@@ -724,7 +782,10 @@ export default function AppointmentDetailModal({
           </div>
 
           {/* Content */}
-          <div className="px-6 py-6 space-y-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+          <div 
+            ref={contentRef}
+            className="px-6 py-6 space-y-6 overflow-y-auto max-h-[calc(90vh-180px)]"
+          >
             {/* Estado */}
             <div className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-white rounded-xl border border-gray-100">
               <span className="text-sm font-semibold text-gray-600">Estado</span>
@@ -995,42 +1056,149 @@ export default function AppointmentDetailModal({
               </div>
             )}
 
-            {tipoAtencion === "a_domicilio" && (
-              <div className="bg-gradient-to-br from-yellow-50 via-amber-50/50 to-white rounded-xl p-5 border border-yellow-200/50 shadow-sm">
-                <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center">
-                  <svg
-                    className="w-5 h-5 mr-2 text-yellow-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-                    />
-                  </svg>
-                  Cita a Domicilio
-                </h3>
-                <div className="bg-white/60 rounded-lg p-4 border border-yellow-100">
-                  <p className="text-base text-gray-900 leading-relaxed mb-2">
-                    El profesional llegará a tu dirección en la fecha y hora programada.
-                  </p>
-                  {appointment.notes && appointment.notes.includes("Dirección de atención a domicilio") && (
-                    <div className="mt-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                      <p className="text-sm font-semibold text-gray-700 mb-1">Dirección registrada:</p>
-                      <p className="text-sm text-gray-900">
-                        {appointment.notes.split("Dirección de atención a domicilio:")[1]?.trim() || "Verificar en el sistema"}
-                      </p>
-                    </div>
-                  )}
-                  <p className="text-sm text-gray-600 mt-3 italic">
-                    Asegúrate de estar disponible en la dirección proporcionada.
-                  </p>
+            {tipoAtencion === "a_domicilio" && (() => {
+              // Extraer dirección de las notas
+              let direccionCliente = null;
+              const notas = appointment.notes ? String(appointment.notes) : null;
+              
+              console.log("[AppointmentDetailModal] Tipo atención:", tipoAtencion);
+              console.log("[AppointmentDetailModal] Notas completas:", notas);
+              console.log("[AppointmentDetailModal] Appointment completo:", appointment);
+              
+              if (notas && notas.trim()) {
+                // Normalizar saltos de línea (por si hay \r\n o solo \n)
+                const notasNormalizadas = notas.replace(/\r\n/g, '\n');
+                
+                // Intentar diferentes formatos de extracción
+                // Formato esperado: "\n\n📍 Dirección de atención a domicilio:\n[dirección]"
+                const patterns = [
+                  // Patrones con emoji y saltos de línea (formato más común)
+                  /(?:^|\n\n)📍\s*Dirección de atención a domicilio:\s*\n(.+?)(?:\n\n|$)/s,
+                  /📍\s*Dirección de atención a domicilio:\s*\n(.+?)(?:\n\n|$)/s,
+                  /📍\s*Dirección de atención a domicilio:\s*(.+?)(?:\n\n|$)/s,
+                  /📍\s*Dirección de atención a domicilio:\s*(.+)/s,
+                  // Patrones sin emoji (por si el emoji no se guardó correctamente)
+                  /(?:^|\n\n)Dirección de atención a domicilio:\s*\n(.+?)(?:\n\n|$)/s,
+                  /Dirección de atención a domicilio:\s*\n(.+?)(?:\n\n|$)/s,
+                  /Dirección de atención a domicilio:\s*(.+?)(?:\n\n|$)/s,
+                  /Dirección de atención a domicilio:\s*(.+)/s,
+                ];
+                
+                for (const pattern of patterns) {
+                  const match = notasNormalizadas.match(pattern);
+                  if (match && match[1] && match[1].trim()) {
+                    direccionCliente = match[1].trim();
+                    console.log("[AppointmentDetailModal] ✓ Dirección extraída con patrón regex:", direccionCliente);
+                    break;
+                  }
+                }
+                
+                // Si no se encontró con los patrones regex, intentar split simple
+                if (!direccionCliente) {
+                  // Intentar con emoji
+                  if (notasNormalizadas.includes('📍')) {
+                    const parts = notasNormalizadas.split(/📍\s*Dirección de atención a domicilio:/);
+                    if (parts.length > 1) {
+                      const afterMarker = parts[1].trim();
+                      // Tomar la primera línea o párrafo después del marcador
+                      direccionCliente = afterMarker
+                        .split(/\n\n/)[0]  // Primero intentar por párrafos
+                        .split('\n')
+                        .map(line => line.trim())
+                        .filter(line => line.length > 0)
+                        .join(', ')
+                        .trim();
+                      
+                      if (direccionCliente) {
+                        console.log("[AppointmentDetailModal] ✓ Dirección extraída con split (emoji):", direccionCliente);
+                      }
+                    }
+                  }
+                  
+                  // Si aún no se encontró, intentar sin emoji
+                  if (!direccionCliente && notasNormalizadas.includes('Dirección de atención a domicilio')) {
+                    const parts = notasNormalizadas.split(/Dirección de atención a domicilio:/);
+                    if (parts.length > 1) {
+                      const afterMarker = parts[1].trim();
+                      direccionCliente = afterMarker
+                        .split(/\n\n/)[0]
+                        .split('\n')
+                        .map(line => line.trim())
+                        .filter(line => line.length > 0)
+                        .join(', ')
+                        .trim();
+                      
+                      if (direccionCliente) {
+                        console.log("[AppointmentDetailModal] ✓ Dirección extraída con split (sin emoji):", direccionCliente);
+                      }
+                    }
+                  }
+                  
+                  // Último intento: si las notas solo contienen la dirección (sin marcador)
+                  // Esto puede pasar si la dirección se guardó directamente sin el formato estándar
+                  if (!direccionCliente && notasNormalizadas.trim()) {
+                    // Si no contiene el marcador pero tiene contenido, usar todo como dirección
+                    const trimmed = notasNormalizadas.trim();
+                    // Solo usar si no parece ser otro tipo de nota (muy corto o muy largo podría ser otra cosa)
+                    if (trimmed.length > 5 && trimmed.length < 500) {
+                      direccionCliente = trimmed;
+                      console.log("[AppointmentDetailModal] ✓ Usando notas completas como dirección:", direccionCliente);
+                    }
+                  }
+                }
+                
+                if (!direccionCliente) {
+                  console.warn("[AppointmentDetailModal] ⚠️ No se pudo extraer la dirección de las notas");
+                  console.warn("[AppointmentDetailModal] Notas recibidas:", notas);
+                }
+              } else {
+                console.warn("[AppointmentDetailModal] ⚠️ No hay notas en el appointment para a_domicilio");
+                console.warn("[AppointmentDetailModal] Appointment.notes:", appointment.notes);
+              }
+              
+              return (
+                <div className="bg-gradient-to-br from-yellow-50 via-amber-50/50 to-white rounded-xl p-5 border border-yellow-200/50 shadow-sm">
+                  <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center">
+                    <svg
+                      className="w-5 h-5 mr-2 text-yellow-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+                      />
+                    </svg>
+                    Cita a Domicilio
+                  </h3>
+                  <div className="bg-white/60 rounded-lg p-4 border border-yellow-100">
+                    <p className="text-base text-gray-900 leading-relaxed mb-2">
+                      El profesional llegará a la dirección del cliente en la fecha y hora programada.
+                    </p>
+                    {direccionCliente ? (
+                      <div className="mt-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                        <p className="text-sm font-semibold text-gray-700 mb-1">Dirección del cliente:</p>
+                        <p className="text-sm text-gray-900 leading-relaxed">
+                          {direccionCliente}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="mt-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                        <p className="text-sm text-gray-600 italic">
+                          La dirección no está disponible en este momento. Por favor, contacta al cliente para confirmar la dirección.
+                        </p>
+                      </div>
+                    )}
+                    <p className="text-sm text-gray-600 mt-3 italic">
+                      Asegúrate de tener la dirección correcta antes de la cita.
+                    </p>
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Información de Pago */}
             {appointment.payment && (
@@ -1165,7 +1333,10 @@ export default function AppointmentDetailModal({
 
             {/* Sección de Reagendamiento */}
             {isRescheduleMode && (
-              <div className="bg-gradient-to-br from-primary/5 via-purple-50/50 to-white rounded-xl p-6 border border-primary/10 space-y-6">
+              <div 
+                ref={rescheduleSectionRef}
+                className="bg-gradient-to-br from-primary/5 via-purple-50/50 to-white rounded-xl p-6 border border-primary/10 space-y-6"
+              >
                 <div className="flex items-center justify-between">
                   <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                     <svg
@@ -1244,6 +1415,15 @@ export default function AppointmentDetailModal({
                             onClick={() => {
                               setSelectedDate(day.date);
                               setSelectedTimeSlot(null);
+                              // Scroll suave hacia el selector de horarios después de un pequeño delay
+                              setTimeout(() => {
+                                if (contentRef.current) {
+                                  const timeSlotsSection = contentRef.current.querySelector('[data-time-slots]');
+                                  if (timeSlotsSection) {
+                                    timeSlotsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                  }
+                                }
+                              }, 100);
                             }}
                             className={`px-3 py-2 rounded-md text-sm whitespace-nowrap snap-center ${
                               isSelected
@@ -1266,7 +1446,7 @@ export default function AppointmentDetailModal({
                           Cargando horarios...
                         </div>
                       ) : timeSlots.length > 0 ? (
-                        <div className="space-y-3">
+                        <div className="space-y-3" data-time-slots>
                           <div className="mb-4">
                             <p className="text-sm text-gray-600 mb-2">
                               Horarios disponibles para{" "}
@@ -1441,6 +1621,21 @@ export default function AppointmentDetailModal({
                     setCurrentMonth(new Date());
                     setSelectedDate(null);
                     setSelectedTimeSlot(null);
+                    // Scroll hacia la sección de reagendamiento después de un pequeño delay
+                    setTimeout(() => {
+                      if (contentRef.current && rescheduleSectionRef.current) {
+                        const container = contentRef.current;
+                        const section = rescheduleSectionRef.current;
+                        const containerTop = container.getBoundingClientRect().top;
+                        const sectionTop = section.getBoundingClientRect().top;
+                        const currentScrollTop = container.scrollTop;
+                        const offset = sectionTop - containerTop + currentScrollTop;
+                        container.scrollTo({ 
+                          top: Math.max(0, offset - 20), 
+                          behavior: 'smooth' 
+                        });
+                      }
+                    }, 200);
                   }}
                   className="px-6 py-2.5 text-white bg-primary rounded-xl hover:bg-primary-dark transition-all duration-200 font-semibold shadow-sm hover:shadow-md transform hover:-translate-y-0.5 flex items-center gap-2"
                 >

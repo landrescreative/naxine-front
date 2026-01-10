@@ -38,6 +38,10 @@ export class CalendarsService {
     return apiClient.get<{ url: string }>("/calendarios-externos/google/authorize");
   }
 
+  async getOutlookAuthorizationUrl(): Promise<ApiResponse<{ url: string }>> {
+    return apiClient.get<{ url: string }>("/calendarios-externos/outlook/authorize");
+  }
+
   async verifyMyCalendars(): Promise<ApiResponse<{ resultados: CalendarVerificationResult[] }>> {
     return apiClient.post<{ resultados: CalendarVerificationResult[] }>("/calendarios-externos/verificar");
   }

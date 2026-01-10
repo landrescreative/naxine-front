@@ -2,7 +2,6 @@
 import React, { useRef } from "react";
 import { motion, useInView } from "framer-motion";
 
-import thumbnail from "@/assets/screenshot.png";
 import dotsSquare from "@/assets/Vector.png";
 import dotsCircle from "@/assets/Vector 363.svg";
 import dotsTriangle from "@/assets/Group 259.svg";
@@ -108,34 +107,6 @@ export default function NuestrasGarantias() {
             Conoce nuestras garantías
           </motion.h2>
         </div>
-
-        {/* Video container */}
-        <motion.div
-          className="relative w-full max-w-6xl mx-auto"
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={
-            isInView ? { scale: 1, opacity: 1 } : { scale: 0.9, opacity: 0 }
-          }
-          transition={{
-            duration: 0.8,
-            ease: [0.25, 0.46, 0.45, 0.94],
-            delay: 0.6,
-          }}
-        >
-          <div className="relative aspect-video bg-gray-100 rounded-2xl overflow-hidden shadow-2xl">
-            <video
-              className="w-full h-full object-cover"
-              poster={thumbnail.src}
-              controls
-              preload="metadata"
-              playsInline
-              aria-label="Video explicativo de las garantías de NAXINE"
-            >
-              <source src="/Naxine_V1_Music.mp4" type="video/mp4" />
-              Tu navegador no soporta la reproducción de video.
-            </video>
-          </div>
-        </motion.div>
       </div>
     </section>
   );

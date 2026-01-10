@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter, useParams } from "next/navigation";
-import { ChevronRight, X, Plus } from "lucide-react";
-import { useState, useEffect } from "react";
+import { ChevronRight, X, Plus, CheckCircle } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
 import { type AdminClient } from "@/data/adminClients";
 import { usersService } from "@/services/api/users";
 import { lazyLoad } from "@/lib/lazy-loading";
@@ -30,6 +30,7 @@ export default function AdminClienteEditPage() {
   const [passwordResetError, setPasswordResetError] = useState<string | null>(null);
   const [changingStatus, setChangingStatus] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   // Función para mapear los datos del backend al formato AdminClient
   const mapBackendClientToAdminClient = (backendClient: any): AdminClient => {
@@ -69,7 +70,7 @@ export default function AdminClienteEditPage() {
         (backendClient.email || backendClient.email_usuario || "")?.split(
           "@"
         )[0] || "",
-      city: backendClient.ciudad || backendClient.city || "",
+      city: backendClient.direccion || backendClient.ciudad || backendClient.city || "",
       postalCode: backendClient.codigo_postal || backendClient.postalCode || "",
       createdAt:
         backendClient.created_at ||
@@ -85,67 +86,68 @@ export default function AdminClienteEditPage() {
     };
   };
 
-  // Cargar cliente desde la API
-  useEffect(() => {
-    const fetchClient = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  // Función para cargar cliente desde la API (extraída para poder reutilizarla)
+  const fetchClient = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Obtener todos los clientes y buscar el que coincida con el ID
+      const response = await usersService.getAdminClients();
+      
+      if (response.success && response.data) {
+        let clientsData: any[] = [];
         
-        // Obtener todos los clientes y buscar el que coincida con el ID
-        const response = await usersService.getAdminClients();
-        
-        if (response.success && response.data) {
-          let clientsData: any[] = [];
-          
-          if (Array.isArray(response.data)) {
-            clientsData = response.data;
-          } else if (
-            response.data.data &&
-            response.data.data.clientes &&
-            Array.isArray(response.data.data.clientes)
-          ) {
-            clientsData = response.data.data.clientes;
-          } else if (response.data.data && Array.isArray(response.data.data)) {
-            clientsData = response.data.data;
-          } else if (
-            response.data.clientes &&
-            Array.isArray(response.data.clientes)
-          ) {
-            clientsData = response.data.clientes;
-          }
-          
-          // Buscar el cliente por id_usuario o id_cliente
-          const foundClient = clientsData.find(
-            (c) =>
-              String(c.id_usuario) === userId ||
-              String(c.id_cliente) === userId ||
-              String(c.id) === userId
-          );
-          
-          if (foundClient) {
-            const mappedClient = mapBackendClientToAdminClient(foundClient);
-            setClient(mappedClient);
-            // Guardar el id_cliente original para usar en la actualización
-            setClientIdCliente(String(foundClient.id_cliente || foundClient.id || userId));
-          } else {
-            setError(`Cliente con ID ${userId} no encontrado`);
-          }
-        } else {
-          setError(response.error || "Error al cargar el cliente");
+        if (Array.isArray(response.data)) {
+          clientsData = response.data;
+        } else if (
+          response.data.data &&
+          response.data.data.clientes &&
+          Array.isArray(response.data.data.clientes)
+        ) {
+          clientsData = response.data.data.clientes;
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          clientsData = response.data.data;
+        } else if (
+          response.data.clientes &&
+          Array.isArray(response.data.clientes)
+        ) {
+          clientsData = response.data.clientes;
         }
-      } catch (err) {
-        setError("Ocurrió un error al cargar el cliente");
-        console.error("Error al cargar cliente:", err);
-      } finally {
-        setLoading(false);
+        
+        // Buscar el cliente por id_usuario o id_cliente
+        const foundClient = clientsData.find(
+          (c) =>
+            String(c.id_usuario) === userId ||
+            String(c.id_cliente) === userId ||
+            String(c.id) === userId
+        );
+        
+        if (foundClient) {
+          const mappedClient = mapBackendClientToAdminClient(foundClient);
+          setClient(mappedClient);
+          // Guardar el id_cliente original para usar en la actualización
+          setClientIdCliente(String(foundClient.id_cliente || foundClient.id || userId));
+        } else {
+          setError(`Cliente con ID ${userId} no encontrado`);
+        }
+      } else {
+        setError(response.error || "Error al cargar el cliente");
       }
-    };
+    } catch (err) {
+      setError("Ocurrió un error al cargar el cliente");
+      console.error("Error al cargar cliente:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
 
+  // Cargar cliente desde la API al montar el componente
+  useEffect(() => {
     if (userId) {
       fetchClient();
     }
-  }, [userId]);
+  }, [userId, fetchClient]);
 
   // Local form state
   const [form, setForm] = useState({
@@ -153,7 +155,7 @@ export default function AdminClienteEditPage() {
     email: "",
     telefono: "",
     nombreUsuario: "",
-    ciudad: "",
+    direccion: "",
     codigoPostal: "",
   });
 
@@ -170,7 +172,7 @@ export default function AdminClienteEditPage() {
         email: client.email,
         telefono: client.phone,
         nombreUsuario: client.username,
-        ciudad: client.city,
+        direccion: client.city, // client.city ahora contiene direccion del backend
         codigoPostal: client.postalCode,
       });
     }
@@ -197,6 +199,8 @@ export default function AdminClienteEditPage() {
         email?: string;
         fecha_nacimiento?: string;
         historial_medico?: string;
+        direccion?: string;
+        codigo_postal?: string;
       } = {};
 
       // Incluir todos los campos modificables que tienen valor
@@ -210,22 +214,41 @@ export default function AdminClienteEditPage() {
       if (form.telefono !== undefined) {
         updateData.telefono = form.telefono.trim() || null;
       }
+      // Dirección
+      if (form.direccion !== undefined) {
+        updateData.direccion = form.direccion.trim() || null;
+      }
+      // Código postal
+      if (form.codigoPostal !== undefined) {
+        updateData.codigo_postal = form.codigoPostal.trim() || null;
+      }
 
       // Usar el id_cliente guardado, o intentar extraerlo del customerNumber
       const clientId = clientIdCliente || client.customerNumber.replace(/^0+/, '') || client.id;
 
       console.log('[AdminClienteEditPage] Actualizando cliente con ID:', clientId);
-      console.log('[AdminClienteEditPage] Datos a actualizar:', updateData);
+      console.log('[AdminClienteEditPage] clientIdCliente:', clientIdCliente);
+      console.log('[AdminClienteEditPage] client.customerNumber:', client.customerNumber);
+      console.log('[AdminClienteEditPage] Datos a actualizar:', JSON.stringify(updateData, null, 2));
 
       const response = await usersService.updateAdminClient(clientId, updateData);
+      
+      console.log('[AdminClienteEditPage] Respuesta del servidor:', response);
 
       if (response.success) {
         setIsSaveChangesOpen(false);
-        // Recargar los datos del cliente actualizados
-        router.push("/dashboard/admin/clientes");
+        setSaveSuccess(true);
+        setSaving(false);
+        // Recargar los datos del cliente para mostrar los cambios
+        await fetchClient();
+        // Ocultar el mensaje de éxito después de 3 segundos
+        setTimeout(() => {
+          setSaveSuccess(false);
+        }, 3000);
       } else {
         setSaveError(response.error || "Error al actualizar el cliente");
         console.error("Error al actualizar cliente:", response);
+        setSaving(false);
       }
     } catch (err: any) {
       const errorMessage =
@@ -234,7 +257,6 @@ export default function AdminClienteEditPage() {
         "Ocurrió un error al actualizar el cliente. Por favor, intenta de nuevo.";
       setSaveError(errorMessage);
       console.error("Error al guardar cambios:", err);
-    } finally {
       setSaving(false);
     }
   };
@@ -400,7 +422,8 @@ export default function AdminClienteEditPage() {
               <input
                 value={form.nombreCompleto}
                 onChange={(e) => update("nombreCompleto", e.target.value)}
-                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-3 outline-none focus:ring-2 focus:ring-primary"
+                disabled={saving}
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-3 outline-none focus:ring-2 focus:ring-primary focus:border-primary disabled:bg-gray-50 disabled:cursor-not-allowed"
                 placeholder=""
               />
             </div>
@@ -412,7 +435,8 @@ export default function AdminClienteEditPage() {
                 type="email"
                 value={form.email}
                 onChange={(e) => update("email", e.target.value)}
-                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-3 outline-none focus:ring-2 focus:ring-primary"
+                disabled={saving}
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-3 outline-none focus:ring-2 focus:ring-primary focus:border-primary disabled:bg-gray-50 disabled:cursor-not-allowed"
                 placeholder=""
               />
             </div>
@@ -423,7 +447,8 @@ export default function AdminClienteEditPage() {
               <input
                 value={form.telefono}
                 onChange={(e) => update("telefono", e.target.value)}
-                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-3 outline-none focus:ring-2 focus:ring-primary"
+                disabled={saving}
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-3 outline-none focus:ring-2 focus:ring-primary focus:border-primary disabled:bg-gray-50 disabled:cursor-not-allowed"
                 placeholder=""
               />
             </div>
@@ -434,16 +459,18 @@ export default function AdminClienteEditPage() {
               <input
                 value={form.nombreUsuario}
                 onChange={(e) => update("nombreUsuario", e.target.value)}
-                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-3 outline-none focus:ring-2 focus:ring-primary"
+                disabled={saving}
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-3 outline-none focus:ring-2 focus:ring-primary focus:border-primary disabled:bg-gray-50 disabled:cursor-not-allowed"
                 placeholder=""
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-700 mb-1">Ciudad</label>
+              <label className="block text-sm text-gray-700 mb-1">Dirección</label>
               <input
-                value={form.ciudad}
-                onChange={(e) => update("ciudad", e.target.value)}
-                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-3 outline-none focus:ring-2 focus:ring-primary"
+                value={form.direccion}
+                onChange={(e) => update("direccion", e.target.value)}
+                disabled={saving}
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-3 outline-none focus:ring-2 focus:ring-primary focus:border-primary disabled:bg-gray-50 disabled:cursor-not-allowed"
                 placeholder=""
               />
             </div>
@@ -454,7 +481,8 @@ export default function AdminClienteEditPage() {
               <input
                 value={form.codigoPostal}
                 onChange={(e) => update("codigoPostal", e.target.value)}
-                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-3 outline-none focus:ring-2 focus:ring-primary"
+                disabled={saving}
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-3 outline-none focus:ring-2 focus:ring-primary focus:border-primary disabled:bg-gray-50 disabled:cursor-not-allowed"
                 placeholder=""
               />
             </div>
@@ -526,25 +554,31 @@ export default function AdminClienteEditPage() {
             onClose={() => {
               setIsSaveChangesOpen(false);
               setSaveError(null);
+              setSaveSuccess(false);
             }}
             onConfirm={confirmSave}
+            isLoading={saving}
           />
         </Suspense>
+      )}
+
+      {/* Success message */}
+      {saveSuccess && (
+        <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top duration-300">
+          <div className="bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 min-w-[280px]">
+            <CheckCircle className="h-5 w-5 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="font-medium text-sm">Cambios guardados exitosamente</p>
+              <p className="text-xs text-green-100">Los datos se han actualizado correctamente</p>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Error message */}
       {saveError && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
           {saveError}
-        </div>
-      )}
-
-      {/* Loading overlay when saving */}
-      {saving && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6">
-            <div className="text-gray-600">Guardando cambios...</div>
-          </div>
         </div>
       )}
 

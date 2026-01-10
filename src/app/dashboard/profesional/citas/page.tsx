@@ -133,6 +133,10 @@ export default function CitasPage() {
           
           // Mapear citas al formato ApiAppointment
           const mappedAppointments: ApiAppointment[] = citasArray.map((cita: any) => {
+            if (cita.tipo_atencion === "a_domicilio") {
+              console.log("[CitasPage] Cita a domicilio - notas:", cita.notas);
+            }
+            
             const monto = cita.pago_monto ? parseFloat(cita.pago_monto) : 0;
             
             // Convertir fecha_inicio de MySQL a formato ISO UTC
@@ -383,6 +387,8 @@ export default function CitasPage() {
             minute: "2-digit",
             hour12: true,
           }),
+          tipo_atencion: (appointment as any).tipo_atencion || null,
+          modality: appointment.modality || null,
         };
       });
   }, [appointments]);

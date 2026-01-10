@@ -161,17 +161,20 @@ export default function PendingSessionsTable({
                       >
                         Ver detalles
                       </button>
-                      <button
-                        onClick={() =>
-                          router.push(
-                            `${basePath}/pagos/reagendar?sessionId=${session.id}&professionalName=${session.professional.name}&currentDate=${session.date}&currentTime=${session.time}`
-                          )
-                        }
-                        className="bg-purple-600 hover:bg-purple-700 text-white text-xs sm:text-sm font-medium py-1.5 sm:py-2 px-3 sm:px-4 rounded-lg transition-colors"
-                        aria-label={`Reagendar sesión con ${session.professional.name}`}
-                      >
-                        Reagendar
-                      </button>
+                      {/* Ocultar botón de reagendar para profesionales */}
+                      {!basePath?.includes("/profesional") && (
+                        <button
+                          onClick={() =>
+                            router.push(
+                              `${basePath}/pagos/reagendar?sessionId=${session.id}&professionalName=${session.professional.name}&currentDate=${session.date}&currentTime=${session.time}`
+                            )
+                          }
+                          className="bg-purple-600 hover:bg-purple-700 text-white text-xs sm:text-sm font-medium py-1.5 sm:py-2 px-3 sm:px-4 rounded-lg transition-colors"
+                          aria-label={`Reagendar sesión con ${session.professional.name}`}
+                        >
+                          Reagendar
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

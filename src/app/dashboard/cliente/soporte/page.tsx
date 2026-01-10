@@ -20,11 +20,27 @@ export default function SoportePage() {
     setIsSubmitting(true);
 
     try {
+      // Validar que el mensaje tenga al menos 10 caracteres (requisito del backend)
+      const mensajeTrimmed = message.trim();
+      if (mensajeTrimmed.length < 10) {
+        setError("El mensaje debe tener al menos 10 caracteres");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Asegurar que asunto tenga al menos 3 caracteres (requisito del backend)
+      const asuntoFinal = asunto.trim() || "Consulta de soporte";
+      if (asuntoFinal.length < 3) {
+        setError("El asunto debe tener al menos 3 caracteres");
+        setIsSubmitting(false);
+        return;
+      }
+      
       const response = await ticketsService.createTicket({
-        asunto: asunto.trim() || "Consulta de soporte",
-        mensaje: message.trim(),
+        asunto: asuntoFinal,
+        mensaje: mensajeTrimmed,
         telefono: telefono.trim() || undefined,
-        correo: correo.trim() || undefined,
+        correo_electronico: correo.trim() || undefined,
       });
 
       if (response.success) {
@@ -169,11 +185,14 @@ export default function SoportePage() {
                 onChange={handleMessageChange}
                 placeholder="Escribe tu mensaje aquí..."
                 maxLength={2000}
+                minLength={10}
                 className="w-full h-32 px-4 py-3 rounded-lg bg-primary/10 border border-transparent focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
                 required
               />
               <p className="text-xs text-gray-500 mt-1">
-                {message.length}/2000 caracteres
+                {message.length}/2000 caracteres {message.length > 0 && message.length < 10 && (
+                  <span className="text-red-500">(mínimo 10 caracteres)</span>
+                )}
               </p>
             </div>
 

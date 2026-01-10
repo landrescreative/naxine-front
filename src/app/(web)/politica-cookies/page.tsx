@@ -78,6 +78,21 @@ export default async function PoliticaCookiesPage() {
           <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
             {content}
           </div>
+          
+          {/* CookieFirst Policy Page Component */}
+          <div id="cookiefirst-policy-page" className="mt-8"></div>
+          <div className="mt-4 text-sm text-gray-600">
+            Esta política de cookies ha sido creada y actualizada por{" "}
+            <a
+              href="https://cookiefirst.com/es/cookie-manager/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 underline"
+            >
+              Cookie Management CookieFirst
+            </a>
+            .
+          </div>
         </article>
       </div>
     </main>

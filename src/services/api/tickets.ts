@@ -10,7 +10,7 @@ export interface Ticket {
   asunto: string;
   mensaje: string;
   telefono?: string;
-  correo?: string;
+  correo_electronico?: string;
   estado: TicketStatus;
   fecha_creacion: string;
   fecha_actualizacion: string;
@@ -34,7 +34,7 @@ export interface CreateTicketRequest {
   asunto: string;
   mensaje: string;
   telefono?: string;
-  correo?: string;
+  correo_electronico?: string;
 }
 
 export interface CreatePublicTicketRequest {

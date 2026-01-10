@@ -5,7 +5,6 @@ import SeparatorSection from "@/components/ui/SeparatorSection";
 import ServicesSection from "@/components/ui/ServicesSection";
 import HowItWorksSection from "@/components/ui/HowItWorksSection";
 import OurProcess from "@/components/ui/OurProcess";
-import NuestrasGarantias from "@/components/ui/NuestrasGarantias";
 import BenefitsSection from "@/components/ui/BenefitsSection";
 import AccesibilitySection from "@/components/ui/AccesibilitySection";
 import FAQSection from "@/components/ui/FAQSection";
@@ -138,7 +137,6 @@ export default function Home() {
       />
       <HowItWorksSection />
       <OurProcess />
-      <NuestrasGarantias />
       <BenefitsSection />
       <AccesibilitySection />
       <SeparatorSection

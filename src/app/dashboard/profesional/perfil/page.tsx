@@ -11,15 +11,24 @@ import { handleApiError } from "@/services";
 export default function PerfilPage() {
   const { user } = useAuth();
 
+  const [professionalId, setProfessionalId] = useState<string | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
   const [profile, setProfile] = useState({
-    firstName: "Juan",
-    lastName: "Pérez",
-    email: "jp@gmail.com",
-    username: "@jnutriologo",
-    phone: "+52 55 31 953 893",
-    city: "Madrid, España",
-    occupation: "Nutriologo",
-    postalCode: "63929",
+    firstName: "",
+    lastName: "",
+    email: "",
+    username: "",
+    phone: "",
+    city: "",
+    occupation: "",
+    postalCode: "",
+    address: "",
+    description: "",
+    experience: "",
+    licenseNumber: "",
+    nifCif: "",
+    publicEmail: "",
+    education: "",
   });
 
   const [password, setPassword] = useState({
@@ -72,20 +81,92 @@ export default function PerfilPage() {
     message: string;
   } | null>(null);
 
+  const [outlookStatus, setOutlookStatus] = useState<{
+    loading: boolean;
+    connected: boolean;
+    syncOk: boolean;
+    lastVerification: string | null;
+    error: string | null;
+  }>({
+    loading: true,
+    connected: false,
+    syncOk: false,
+    lastVerification: null,
+    error: null,
+  });
+  const [outlookConnectLoading, setOutlookConnectLoading] = useState(false);
+  const [outlookVerifyLoading, setOutlookVerifyLoading] = useState(false);
+  const [outlookFeedback, setOutlookFeedback] = useState<{
+    type: "success" | "error" | "info";
+    message: string;
+  } | null>(null);
+
   const getErrorMessage = useCallback((error: unknown): string => {
     if (typeof error === "string") return error;
     if (error instanceof Error) return error.message;
     return handleApiError(error as any);
   }, []);
 
+  // Cargar datos del profesional
   useEffect(() => {
-    if (!user) return;
-    setProfile((prev) => ({
-      ...prev,
-      firstName: user.name?.split(" ")[0] || prev.firstName,
-      lastName: user.name?.split(" ").slice(1).join(" ") || prev.lastName,
-      email: user.email || prev.email,
-    }));
+    const loadProfessionalProfile = async () => {
+      if (!user) {
+        setLoadingProfile(false);
+        return;
+      }
+
+      try {
+        setLoadingProfile(true);
+        const response = await professionalsService.getMyProfessionalProfile();
+
+        if (response.success && response.data) {
+          const backendData = response.data as any;
+          const profesional =
+            backendData.data?.profesional ||
+            backendData.profesional ||
+            backendData;
+
+          if (profesional) {
+            const idProfesional = String(
+              profesional.id_profesional || profesional.id || ""
+            );
+            setProfessionalId(idProfesional);
+
+            // Mapear datos del profesional al estado del formulario
+            setProfile({
+              firstName: profesional.nombre || user.name?.split(" ")[0] || "",
+              lastName: profesional.apellidos || user.name?.split(" ").slice(1).join(" ") || "",
+              email: profesional.email || user.email || "",
+              username: profesional.username || (profesional.email || "").split("@")[0] || "",
+              phone: profesional.telefono || "",
+              city: profesional.ciudad || "",
+              occupation: profesional.especialidad || "",
+              postalCode: profesional.codigo_postal || "",
+              address: profesional.domicilio_consultorio || profesional.direccion || "",
+              description: profesional.descripcion || "",
+              experience: profesional.experiencia_años ? String(profesional.experiencia_años) : "",
+              licenseNumber: profesional.numero_colegiado || "",
+              nifCif: profesional.nif_cif || "",
+              publicEmail: profesional.correo_profesional_publico || "",
+              education: profesional.titulacion || "",
+            });
+          }
+        }
+      } catch (err) {
+        console.error("[PerfilPage] Error al cargar perfil profesional:", err);
+        // En caso de error, usar datos del usuario como fallback
+        setProfile((prev) => ({
+          ...prev,
+          firstName: user.name?.split(" ")[0] || prev.firstName,
+          lastName: user.name?.split(" ").slice(1).join(" ") || prev.lastName,
+          email: user.email || prev.email,
+        }));
+      } finally {
+        setLoadingProfile(false);
+      }
+    };
+
+    loadProfessionalProfile();
   }, [user]);
 
   // Cargar estado de Stripe Connect
@@ -238,6 +319,103 @@ export default function PerfilPage() {
     loadCalendarStatus();
   }, [loadCalendarStatus]);
 
+  const loadOutlookStatus = useCallback(async () => {
+    if (!user) return;
+
+    setOutlookStatus((prev) => ({
+      ...prev,
+      loading: true,
+      error: null,
+    }));
+
+    try {
+      const response = await calendarsService.getMyCalendars();
+
+      if (response.success && response.data) {
+        const rawCalendars =
+          (response.data as any).calendarios_externos ??
+          (response.data as any).data?.calendarios_externos ??
+          [];
+        const calendars = Array.isArray(rawCalendars) ? rawCalendars : [];
+        const outlookCalendars = calendars.filter(
+          (cal) => cal.proveedor === "outlook"
+        );
+        const hasConnected = outlookCalendars.some((cal) => cal.connected);
+        const activeCalendars = outlookCalendars.filter(
+          (cal) =>
+            cal.connected && (cal.sincronizacion_activa ?? true)
+        );
+
+        let lastVerification: string | null = null;
+        let errorMessage: string | null = null;
+
+        activeCalendars.forEach((cal) => {
+          if (cal.ultima_verificacion) {
+            if (
+              !lastVerification ||
+              new Date(cal.ultima_verificacion) > new Date(lastVerification)
+            ) {
+              lastVerification = cal.ultima_verificacion;
+            }
+          }
+          if (cal.google_sync_ok === 0 || cal.google_sync_ok === "0") {
+            errorMessage =
+              "Tu conexión con Outlook necesita reconfirmarse. Generaremos enlaces temporales hasta que la restaures.";
+          }
+          if (cal.error_conexion) {
+            errorMessage = cal.error_conexion;
+          }
+        });
+
+        const hasSyncOk = activeCalendars.some((cal) => {
+          const value = cal.google_sync_ok;
+          return (
+            value === true ||
+            value === 1 ||
+            value === "1" ||
+            value === undefined ||
+            value === null
+          );
+        });
+
+        if (hasConnected && activeCalendars.length === 0) {
+          errorMessage =
+            "Tu calendario está conectado, pero la sincronización está desactivada.";
+        }
+
+        setOutlookStatus({
+          loading: false,
+          connected: hasConnected,
+          syncOk: hasConnected ? hasSyncOk && activeCalendars.length > 0 : false,
+          lastVerification,
+          error: errorMessage,
+        });
+      } else {
+        setOutlookStatus({
+          loading: false,
+          connected: false,
+          syncOk: false,
+          lastVerification: null,
+          error:
+            response.error ||
+            "No se pudo obtener el estado de Outlook Calendar. Intenta nuevamente.",
+        });
+      }
+    } catch (error) {
+      setOutlookStatus({
+        loading: false,
+        connected: false,
+        syncOk: false,
+        lastVerification: null,
+        error: getErrorMessage(error),
+      });
+    }
+  }, [user, getErrorMessage]);
+
+  useEffect(() => {
+    loadOutlookStatus();
+  }, [loadOutlookStatus]);
+
   useEffect(() => {
     if (calendarFeedback) {
       const timeout = setTimeout(
@@ -248,11 +426,23 @@ export default function PerfilPage() {
     }
   }, [calendarFeedback]);
 
+  useEffect(() => {
+    if (outlookFeedback) {
+      const timeout = setTimeout(
+        () => setOutlookFeedback(null),
+        4000
+      );
+      return () => clearTimeout(timeout);
+    }
+  }, [outlookFeedback]);
+
   // Manejar retorno de Stripe onboarding
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const stripeReturn = urlParams.get("stripe_return");
     const stripeRefresh = urlParams.get("stripe_refresh");
+    const outlookSync = urlParams.get("outlook_sync");
+    const outlookError = urlParams.get("error");
 
     if (stripeReturn || stripeRefresh) {
       // Limpiar los parámetros de la URL
@@ -263,7 +453,33 @@ export default function PerfilPage() {
         loadStripeStatus();
       }, 1000);
     }
-  }, [loadStripeStatus]);
+
+    if (outlookSync) {
+      // Limpiar los parámetros de la URL
+      window.history.replaceState({}, "", window.location.pathname);
+
+      // Mostrar mensaje de éxito o error
+      if (outlookSync === "ok") {
+        setOutlookFeedback({
+          type: "success",
+          message: "Outlook Calendar conectado exitosamente.",
+        });
+      } else if (outlookSync === "error" || outlookError) {
+        const errorMessage = outlookError
+          ? decodeURIComponent(outlookError)
+          : "Error al conectar con Outlook Calendar";
+        setOutlookFeedback({
+          type: "error",
+          message: errorMessage,
+        });
+      }
+
+      // Recargar el estado de Outlook después de un breve delay
+      setTimeout(() => {
+        loadOutlookStatus();
+      }, 1000);
+    }
+  }, [loadStripeStatus, loadOutlookStatus]);
 
   // Trigger entrance animation for Save popup
   useEffect(() => {
@@ -285,7 +501,49 @@ export default function PerfilPage() {
   const toggle = (key: keyof typeof notif) =>
     setNotif((p) => ({ ...p, [key]: !p[key] }));
 
-  const handleSave = () => {
+  const handleSaveProfile = async () => {
+    if (!professionalId) {
+      alert("No se pudo identificar el perfil profesional");
+      return;
+    }
+
+    try {
+      // Preparar datos para actualizar
+      const updateData: any = {
+        nombre: profile.firstName,
+        apellidos: profile.lastName,
+        email: profile.email,
+        telefono: profile.phone || null,
+        ciudad: profile.city || null,
+        domicilio_consultorio: profile.address || null,
+        especialidad: profile.occupation || null,
+        descripcion: profile.description || null,
+        experiencia_años: profile.experience ? parseInt(profile.experience, 10) : null,
+        numero_colegiado: profile.licenseNumber || null,
+        nif_cif: profile.nifCif || null,
+        correo_profesional_publico: profile.publicEmail || null,
+        titulacion: profile.education || null,
+      };
+
+      const response = await professionalsService.updateAdminProfessional(
+        professionalId,
+        updateData
+      );
+
+      if (response.success) {
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
+      } else {
+        alert(response.error || "Error al guardar los cambios");
+      }
+    } catch (err: any) {
+      console.error("[PerfilPage] Error al guardar perfil:", err);
+      alert(err?.message || "Error al guardar los cambios");
+    }
+  };
+
+  const handleSavePassword = () => {
+    // TODO: Implementar cambio de contraseña
     setShowToast(true);
     setTimeout(() => setShowToast(false), 3000);
   };
@@ -469,6 +727,90 @@ export default function PerfilPage() {
     }
   };
 
+  const handleConnectOutlook = async () => {
+    if (outlookConnectLoading) return;
+
+    setOutlookFeedback(null);
+    setOutlookConnectLoading(true);
+
+    try {
+      const response = await calendarsService.getOutlookAuthorizationUrl();
+      const rawData = response.data as any;
+      const url =
+        rawData?.url ??
+        rawData?.data?.url ??
+        rawData?.data?.data?.url ??
+        null;
+
+      if (response.success && url) {
+        window.location.href = url;
+      } else {
+        setOutlookFeedback({
+          type: "error",
+          message:
+            response.error ||
+            "No se pudo obtener la URL de autorización de Outlook Calendar.",
+        });
+      }
+    } catch (error) {
+      setOutlookFeedback({
+        type: "error",
+        message: getErrorMessage(error),
+      });
+      await loadOutlookStatus();
+    } finally {
+      setOutlookConnectLoading(false);
+    }
+  };
+
+  const handleVerifyOutlook = async () => {
+    if (outlookVerifyLoading) return;
+
+    setOutlookFeedback(null);
+    setOutlookVerifyLoading(true);
+
+    try {
+      const response = await calendarsService.verifyMyCalendars();
+
+      if (response.success && response.data) {
+        const rawResultados =
+          (response.data as any).resultados ??
+          (response.data as any).data?.resultados ??
+          [];
+        const resultados = Array.isArray(rawResultados) ? rawResultados : [];
+        const fallidos = resultados.filter((r) => !r.ok);
+
+        if (fallidos.length === 0) {
+          setOutlookFeedback({
+            type: "success",
+            message: "Sincronización con Outlook Calendar verificada correctamente.",
+          });
+        } else {
+          setOutlookFeedback({
+            type: "error",
+            message:
+              "Algunos calendarios necesitan reconectarse en Outlook para reactivar la sincronización.",
+          });
+        }
+      } else {
+        setOutlookFeedback({
+          type: "error",
+          message:
+            response.error ||
+            "No se pudo verificar la sincronización con Outlook Calendar.",
+        });
+      }
+    } catch (error) {
+      setOutlookFeedback({
+        type: "error",
+        message: getErrorMessage(error),
+      });
+    } finally {
+      setOutlookVerifyLoading(false);
+      await loadOutlookStatus();
+    }
+  };
+
   // Verificar si necesita onboarding de Stripe
   const needsStripeOnboarding =
     !stripeStatus.loading &&
@@ -505,6 +847,26 @@ export default function PerfilPage() {
 
   const formattedLastVerification = calendarStatus.lastVerification
     ? new Date(calendarStatus.lastVerification).toLocaleString()
+    : null;
+
+  const outlookStatusLabel = outlookStatus.loading
+    ? "Verificando..."
+    : outlookStatus.connected
+    ? outlookStatus.syncOk
+      ? "Sincronización activa"
+      : "Atención requerida"
+    : "No conectado";
+
+  const outlookStatusClass = outlookStatus.loading
+    ? "bg-gray-100 text-gray-600"
+    : outlookStatus.connected
+    ? outlookStatus.syncOk
+      ? "bg-green-100 text-green-700"
+      : "bg-yellow-100 text-yellow-700"
+    : "bg-red-100 text-red-700";
+
+  const formattedOutlookLastVerification = outlookStatus.lastVerification
+    ? new Date(outlookStatus.lastVerification).toLocaleString()
     : null;
 
   return (
@@ -544,8 +906,7 @@ export default function PerfilPage() {
           Ajustes de Perfil
         </h2>
         <p className="text-xs text-purple-600 mt-1">
-          NOTA: La información personal no es editable por el usuario,
-          contacta con soporte para cambiar tu información.
+          Puedes editar tu información personal. Los cambios se guardarán automáticamente al hacer clic en "Guardar".
         </p>
       </div>
 
@@ -723,6 +1084,90 @@ export default function PerfilPage() {
         </div>
       </div>
 
+      {/* Outlook Calendar Sync */}
+      <div className="bg-white shadow rounded-lg border border-blue-100">
+        <div className="px-4 py-5 sm:p-6 space-y-4">
+          <div className="flex items-start justify-between">
+            <div>
+              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-1">
+                Sincronización con Outlook Calendar
+              </h3>
+              <p className="text-sm text-gray-600 max-w-2xl">
+                Conecta tu cuenta de Microsoft/Outlook para que tus citas se sincronicen automáticamente
+                con tu calendario y generen enlaces reales de Microsoft Teams.
+              </p>
+            </div>
+            <span
+              className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${outlookStatusClass}`}
+            >
+              {outlookStatusLabel}
+            </span>
+          </div>
+
+          {outlookFeedback && (
+            <div
+              className={`border rounded-lg px-4 py-3 text-sm ${
+                outlookFeedback.type === "success"
+                  ? "bg-green-50 border-green-200 text-green-700"
+                  : outlookFeedback.type === "error"
+                  ? "bg-red-50 border-red-200 text-red-700"
+                  : "bg-blue-50 border-blue-200 text-blue-700"
+              }`}
+            >
+              {outlookFeedback.message}
+            </div>
+          )}
+
+          <div className="text-sm text-gray-600 space-y-2">
+            {outlookStatus.loading ? (
+              <p>Verificando el estado de la sincronización...</p>
+            ) : outlookStatus.connected ? (
+              <>
+                <p>
+                  {outlookStatus.syncOk
+                    ? "Tu cuenta de Outlook está conectada y lista para generar enlaces de Teams."
+                    : "Tu cuenta de Outlook está conectada, pero necesitamos que la reconectes para generar enlaces reales. Usaremos enlaces temporales hasta que lo hagas."}
+                </p>
+                {outlookStatus.error && (
+                  <p className="text-sm text-yellow-700">{outlookStatus.error}</p>
+                )}
+                {formattedOutlookLastVerification && (
+                  <p className="text-xs text-gray-500">
+                    Última verificación: {formattedOutlookLastVerification}
+                  </p>
+                )}
+              </>
+            ) : (
+              <p>
+                Aún no has vinculado tu cuenta de Outlook. Conéctala para que las citas en línea
+                generen automáticamente eventos y enlaces seguros de Microsoft Teams.
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-3 pt-2">
+            <button
+              onClick={handleConnectOutlook}
+              disabled={outlookConnectLoading}
+              className="px-6 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {outlookConnectLoading ? "Redirigiendo..." : "Conectar Outlook Calendar"}
+            </button>
+            <button
+              onClick={handleVerifyOutlook}
+              disabled={
+                outlookVerifyLoading ||
+                outlookStatus.loading ||
+                !outlookStatus.connected
+              }
+              className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {outlookVerifyLoading ? "Verificando..." : "Verificar sincronización"}
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Info + Support */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         <div className="lg:col-span-2 bg-white shadow rounded-lg">
@@ -730,25 +1175,35 @@ export default function PerfilPage() {
             <h3 className="text-lg leading-6 font-medium text-gray-900 mb-6">
               Información Personal
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Nombre
-                </label>
-                <input
-                  disabled
-                  value={profile.firstName}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
-                />
+            {loadingProfile ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                <p className="text-gray-600">Cargando información del perfil...</p>
               </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Nombre
+                  </label>
+                  <input
+                    value={profile.firstName}
+                    onChange={(e) =>
+                      setProfile((prev) => ({ ...prev, firstName: e.target.value }))
+                    }
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Apellido
                 </label>
                 <input
-                  disabled
                   value={profile.lastName}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
+                  onChange={(e) =>
+                    setProfile((prev) => ({ ...prev, lastName: e.target.value }))
+                  }
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
               </div>
               <div>
@@ -756,9 +1211,12 @@ export default function PerfilPage() {
                   Correo Electrónico
                 </label>
                 <input
-                  disabled
+                  type="email"
                   value={profile.email}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
+                  onChange={(e) =>
+                    setProfile((prev) => ({ ...prev, email: e.target.value }))
+                  }
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
               </div>
               <div>
@@ -776,9 +1234,12 @@ export default function PerfilPage() {
                   Teléfono
                 </label>
                 <input
-                  disabled
+                  type="tel"
                   value={profile.phone}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
+                  onChange={(e) =>
+                    setProfile((prev) => ({ ...prev, phone: e.target.value }))
+                  }
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
               </div>
               <div>
@@ -786,19 +1247,23 @@ export default function PerfilPage() {
                   Ciudad
                 </label>
                 <input
-                  disabled
                   value={profile.city}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
+                  onChange={(e) =>
+                    setProfile((prev) => ({ ...prev, city: e.target.value }))
+                  }
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Ocupación
+                  Especialidad
                 </label>
                 <input
-                  disabled
                   value={profile.occupation}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
+                  onChange={(e) =>
+                    setProfile((prev) => ({ ...prev, occupation: e.target.value }))
+                  }
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
               </div>
               <div>
@@ -806,21 +1271,113 @@ export default function PerfilPage() {
                   Código Postal
                 </label>
                 <input
-                  disabled
                   value={profile.postalCode}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
+                  onChange={(e) =>
+                    setProfile((prev) => ({ ...prev, postalCode: e.target.value }))
+                  }
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
               </div>
-            </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Dirección del Consultorio
+                </label>
+                <input
+                  value={profile.address}
+                  onChange={(e) =>
+                    setProfile((prev) => ({ ...prev, address: e.target.value }))
+                  }
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Descripción/Biografía
+                </label>
+                <textarea
+                  value={profile.description}
+                  onChange={(e) =>
+                    setProfile((prev) => ({ ...prev, description: e.target.value }))
+                  }
+                  rows={4}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Años de Experiencia
+                </label>
+                <input
+                  type="number"
+                  value={profile.experience}
+                  onChange={(e) =>
+                    setProfile((prev) => ({ ...prev, experience: e.target.value }))
+                  }
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Número de Colegiado
+                </label>
+                <input
+                  value={profile.licenseNumber}
+                  onChange={(e) =>
+                    setProfile((prev) => ({ ...prev, licenseNumber: e.target.value }))
+                  }
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  NIF/CIF
+                </label>
+                <input
+                  value={profile.nifCif}
+                  onChange={(e) =>
+                    setProfile((prev) => ({ ...prev, nifCif: e.target.value }))
+                  }
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Correo Profesional Público
+                </label>
+                <input
+                  type="email"
+                  value={profile.publicEmail}
+                  onChange={(e) =>
+                    setProfile((prev) => ({ ...prev, publicEmail: e.target.value }))
+                  }
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="Correo que se mostrará públicamente"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Titulación
+                </label>
+                <input
+                  value={profile.education}
+                  onChange={(e) =>
+                    setProfile((prev) => ({ ...prev, education: e.target.value }))
+                  }
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="Ej: Grado en Psicología"
+                />
+              </div>
+              </div>
+            )}
           </div>
         </div>
         <div className="bg-primary text-white rounded-2xl p-6 md:p-8">
           <h4 className="text-white text-lg mb-2" style={{ fontWeight: 900 }}>
-            NOTA:
+            SOPORTE:
           </h4>
           <p className="text-base leading-7 opacity-95 mb-6">
-            La información personal no es editable por el usuario, contacta con
-            soporte para cambiar tu información.
+            Si necesitas ayuda con tu cuenta o tienes alguna pregunta, puedes contactarnos
+            a través del formulario de soporte.
           </p>
           <label
             className="block text-white text-lg mb-3"
@@ -926,6 +1483,17 @@ export default function PerfilPage() {
             </ul>
           </div>
 
+          {/* Botones de acción para información personal */}
+          <div className="mt-6 flex space-x-3">
+            <button
+              onClick={handleSaveProfile}
+              disabled={loadingProfile}
+              className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loadingProfile ? "Guardando..." : "Guardar Cambios"}
+            </button>
+          </div>
+
           {/* Botones de acción - Solo mostrar si hay cambios en la contraseña */}
           {(password.current || password.next || password.confirm) && (
             <div className="mt-6 flex space-x-3">
@@ -936,10 +1504,10 @@ export default function PerfilPage() {
                 Cancelar
               </button>
               <button
-                onClick={handleSave}
+                onClick={handleSavePassword}
                 className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors"
               >
-                Guardar
+                Guardar Contraseña
               </button>
             </div>
           )}

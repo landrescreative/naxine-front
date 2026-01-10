@@ -12,6 +12,8 @@ interface CalendarAppointment {
   professional: string;
   specialty: string;
   time: string;
+  tipo_atencion?: "presencial" | "en_linea" | "a_domicilio" | null;
+  modality?: "in-person" | "online" | "home-visit" | null;
 }
 
 interface SessionCalendarProps {
@@ -141,6 +143,55 @@ export default function SessionCalendar({
     }
   };
 
+  // Función para obtener los colores según la modalidad
+  const getModalityColors = (appointment: CalendarAppointment) => {
+    const tipoAtencion = appointment.tipo_atencion || appointment.modality;
+    
+    // Determinar tipo de atención
+    let modalityType: "presencial" | "en_linea" | "a_domicilio" | null = null;
+    
+    if (tipoAtencion === "presencial" || tipoAtencion === "in-person") {
+      modalityType = "presencial";
+    } else if (tipoAtencion === "en_linea" || tipoAtencion === "online") {
+      modalityType = "en_linea";
+    } else if (tipoAtencion === "a_domicilio" || tipoAtencion === "home-visit") {
+      modalityType = "a_domicilio";
+    }
+    
+    // Retornar colores según la modalidad
+    switch (modalityType) {
+      case "presencial":
+        return {
+          bg: "bg-blue-100",
+          bgHover: "hover:bg-blue-200",
+          text: "text-blue-700",
+          border: "border-blue-300",
+        };
+      case "en_linea":
+        return {
+          bg: "bg-purple-100",
+          bgHover: "hover:bg-purple-200",
+          text: "text-purple-700",
+          border: "border-purple-300",
+        };
+      case "a_domicilio":
+        return {
+          bg: "bg-amber-100",
+          bgHover: "hover:bg-amber-200",
+          text: "text-amber-700",
+          border: "border-amber-300",
+        };
+      default:
+        // Color por defecto (primary)
+        return {
+          bg: "bg-primary/15",
+          bgHover: "hover:bg-primary/25",
+          text: "text-primary",
+          border: "border-primary/30",
+        };
+    }
+  };
+
   const days = getDaysInMonth(currentDate);
 
   return (
@@ -248,21 +299,24 @@ export default function SessionCalendar({
                   {dayData.day}
                 </div>
 
-                {appointment && (
-                  <button
-                    className="w-full text-left bg-primary/15 rounded p-1 sm:p-2 text-[10px] sm:text-xs cursor-pointer hover:bg-primary/25 transition-colors"
-                    onClick={() => handleAppointmentClick(appointment)}
-                    aria-label={`Cita: ${appointment.specialty} con ${appointment.professional} a las ${appointment.time}`}
-                  >
-                    <div className="font-medium text-primary truncate">
-                      {appointment.specialty}
-                    </div>
-                    <div className="text-primary truncate hidden sm:block">
-                      {appointment.professional}
-                    </div>
-                    <div className="text-primary hidden sm:block">{appointment.time}</div>
-                  </button>
-                )}
+                {appointment && (() => {
+                  const colors = getModalityColors(appointment);
+                  return (
+                    <button
+                      className={`w-full text-left ${colors.bg} ${colors.bgHover} rounded p-1 sm:p-2 text-[10px] sm:text-xs cursor-pointer transition-colors border ${colors.border}`}
+                      onClick={() => handleAppointmentClick(appointment)}
+                      aria-label={`Cita: ${appointment.specialty} con ${appointment.professional} a las ${appointment.time}`}
+                    >
+                      <div className={`font-medium ${colors.text} truncate`}>
+                        {appointment.specialty}
+                      </div>
+                      <div className={`${colors.text} truncate hidden sm:block`}>
+                        {appointment.professional}
+                      </div>
+                      <div className={`${colors.text} hidden sm:block`}>{appointment.time}</div>
+                    </button>
+                  );
+                })()}
               </div>
             );
           })}
