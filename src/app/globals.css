@@ -58,22 +58,19 @@
   --font-body: "Atkinson Hyperlegible", sans-serif;
 }
 
-html {
+html,
+body {
   height: 100%;
   overflow-x: hidden;
-  overflow-y: auto;
 }
 
 body {
-  min-height: 100%;
-  overflow-x: hidden;
   background: var(--background);
   color: var(--foreground);
   font-family: "Atkinson Hyperlegible", sans-serif;
   font-weight: 400;
   margin: 0;
   padding: 0;
-  position: relative;
 }
 
 /* Font utility classes */
