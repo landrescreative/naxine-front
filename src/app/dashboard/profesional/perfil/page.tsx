@@ -565,7 +565,7 @@ export default function PerfilPage() {
       const response = await ticketsService.createTicket({
         asunto: "Consulta desde perfil",
         mensaje: supportMessage.trim(),
-        correo: user?.email || undefined,
+        correo_electronico: user?.email || undefined,
       });
 
       if (response.success) {

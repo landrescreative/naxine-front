@@ -31,7 +31,7 @@ export default function SoportePage() {
         asunto: asunto.trim() || "Consulta de soporte",
         mensaje: message.trim(),
         telefono: telefono.trim() || undefined,
-        correo: correo.trim() || user?.email || undefined,
+        correo_electronico: correo.trim() || user?.email || undefined,
       });
 
       if (response.success) {

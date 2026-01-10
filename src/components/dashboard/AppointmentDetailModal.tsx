@@ -1073,15 +1073,15 @@ export default function AppointmentDetailModal({
                 // Formato esperado: "\n\n📍 Dirección de atención a domicilio:\n[dirección]"
                 const patterns = [
                   // Patrones con emoji y saltos de línea (formato más común)
-                  /(?:^|\n\n)📍\s*Dirección de atención a domicilio:\s*\n(.+?)(?:\n\n|$)/s,
-                  /📍\s*Dirección de atención a domicilio:\s*\n(.+?)(?:\n\n|$)/s,
-                  /📍\s*Dirección de atención a domicilio:\s*(.+?)(?:\n\n|$)/s,
-                  /📍\s*Dirección de atención a domicilio:\s*(.+)/s,
+                  /(?:^|\n\n)📍\s*Dirección de atención a domicilio:\s*\n([\s\S]+?)(?:\n\n|$)/,
+                  /📍\s*Dirección de atención a domicilio:\s*\n([\s\S]+?)(?:\n\n|$)/,
+                  /📍\s*Dirección de atención a domicilio:\s*([\s\S]+?)(?:\n\n|$)/,
+                  /📍\s*Dirección de atención a domicilio:\s*([\s\S]+)/,
                   // Patrones sin emoji (por si el emoji no se guardó correctamente)
-                  /(?:^|\n\n)Dirección de atención a domicilio:\s*\n(.+?)(?:\n\n|$)/s,
-                  /Dirección de atención a domicilio:\s*\n(.+?)(?:\n\n|$)/s,
-                  /Dirección de atención a domicilio:\s*(.+?)(?:\n\n|$)/s,
-                  /Dirección de atención a domicilio:\s*(.+)/s,
+                  /(?:^|\n\n)Dirección de atención a domicilio:\s*\n([\s\S]+?)(?:\n\n|$)/,
+                  /Dirección de atención a domicilio:\s*\n([\s\S]+?)(?:\n\n|$)/,
+                  /Dirección de atención a domicilio:\s*([\s\S]+?)(?:\n\n|$)/,
+                  /Dirección de atención a domicilio:\s*([\s\S]+)/,
                 ];
                 
                 for (const pattern of patterns) {

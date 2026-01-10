@@ -131,8 +131,8 @@ export default function AdminSoportePage() {
   };
 
   const handleSendEmail = () => {
-    if (selectedTicket?.correo) {
-      window.location.href = `mailto:${selectedTicket.correo}`;
+    if (selectedTicket?.correo_electronico) {
+      window.location.href = `mailto:${selectedTicket.correo_electronico}`;
     } else if (selectedTicket?.usuario?.email) {
       window.location.href = `mailto:${selectedTicket.usuario.email}`;
     }
@@ -516,9 +516,9 @@ export default function AdminSoportePage() {
                         Teléfono: {selectedTicket.telefono}
                       </p>
                     )}
-                    {(selectedTicket.correo || selectedTicket.usuario?.email) && (
+                    {(selectedTicket.correo_electronico || selectedTicket.usuario?.email) && (
                       <p className="text-xs sm:text-sm text-gray-900 font-medium break-all">
-                        Correo: {selectedTicket.correo || selectedTicket.usuario?.email}
+                        Correo: {selectedTicket.correo_electronico || selectedTicket.usuario?.email}
                       </p>
                     )}
                     {selectedTicket.fecha_creacion && (
