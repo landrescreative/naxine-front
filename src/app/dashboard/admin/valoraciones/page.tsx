@@ -170,10 +170,10 @@ export default function AdminValoracionesPage() {
       console.log('[AdminValoracionesPage] Respuesta getById:', response);
       
       if (response.success && response.data) {
-        // El apiClient devuelve: { success: true, data: { success: true, data: { valoracion: {...} } } }
-        // El backend devuelve: { success: true, data: { valoracion: {...} } }
+        // El apiClient devuelve: { success: true, data: { valoracion: {...} } }
+        // response.data es de tipo { valoracion: ValoracionItem }
         const backendData = response.data;
-        const valoracion = backendData?.data?.valoracion || backendData?.valoracion || backendData;
+        const valoracion = backendData?.valoracion;
         
         if (!valoracion || !valoracion.id_valoracion) {
           console.error('[AdminValoracionesPage] No se encontró la valoración en la respuesta:', response);
@@ -221,8 +221,9 @@ export default function AdminValoracionesPage() {
       const refreshed = await valoracionesService.getAll({ limit: pageSize, offset });
       if (refreshed.success && refreshed.data) {
         const backendData = refreshed.data;
-        const valoraciones = backendData?.data?.valoraciones || backendData?.valoraciones || [];
-        const paginacion = backendData?.data?.paginacion || backendData?.paginacion;
+        // response.data es de tipo ValoracionesListResponse que tiene valoraciones y paginacion directamente
+        const valoraciones = backendData?.valoraciones || [];
+        const paginacion = backendData?.paginacion;
         setItems(valoraciones);
         setTotal(paginacion?.total || valoraciones.length || 0);
       }
@@ -262,8 +263,9 @@ export default function AdminValoracionesPage() {
       const refreshed = await valoracionesService.getAll({ limit: pageSize, offset });
       if (refreshed.success && refreshed.data) {
         const backendData = refreshed.data;
-        const valoraciones = backendData?.data?.valoraciones || backendData?.valoraciones || [];
-        const paginacion = backendData?.data?.paginacion || backendData?.paginacion;
+        // response.data es de tipo ValoracionesListResponse que tiene valoraciones y paginacion directamente
+        const valoraciones = backendData?.valoraciones || [];
+        const paginacion = backendData?.paginacion;
         setItems(valoraciones);
         setTotal(paginacion?.total || valoraciones.length || 0);
       }

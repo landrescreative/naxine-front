@@ -53,11 +53,10 @@ export default function AdminSessionDetailPage() {
         console.log('Respuesta completa del servicio:', response);
         
         if (response.success && response.data) {
-          // El apiClient devuelve: { success: true, data: { success: true, data: { cita: {...} } } }
-          // El backend devuelve: { success: true, data: { cita: {...} } }
-          // Por lo tanto, necesitamos acceder a response.data.data.cita
+          // El apiClient devuelve: { success: true, data: { cita: {...} } }
+          // response.data es de tipo { cita: Cita }
           const backendData = response.data;
-          const citaData = backendData?.data?.cita || backendData?.cita || backendData;
+          const citaData = backendData?.cita;
           
           if (!citaData || !citaData.id_cita) {
             console.error('No se encontró la cita en la respuesta:', response);
@@ -286,7 +285,7 @@ export default function AdminSessionDetailPage() {
         const citaResponse = await citasService.getCitaPorId(sessionId);
         if (citaResponse.success && citaResponse.data) {
           const backendData = citaResponse.data;
-          const citaData = backendData?.data?.cita || backendData?.cita || backendData;
+          const citaData = backendData?.cita;
           if (citaData && citaData.id_cita) {
             setCita(citaData);
           }
@@ -369,7 +368,7 @@ export default function AdminSessionDetailPage() {
         const citaResponse = await citasService.getCitaPorId(sessionId);
         if (citaResponse.success && citaResponse.data) {
           const backendData = citaResponse.data;
-          const citaData = backendData?.data?.cita || backendData?.cita || backendData;
+          const citaData = backendData?.cita;
           if (citaData && citaData.id_cita) {
             setCita(citaData);
           }
