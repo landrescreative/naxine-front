@@ -3498,6 +3498,27 @@ export default function RegisterProfessionalPage() {
                 Iniciar sesión
               </Link>
             </div>
+
+            {/* Links a términos y políticas */}
+            <div className="text-center mt-6 pt-6 border-t border-gray-200">
+              <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-gray-600">
+                <Link
+                  href="/terminos-condiciones"
+                  className="text-primary hover:text-primary/80 hover:underline transition-colors"
+                  target="_blank"
+                >
+                  Términos y Condiciones
+                </Link>
+                <span className="text-gray-400">•</span>
+                <Link
+                  href="/politica-privacidad"
+                  className="text-primary hover:text-primary/80 hover:underline transition-colors"
+                  target="_blank"
+                >
+                  Política de Privacidad
+                </Link>
+              </div>
+            </div>
           </form>
         </div>
       </div>

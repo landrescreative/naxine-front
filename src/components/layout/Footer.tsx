@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Instagram, Facebook, Github, Send } from "lucide-react";
+import { Instagram, Facebook, Github, Send, Phone } from "lucide-react";
 
 export default function Footer() {
   return (
@@ -26,6 +26,16 @@ export default function Footer() {
             <p className="text-black text-sm">
               Explora, elige y contrata al profesional colegiado ideal para ti
             </p>
+
+            {/* Contact Phone */}
+            <a
+              href="tel:+34919933510"
+              className="flex items-center gap-2 text-black hover:text-purple-600 focus:text-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:ring-offset-2 rounded-md transition-colors text-sm"
+              aria-label="Llamar al +34 919 933 510"
+            >
+              <Phone className="h-4 w-4" aria-hidden="true" />
+              <span>+34 919 933 510</span>
+            </a>
           </div>
 
           {/* Sitio Web Links - Top Right */}

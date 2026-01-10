@@ -26,7 +26,9 @@ export const metadata: Metadata = {
 };
 
 async function fetchPolicies() {
-  const base = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api").replace(/\/$/, "");
+  const base = (
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
+  ).replace(/\/$/, "");
   const res = await fetch(`${base}/paginas-informacion`, { cache: "no-store" });
   if (!res.ok) {
     throw new Error(`Error ${res.status} al obtener páginas de información`);
@@ -70,7 +72,9 @@ export default async function PoliticaCookiesPage() {
 
         {/* Contenido dinámico */}
         <article className="max-w-4xl mx-auto px-4 py-8">
-          <h1 id="cookies-title" className="sr-only">Política de Cookies de NAXINE</h1>
+          <h1 id="cookies-title" className="sr-only">
+            Política de Cookies de NAXINE
+          </h1>
           <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
             {content}
           </div>
