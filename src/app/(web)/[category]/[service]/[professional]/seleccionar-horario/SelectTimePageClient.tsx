@@ -58,23 +58,24 @@ export default function SelectTimePageClient({
           String(p.raw?.id_precio || "") === String(precioId)
       );
       if (precio) {
+        const precioAny = precio as any;
         const precioNormalizado: ProfessionalPrice = {
-          id_precio: precio.id_precio || precio.id || 0,
+          id_precio: precioAny.id_precio || precioAny.id || 0,
           nombre_servicio:
-            precio.nombre_servicio ||
-            precio.nombre_paquete ||
-            precio.nombre ||
+            precioAny.nombre_servicio ||
+            precioAny.nombre_paquete ||
+            precioAny.nombre ||
             "Servicio",
-          descripcion: precio.descripcion || "",
-          precio: precio.precio || 0,
-          moneda: precio.moneda || "EUR",
-          duracion: precio.duracion || undefined,
+          descripcion: precioAny.descripcion || "",
+          precio: precioAny.precio || 0,
+          moneda: precioAny.moneda || "EUR",
+          duracion: precioAny.duracion || undefined,
         };
         setSelectedPrice(precioNormalizado);
       }
     } else if (professional.precios && professional.precios.length > 0) {
       // Si no hay precioId, seleccionar el primero
-      const primerPrecio = professional.precios[0];
+      const primerPrecio = professional.precios[0] as any;
       const precioNormalizado: ProfessionalPrice = {
         id_precio: primerPrecio.id_precio || primerPrecio.id || 0,
         nombre_servicio:
@@ -273,6 +274,17 @@ export default function SelectTimePageClient({
 
     return horarios;
   }, [horariosCargados, selectedTipoAtencion]);
+
+  // Obtener tipos de atención disponibles de los horarios
+  const tiposAtencionDisponibles = useMemo(() => {
+    const tipos = new Set<string>();
+    horariosCargados.forEach((horario) => {
+      if (horario.tipo_atencion) {
+        tipos.add(horario.tipo_atencion);
+      }
+    });
+    return Array.from(tipos);
+  }, [horariosCargados]);
 
   // Generar fechas disponibles
   const getAvailableDays = useMemo(() => {
@@ -597,22 +609,33 @@ export default function SelectTimePageClient({
         ? parseInt(selectedPrice.duracion.replace(/\D/g, "")) || 60
         : 60;
 
-      const response = await citasService.createAppointment({
+      const fechaInicio = slotDateTimeUTC.toISOString();
+      const fechaFin = new Date(slotDateTimeUTC.getTime() + duracionMinutos * 60000).toISOString();
+
+      const response = await citasService.createCita({
+        id_cliente: Number(user?.id || 0),
         id_profesional: Number(professional.id),
         id_precio: selectedPrice.id_precio,
-        fecha_hora: slotDateTimeUTC.toISOString(),
-        tipo_atencion: selectedTipoAtencion || "presencial",
+        fecha_inicio: fechaInicio,
+        fecha_fin: fechaFin,
+        crear_payment_intent: true,
+        moneda: selectedPrice.moneda || "EUR",
+        tipo_atencion: (selectedTipoAtencion || "presencial") as 'presencial' | 'en_linea' | 'a_domicilio',
         direccion_domicilio:
           selectedTipoAtencion === "a_domicilio"
             ? direccionDomicilio
             : undefined,
-        duracion_minutos: duracionMinutos,
       });
 
-      if (response.success) {
-        router.push(
-          `/dashboard/cliente/citas/${response.data?.id || ""}`
-        );
+      if (response.success && response.data) {
+        // Redirigir a la página de pago o a las citas del cliente
+        if (response.data.redirectToPayment) {
+          router.push(response.data.redirectToPayment.url);
+        } else {
+          router.push(
+            `/dashboard/cliente/citas/${response.data.cita?.id_cita || ""}`
+          );
+        }
       } else {
         alert(response.error || "Error al crear la cita");
       }

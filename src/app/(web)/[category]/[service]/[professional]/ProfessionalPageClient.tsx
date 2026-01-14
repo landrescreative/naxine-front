@@ -667,7 +667,6 @@ export default function ProfessionalPageClient({
         setSelectedPrice(preciosNormalizados[0]);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [professional?.precios]);
 
   // Función helper para normalizar nombres de días (manejar acentos y mayúsculas)
@@ -2609,7 +2608,7 @@ export default function ProfessionalPageClient({
                                   if (slot.available && selectedDate && selectedPrice) {
                                     // Navegar a la página de selección de horario
                                     const fechaISO = selectedDate.toISOString();
-                                    const precioId = selectedPrice.id_precio || selectedPrice.raw?.id_precio || "";
+                                    const precioId = selectedPrice.id_precio?.toString() || "";
                                     const tipoAtencion = selectedTipoAtencion || "presencial";
                                     
                                     router.push(
