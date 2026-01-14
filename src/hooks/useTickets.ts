@@ -1,6 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
-import { ticketsService, Ticket, TicketStatus, TicketStatistics } from "@/services/api/tickets";
-import { handleApiError, getErrorMessage } from "@/services/utils/error-handling";
+import {
+  ticketsService,
+  Ticket,
+  TicketStatus,
+  TicketStatistics,
+} from "@/services/api/tickets";
+import {
+  handleApiError,
+  getErrorMessage,
+} from "@/services/utils/error-handling";
 
 interface UseTicketsOptions {
   estado?: TicketStatus;
@@ -40,9 +48,12 @@ export const useTickets = (options: UseTicketsOptions = {}) => {
 
       const response = await ticketsService.getTickets(params);
 
-      console.log('[useTickets] Respuesta completa:', response);
-      console.log('[useTickets] response.data:', response.data);
-      console.log('[useTickets] response.data (JSON):', JSON.stringify(response.data, null, 2));
+      console.log("[useTickets] Respuesta completa:", response);
+      console.log("[useTickets] response.data:", response.data);
+      console.log(
+        "[useTickets] response.data (JSON):",
+        JSON.stringify(response.data, null, 2)
+      );
 
       if (response.success && response.data) {
         // El backend devuelve: { tickets: [...], total: ... }
@@ -53,8 +64,7 @@ export const useTickets = (options: UseTicketsOptions = {}) => {
         let ticketsArray: any[] = Array.isArray(actualData.tickets)
           ? actualData.tickets
           : [];
-        let totalValue: any =
-          actualData.total ?? ticketsArray.length ?? 0;
+        let totalValue: any = actualData.total ?? ticketsArray.length ?? 0;
 
         // Compatibilidad con estructuras antiguas
         if (ticketsArray.length === 0) {
@@ -77,10 +87,7 @@ export const useTickets = (options: UseTicketsOptions = {}) => {
               "[useTickets] Usando legacy array directo, cantidad:",
               ticketsArray.length
             );
-          } else if (
-            legacyData?.data &&
-            Array.isArray(legacyData.data)
-          ) {
+          } else if (legacyData?.data && Array.isArray(legacyData.data)) {
             ticketsArray = legacyData.data;
             totalValue = legacyData.data.length;
             console.log(
@@ -108,15 +115,19 @@ export const useTickets = (options: UseTicketsOptions = {}) => {
           ticketsData = ticketsArray.map((ticket: any) => {
             // El backend ahora siempre envía rol_usuario en cada ticket
             // Priorizar rol_usuario ya que es el campo que el backend envía directamente
-            let userRole = ticket.rol_usuario || ticket.usuario?.rol || ticket.rol || 'cliente';
-            
+            let userRole =
+              ticket.rol_usuario ||
+              ticket.usuario?.rol ||
+              ticket.rol ||
+              "cliente";
+
             // Normalizar el rol (asegurar formato consistente)
-            if (userRole === 'profesional' || userRole === 'professional') {
-              userRole = 'profesional';
-            } else if (userRole === 'cliente' || userRole === 'client') {
-              userRole = 'cliente';
-            } else if (userRole === 'admin' || userRole === 'administracion') {
-              userRole = 'admin';
+            if (userRole === "profesional" || userRole === "professional") {
+              userRole = "profesional";
+            } else if (userRole === "cliente" || userRole === "client") {
+              userRole = "cliente";
+            } else if (userRole === "admin" || userRole === "administracion") {
+              userRole = "admin";
             }
 
             return {
@@ -128,20 +139,27 @@ export const useTickets = (options: UseTicketsOptions = {}) => {
               correo_electronico: ticket.correo_electronico || ticket.correo,
               estado: ticket.estado,
               fecha_creacion: ticket.fecha_creacion,
-              fecha_actualizacion: ticket.fecha_actualizacion || ticket.fecha_creacion,
-              usuario: ticket.usuario || (ticket.nombre_usuario || ticket.email_usuario ? {
-                id_usuario: ticket.id_usuario,
-                nombre: ticket.nombre_usuario || 'Usuario desconocido',
-                email: ticket.email_usuario || ticket.correo_electronico || '',
-                telefono: ticket.telefono,
-                rol: userRole,
-              } : undefined),
+              fecha_actualizacion:
+                ticket.fecha_actualizacion || ticket.fecha_creacion,
+              usuario:
+                ticket.usuario ||
+                (ticket.nombre_usuario || ticket.email_usuario
+                  ? {
+                      id_usuario: ticket.id_usuario,
+                      nombre: ticket.nombre_usuario || "Usuario desconocido",
+                      email:
+                        ticket.email_usuario || ticket.correo_electronico || "",
+                      telefono: ticket.telefono,
+                      rol: userRole,
+                    }
+                  : undefined),
             };
           });
           // El total puede venir como string desde el backend
-          totalCount = typeof totalValue === 'string' 
-            ? parseInt(totalValue, 10) 
-            : (totalValue || ticketsArray.length);
+          totalCount =
+            typeof totalValue === "string"
+              ? parseInt(totalValue, 10)
+              : totalValue || ticketsArray.length;
         }
 
         setTickets(ticketsData);
@@ -179,19 +197,23 @@ export const useTickets = (options: UseTicketsOptions = {}) => {
       if (response.success && response.data) {
         // Acceder directamente a response.data
         const actualData = response.data as any;
-        
+
         // El backend ahora siempre envía rol_usuario
-        let userRole = actualData.rol_usuario || actualData.usuario?.rol || actualData.rol || 'cliente';
-        
+        let userRole =
+          actualData.rol_usuario ||
+          actualData.usuario?.rol ||
+          actualData.rol ||
+          "cliente";
+
         // Normalizar el rol
-        if (userRole === 'profesional' || userRole === 'professional') {
-          userRole = 'profesional';
-        } else if (userRole === 'cliente' || userRole === 'client') {
-          userRole = 'cliente';
-        } else if (userRole === 'admin' || userRole === 'administracion') {
-          userRole = 'admin';
+        if (userRole === "profesional" || userRole === "professional") {
+          userRole = "profesional";
+        } else if (userRole === "cliente" || userRole === "client") {
+          userRole = "cliente";
+        } else if (userRole === "admin" || userRole === "administracion") {
+          userRole = "admin";
         }
-        
+
         // Mapear el ticket del formato del backend al formato del frontend
         const ticket: Ticket = {
           id_ticket: actualData.id_ticket,
@@ -199,17 +221,26 @@ export const useTickets = (options: UseTicketsOptions = {}) => {
           asunto: actualData.asunto,
           mensaje: actualData.mensaje,
           telefono: actualData.telefono,
-          correo_electronico: actualData.correo_electronico || actualData.correo,
+          correo_electronico:
+            actualData.correo_electronico || actualData.correo,
           estado: actualData.estado,
           fecha_creacion: actualData.fecha_creacion,
-          fecha_actualizacion: actualData.fecha_actualizacion || actualData.fecha_creacion,
-          usuario: actualData.usuario || (actualData.nombre_usuario || actualData.email_usuario ? {
-            id_usuario: actualData.id_usuario,
-            nombre: actualData.nombre_usuario || 'Usuario desconocido',
-            email: actualData.email_usuario || actualData.correo_electronico || '',
-            telefono: actualData.telefono,
-            rol: userRole,
-          } : undefined),
+          fecha_actualizacion:
+            actualData.fecha_actualizacion || actualData.fecha_creacion,
+          usuario:
+            actualData.usuario ||
+            (actualData.nombre_usuario || actualData.email_usuario
+              ? {
+                  id_usuario: actualData.id_usuario,
+                  nombre: actualData.nombre_usuario || "Usuario desconocido",
+                  email:
+                    actualData.email_usuario ||
+                    actualData.correo_electronico ||
+                    "",
+                  telefono: actualData.telefono,
+                  rol: userRole,
+                }
+              : undefined),
         };
 
         return { success: true, data: ticket };
@@ -239,19 +270,23 @@ export const useTickets = (options: UseTicketsOptions = {}) => {
         if (response.success && response.data) {
           // Acceder directamente a response.data
           const actualData = response.data as any;
-          
+
           // El backend ahora siempre envía rol_usuario
-          let userRole = actualData.rol_usuario || actualData.usuario?.rol || actualData.rol || 'cliente';
-          
+          let userRole =
+            actualData.rol_usuario ||
+            actualData.usuario?.rol ||
+            actualData.rol ||
+            "cliente";
+
           // Normalizar el rol
-          if (userRole === 'profesional' || userRole === 'professional') {
-            userRole = 'profesional';
-          } else if (userRole === 'cliente' || userRole === 'client') {
-            userRole = 'cliente';
-          } else if (userRole === 'admin' || userRole === 'administracion') {
-            userRole = 'admin';
+          if (userRole === "profesional" || userRole === "professional") {
+            userRole = "profesional";
+          } else if (userRole === "cliente" || userRole === "client") {
+            userRole = "cliente";
+          } else if (userRole === "admin" || userRole === "administracion") {
+            userRole = "admin";
           }
-          
+
           // Mapear el ticket del formato del backend al formato del frontend
           const updatedTicket: Ticket = {
             id_ticket: actualData.id_ticket,
@@ -259,25 +294,32 @@ export const useTickets = (options: UseTicketsOptions = {}) => {
             asunto: actualData.asunto,
             mensaje: actualData.mensaje,
             telefono: actualData.telefono,
-            correo_electronico: actualData.correo_electronico || actualData.correo,
+            correo_electronico:
+              actualData.correo_electronico || actualData.correo,
             estado: actualData.estado || newStatus,
             fecha_creacion: actualData.fecha_creacion,
-            fecha_actualizacion: actualData.fecha_actualizacion || actualData.fecha_creacion,
-            usuario: actualData.usuario || (actualData.nombre_usuario || actualData.email_usuario ? {
-              id_usuario: actualData.id_usuario,
-              nombre: actualData.nombre_usuario || 'Usuario desconocido',
-              email: actualData.email_usuario || actualData.correo_electronico || '',
-              telefono: actualData.telefono,
-              rol: userRole,
-            } : undefined),
+            fecha_actualizacion:
+              actualData.fecha_actualizacion || actualData.fecha_creacion,
+            usuario:
+              actualData.usuario ||
+              (actualData.nombre_usuario || actualData.email_usuario
+                ? {
+                    id_usuario: actualData.id_usuario,
+                    nombre: actualData.nombre_usuario || "Usuario desconocido",
+                    email:
+                      actualData.email_usuario ||
+                      actualData.correo_electronico ||
+                      "",
+                    telefono: actualData.telefono,
+                    rol: userRole,
+                  }
+                : undefined),
           };
 
           // Actualizar el ticket en la lista local
           setTickets((prev) =>
             prev.map((ticket) =>
-              ticket.id_ticket === ticketId
-                ? updatedTicket
-                : ticket
+              ticket.id_ticket === ticketId ? updatedTicket : ticket
             )
           );
           // Recargar estadísticas si están disponibles
@@ -355,4 +397,3 @@ export const useTickets = (options: UseTicketsOptions = {}) => {
     clearError: () => setError(null),
   };
 };
-

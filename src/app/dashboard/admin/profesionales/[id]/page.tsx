@@ -50,6 +50,24 @@ const DeactivateUserModal = lazyLoad(
   () => import("@/components/dashboard/DeactivateUserModal")
 );
 
+// Genera un slug SEO-friendly basado solo en el nombre completo del profesional.
+// Ejemplo: "María López Pérez" -> "maria-lopez-perez"
+function createProfessionalSlugFromName(name: string): string {
+  const baseName = (name || "").trim();
+
+  const slugifiedName =
+    baseName
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, "")
+      .trim()
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-") || "profesional";
+
+  return slugifiedName;
+}
+
 export default function AdminProfessionalEditPage() {
   const router = useRouter();
   const params = useParams();
@@ -1282,9 +1300,10 @@ export default function AdminProfessionalEditPage() {
     }
   };
 
-  const publicProfileId = professionalIdProfesional || professional?.id;
-  const publicProfileUrl = publicProfileId
-    ? `/profesionales/${publicProfileId}`
+  // URL pública del perfil del profesional, basada en el nombre (slug) en lugar del ID
+  const publicProfileName = professional?.fullName || professional?.name || null;
+  const publicProfileUrl = publicProfileName
+    ? `/profesionales/${createProfessionalSlugFromName(publicProfileName)}`
     : null;
   const [copyToastVisible, setCopyToastVisible] = useState(false);
   const handleCopyPublicUrl = async () => {
@@ -1905,68 +1924,66 @@ export default function AdminProfessionalEditPage() {
                 </div>
 
                 {/* Public Email */}
-                {professional.publicEmail && (
-                  <div className="group relative">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
-                        <Mail className="h-3 w-3 text-gray-500" />
-                      </div>
-                      <span className="text-sm font-medium text-gray-700">
-                        Correo Público
-                      </span>
+                <div className="group relative">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
+                      <Mail className="h-3 w-3 text-gray-500" />
                     </div>
-                    {editingField === "correoPublico" ? (
-                      <div className="ml-9 space-y-2">
-                        <input
-                          type="email"
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          className="w-full px-3 py-2 text-sm border-2 border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                          autoFocus
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter")
-                              handleSaveEdit("correoPublico");
-                            if (e.key === "Escape") handleCancelEdit();
-                          }}
-                        />
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleSaveEdit("correoPublico")}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
-                          >
-                            <Save className="h-3.5 w-3.5" />
-                            Guardar
-                          </button>
-                          <button
-                            onClick={handleCancelEdit}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                          >
-                            <X className="h-3.5 w-3.5" />
-                            Cancelar
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="ml-9 flex items-center justify-between group-hover:bg-gray-50 -mx-2 px-2 py-1.5 rounded-lg transition-colors">
-                        <span className="text-sm font-medium text-gray-900">
-                          {professional.publicEmail}
-                        </span>
+                    <span className="text-sm font-medium text-gray-700">
+                      Correo Público
+                    </span>
+                  </div>
+                  {editingField === "correoPublico" ? (
+                    <div className="ml-9 space-y-2">
+                      <input
+                        type="email"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border-2 border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter")
+                            handleSaveEdit("correoPublico");
+                          if (e.key === "Escape") handleCancelEdit();
+                        }}
+                      />
+                      <div className="flex items-center gap-2">
                         <button
-                          onClick={() =>
-                            handleEditField(
-                              "correoPublico",
-                              professional.publicEmail || ""
-                            )
-                          }
-                          className="opacity-0 group-hover:opacity-100 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-all"
+                          onClick={() => handleSaveEdit("correoPublico")}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
                         >
-                          <Edit className="h-3.5 w-3.5" />
-                          Editar
+                          <Save className="h-3.5 w-3.5" />
+                          Guardar
+                        </button>
+                        <button
+                          onClick={handleCancelEdit}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          Cancelar
                         </button>
                       </div>
-                    )}
-                  </div>
-                )}
+                    </div>
+                  ) : (
+                    <div className="ml-9 flex items-center justify-between group-hover:bg-gray-50 -mx-2 px-2 py-1.5 rounded-lg transition-colors">
+                      <span className="text-sm font-medium text-gray-900">
+                        {professional.publicEmail || "Sin correo público"}
+                      </span>
+                      <button
+                        onClick={() =>
+                          handleEditField(
+                            "correoPublico",
+                            professional.publicEmail || ""
+                          )
+                        }
+                        className="opacity-0 group-hover:opacity-100 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-all"
+                      >
+                        <Edit className="h-3.5 w-3.5" />
+                        Editar
+                      </button>
+                    </div>
+                  )}
+                </div>
 
                 {/* Bio */}
                 <div className="group relative">
@@ -2487,69 +2504,67 @@ export default function AdminProfessionalEditPage() {
                 </div>
 
                 {/* Home Visit Postal Codes */}
-                {professional.homeVisitPostalCodes && (
-                  <div className="group relative">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
-                        <MapPin className="h-3 w-3 text-gray-500" />
-                      </div>
-                      <span className="text-sm font-medium text-gray-700">
-                        CPs Domicilio
-                      </span>
+                <div className="group relative">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
+                      <MapPin className="h-3 w-3 text-gray-500" />
                     </div>
-                    {editingField === "codigosPostales" ? (
-                      <div className="ml-9 space-y-2">
-                        <input
-                          type="text"
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          className="w-full px-3 py-2 text-sm border-2 border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                          placeholder="Ej: 28001, 28002, 28003"
-                          autoFocus
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter")
-                              handleSaveEdit("codigosPostales");
-                            if (e.key === "Escape") handleCancelEdit();
-                          }}
-                        />
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleSaveEdit("codigosPostales")}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
-                          >
-                            <Save className="h-3.5 w-3.5" />
-                            Guardar
-                          </button>
-                          <button
-                            onClick={handleCancelEdit}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                          >
-                            <X className="h-3.5 w-3.5" />
-                            Cancelar
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="ml-9 flex items-center justify-between group-hover:bg-gray-50 -mx-2 px-2 py-1.5 rounded-lg transition-colors">
-                        <span className="text-sm font-medium text-gray-900">
-                          {professional.homeVisitPostalCodes}
-                        </span>
+                    <span className="text-sm font-medium text-gray-700">
+                      CPs Domicilio
+                    </span>
+                  </div>
+                  {editingField === "codigosPostales" ? (
+                    <div className="ml-9 space-y-2">
+                      <input
+                        type="text"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border-2 border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                        placeholder="Ej: 28001, 28002, 28003"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter")
+                            handleSaveEdit("codigosPostales");
+                          if (e.key === "Escape") handleCancelEdit();
+                        }}
+                      />
+                      <div className="flex items-center gap-2">
                         <button
-                          onClick={() =>
-                            handleEditField(
-                              "codigosPostales",
-                              professional.homeVisitPostalCodes || ""
-                            )
-                          }
-                          className="opacity-0 group-hover:opacity-100 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-all"
+                          onClick={() => handleSaveEdit("codigosPostales")}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
                         >
-                          <Edit className="h-3.5 w-3.5" />
-                          Editar
+                          <Save className="h-3.5 w-3.5" />
+                          Guardar
+                        </button>
+                        <button
+                          onClick={handleCancelEdit}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          Cancelar
                         </button>
                       </div>
-                    )}
-                  </div>
-                )}
+                    </div>
+                  ) : (
+                    <div className="ml-9 flex items-center justify-between group-hover:bg-gray-50 -mx-2 px-2 py-1.5 rounded-lg transition-colors">
+                      <span className="text-sm font-medium text-gray-900">
+                        {professional.homeVisitPostalCodes || "Sin códigos postales especificados"}
+                      </span>
+                      <button
+                        onClick={() =>
+                          handleEditField(
+                            "codigosPostales",
+                            professional.homeVisitPostalCodes || ""
+                          )
+                        }
+                        className="opacity-0 group-hover:opacity-100 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-all"
+                      >
+                        <Edit className="h-3.5 w-3.5" />
+                        Editar
+                      </button>
+                    </div>
+                  )}
+                </div>
 
                 {/* City */}
                 <div className="group relative">

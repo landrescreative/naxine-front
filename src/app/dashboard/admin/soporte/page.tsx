@@ -81,9 +81,13 @@ export default function AdminSoportePage() {
   useEffect(() => {
     const prevFilter = prevStatusFilterRef.current;
     prevStatusFilterRef.current = statusFilter;
-    
+
     // Only reset if filter actually changed (not on initial mount)
-    if (prevFilter !== undefined && prevFilter !== statusFilter && currentOffset !== 0) {
+    if (
+      prevFilter !== undefined &&
+      prevFilter !== statusFilter &&
+      currentOffset !== 0
+    ) {
       goToPage(0);
     }
   }, [statusFilter, currentOffset, goToPage]);
@@ -118,7 +122,10 @@ export default function AdminSoportePage() {
         setSelectedTicket(result.data);
         setIsTicketModalOpen(true);
       } else {
-        console.error("[AdminSoportePage] Error al obtener ticket:", result.error);
+        console.error(
+          "[AdminSoportePage] Error al obtener ticket:",
+          result.error
+        );
       }
     } catch (error) {
       console.error("[AdminSoportePage] Error en handleViewTicket:", error);
@@ -142,7 +149,10 @@ export default function AdminSoportePage() {
     if (!selectedTicket) return;
 
     setIsUpdatingStatus(true);
-    const result = await updateTicketStatus(selectedTicket.id_ticket, newStatus);
+    const result = await updateTicketStatus(
+      selectedTicket.id_ticket,
+      newStatus
+    );
 
     if (result.success && result.data) {
       // Cerrar el modal después de actualizar exitosamente
@@ -208,7 +218,9 @@ export default function AdminSoportePage() {
         <div className="mb-4 flex items-center gap-4">
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-gray-500" />
-            <span className="text-sm font-medium text-gray-700">Filtrar por:</span>
+            <span className="text-sm font-medium text-gray-700">
+              Filtrar por:
+            </span>
           </div>
           <div className="flex gap-2">
             <button
@@ -256,7 +268,11 @@ export default function AdminSoportePage() {
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           {error && (
-            <div className="p-4 bg-red-50 border-b border-red-200" role="alert" aria-live="assertive">
+            <div
+              className="p-4 bg-red-50 border-b border-red-200"
+              role="alert"
+              aria-live="assertive"
+            >
               <p className="text-sm text-red-800">{error}</p>
             </div>
           )}
@@ -271,10 +287,13 @@ export default function AdminSoportePage() {
             ) : tickets.length === 0 ? (
               <div className="flex items-center justify-center py-12">
                 <div className="text-center">
-                  <p className="text-gray-500 mb-2">No hay tickets disponibles</p>
+                  <p className="text-gray-500 mb-2">
+                    No hay tickets disponibles
+                  </p>
                   {total > 0 && (
                     <p className="text-xs text-gray-400">
-                      Total en servidor: {total} | Tickets cargados: {tickets.length}
+                      Total en servidor: {total} | Tickets cargados:{" "}
+                      {tickets.length}
                     </p>
                   )}
                 </div>
@@ -295,22 +314,40 @@ export default function AdminSoportePage() {
                         aria-label="Seleccionar todos los tickets"
                       />
                     </th>
-                    <th scope="col" className="text-left py-4 px-6 text-sm font-medium text-gray-900">
+                    <th
+                      scope="col"
+                      className="text-left py-4 px-6 text-sm font-medium text-gray-900"
+                    >
                       Usuario
                     </th>
-                    <th scope="col" className="text-left py-4 px-6 text-sm font-medium text-gray-900">
+                    <th
+                      scope="col"
+                      className="text-left py-4 px-6 text-sm font-medium text-gray-900"
+                    >
                       Asunto
                     </th>
-                    <th scope="col" className="text-left py-4 px-6 text-sm font-medium text-gray-900">
+                    <th
+                      scope="col"
+                      className="text-left py-4 px-6 text-sm font-medium text-gray-900"
+                    >
                       Mensaje
                     </th>
-                    <th scope="col" className="text-left py-4 px-6 text-sm font-medium text-gray-900">
+                    <th
+                      scope="col"
+                      className="text-left py-4 px-6 text-sm font-medium text-gray-900"
+                    >
                       Fecha
                     </th>
-                    <th scope="col" className="text-left py-4 px-6 text-sm font-medium text-gray-900">
+                    <th
+                      scope="col"
+                      className="text-left py-4 px-6 text-sm font-medium text-gray-900"
+                    >
                       Estado
                     </th>
-                    <th scope="col" className="text-left py-4 px-6 text-sm font-medium text-gray-900">
+                    <th
+                      scope="col"
+                      className="text-left py-4 px-6 text-sm font-medium text-gray-900"
+                    >
                       Acción
                     </th>
                   </tr>
@@ -319,7 +356,10 @@ export default function AdminSoportePage() {
                   {tickets.map((ticket, index) => {
                     const statusDisplay = getStatusDisplay(ticket.estado);
                     return (
-                      <tr key={ticket.id_ticket || `ticket-${index}`} className="hover:bg-gray-50">
+                      <tr
+                        key={ticket.id_ticket || `ticket-${index}`}
+                        className="hover:bg-gray-50"
+                      >
                         <td className="py-4 px-6">
                           <input
                             type="checkbox"
@@ -470,7 +510,9 @@ export default function AdminSoportePage() {
                       Ticket #{selectedTicket.id_ticket}
                     </h2>
                     <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-2 ${getStatusDisplay(selectedTicket.estado).color}`}
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-2 ${
+                        getStatusDisplay(selectedTicket.estado).color
+                      }`}
                     >
                       {getStatusDisplay(selectedTicket.estado).label}
                     </span>
@@ -501,7 +543,8 @@ export default function AdminSoportePage() {
                     </div>
                     <div className="min-w-0">
                       <h3 className="text-base sm:text-lg font-bold text-gray-900 truncate">
-                        {selectedTicket.usuario?.nombre || "Usuario desconocido"}
+                        {selectedTicket.usuario?.nombre ||
+                          "Usuario desconocido"}
                       </h3>
                       <p className="text-xs sm:text-sm text-gray-500">
                         {selectedTicket.usuario?.rol || "N/A"}
@@ -516,9 +559,12 @@ export default function AdminSoportePage() {
                         Teléfono: {selectedTicket.telefono}
                       </p>
                     )}
-                    {(selectedTicket.correo_electronico || selectedTicket.usuario?.email) && (
+                    {(selectedTicket.correo_electronico ||
+                      selectedTicket.usuario?.email) && (
                       <p className="text-xs sm:text-sm text-gray-900 font-medium break-all">
-                        Correo: {selectedTicket.correo_electronico || selectedTicket.usuario?.email}
+                        Correo:{" "}
+                        {selectedTicket.correo_electronico ||
+                          selectedTicket.usuario?.email}
                       </p>
                     )}
                     {selectedTicket.fecha_creacion && (
@@ -606,7 +652,9 @@ export default function AdminSoportePage() {
                     className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 bg-primary text-white rounded-lg text-sm sm:text-base font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
                   >
                     <Mail className="h-4 w-4" />
-                    <span className="hidden sm:inline">Enviar correo electrónico</span>
+                    <span className="hidden sm:inline">
+                      Enviar correo electrónico
+                    </span>
                     <span className="sm:hidden">Enviar correo</span>
                   </button>
                 </div>

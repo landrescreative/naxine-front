@@ -353,6 +353,8 @@ export class ProfessionalsService {
         modalidadesSesiones: modalidadesSesiones.length > 0 ? modalidadesSesiones : undefined,
         // Guardar datos originales de disponibilidad para acceso directo
         disponibilidadRaw: professionalRaw.disponibilidad || undefined,
+        // Guardar objeto raw completo para acceso a campos no mapeados
+        raw: professionalRaw,
       };
 
       console.log(`[ProfessionalsService] Profesional mapeado:`, JSON.stringify(professional, null, 2));

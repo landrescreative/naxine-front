@@ -9,6 +9,24 @@ import { PublicSpecialty, PublicService } from "@/services/api/specialties";
 import { professionalsService } from "@/services/api/professionals";
 import type { ApiProfessional } from "@/services/types/api";
 
+// Genera un slug SEO-friendly basado solo en el nombre del profesional.
+// Ejemplo: name = "María López Pérez" -> "maria-lopez-perez"
+function createProfessionalSlug(name: string): string {
+  const baseName = (name || "").trim();
+
+  const slugifiedName =
+    baseName
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, "")
+      .trim()
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-") || "profesional";
+
+  return slugifiedName;
+}
+
 interface CategoryServicePageProps {
   categorySlug: string;
   serviceSlug?: string;
@@ -419,7 +437,7 @@ export default function CategoryServicePage({
                 const mappedProfessional = {
                   id: professional.id || "",
                   name:
-                    professional.name || professional.fullName || "Profesional",
+                    professional.fullName || professional.name || "Profesional",
                   title: professional.specialty || "Especialista",
                   description: professional.bio || "",
                   rating: professional.rating || 0,
@@ -432,7 +450,11 @@ export default function CategoryServicePage({
                   specialties: professional.specialty
                     ? [professional.specialty]
                     : [],
-                  slug: professional.id || "", // Usar ID como slug si no hay slug
+                  // Slug basado SOLO en el nombre del profesional (sin ID en la URL)
+                  // Ejemplo: "/psicologia/ansiedad/maria-lopez-perez"
+                  slug: createProfessionalSlug(
+                    professional.fullName || professional.name || "Profesional"
+                  ),
                 };
 
                 return (

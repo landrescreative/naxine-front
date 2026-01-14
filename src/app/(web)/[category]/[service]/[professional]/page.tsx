@@ -10,26 +10,16 @@ interface ProfessionalPageProps {
   params: Promise<{
     category: string;
     service: string;
-    professional: string;
+    professional: string; // ahora puede ser "123" o un slug basado en el nombre
   }>;
 }
 
 export async function generateMetadata({ params }: ProfessionalPageProps) {
-  const { professional: professionalId } = await params;
-
-  // Validar que el ID del profesional sea válido antes de intentar cargar
-  // Los IDs de profesionales son números enteros (INT AUTO_INCREMENT en la BD)
-  const isValidId = /^\d+$/.test(professionalId);
-  
-  if (!isValidId || professionalId.length < 1 || professionalId.length > 10) {
-    return {
-      title: "Profesional no encontrado",
-    };
-  }
+  const { professional } = await params;
 
   try {
     const response = await professionalsService.getPublicProfessionalById(
-      professionalId
+      professional
     );
 
     if (response.success && response.data) {
@@ -75,27 +65,15 @@ export async function generateMetadata({ params }: ProfessionalPageProps) {
 export default async function ProfessionalPage({
   params,
 }: ProfessionalPageProps) {
-  const { professional: professionalId } = await params;
+  const { professional } = await params;
 
   console.log(
-    `[ProfessionalPage] Loading professional with ID: ${professionalId}`
+    `[ProfessionalPage] Loading professional with identifier: ${professional}`
   );
-
-  // Validar que el ID del profesional sea válido
-  // Los IDs de profesionales son números enteros (INT AUTO_INCREMENT en la BD)
-  // Rechazar cualquier cosa que no sea un número o que contenga caracteres inválidos
-  const isValidId = /^\d+$/.test(professionalId);
-  
-  if (!isValidId || professionalId.length < 1 || professionalId.length > 10) {
-    console.error(
-      `[ProfessionalPage] Invalid professional ID format: ${professionalId}. Expected numeric ID.`
-    );
-    notFound();
-  }
 
   // Cargar el perfil del profesional desde el API
   const response = await professionalsService.getPublicProfessionalById(
-    professionalId
+    professional
   );
 
   console.log(`[ProfessionalPage] Response:`, {

@@ -177,6 +177,8 @@ export interface ApiProfessional {
       hasta: string;
     };
   };
+  // Objeto raw completo del backend para acceso a campos no mapeados
+  raw?: any;
 }
 
 export interface ApiClient {

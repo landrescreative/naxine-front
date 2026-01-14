@@ -101,13 +101,17 @@ export default function SoportePage() {
     <div className="min-h-[calc(100vh-4rem)] bg-gray-50 flex items-center justify-center p-4 sm:p-6">
       <div className="w-full max-w-2xl">
         {/* Header */}
-        <h1 className="text-2xl sm:text-3xl font-bold text-black mb-6 sm:mb-8">Soporte</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-black mb-6 sm:mb-8">
+          Soporte
+        </h1>
 
         {/* Main Card */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 lg:p-8">
           {/* Contact Us Section */}
           <div className="mb-6 sm:mb-8">
-            <h2 className="text-xl sm:text-2xl font-bold text-black mb-3 sm:mb-4">Contáctanos</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-black mb-3 sm:mb-4">
+              Contáctanos
+            </h2>
             <p className="text-gray-600 text-base leading-relaxed">
               Deja un mensaje al centro de soporte de Nexine y te contactaremos
               lo más brevemente posible.
@@ -196,7 +200,8 @@ export default function SoportePage() {
                 htmlFor="telefono"
                 className="block text-sm font-medium text-black mb-2"
               >
-                Teléfono <span className="text-gray-500 text-xs">(opcional)</span>
+                Teléfono{" "}
+                <span className="text-gray-500 text-xs">(opcional)</span>
               </label>
               <input
                 id="telefono"

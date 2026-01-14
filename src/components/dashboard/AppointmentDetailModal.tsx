@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { ApiAppointment } from "@/services/types/api";
 import { citasService } from "@/services/api/citas";
 import { disponibilidadService } from "@/services/api/disponibilidad";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 interface AppointmentDetailModalProps {
   appointment: ApiAppointment | null;
@@ -69,17 +70,14 @@ export default function AppointmentDetailModal({
   const [isRescheduling, setIsRescheduling] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const rescheduleSectionRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   
-  // Cerrar modal con ESC
+  // Hook para atrapar el foco dentro del modal
+  const focusTrapRef = useFocusTrap(isOpen, onClose, closeButtonRef);
+  
+  // Prevenir scroll del body cuando el modal está abierto
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-      }
-    };
-
     if (isOpen) {
-      document.addEventListener("keydown", handleEscape);
       // Prevenir scroll del body cuando el modal está abierto
       document.body.style.overflow = "hidden";
       // Asegurar que no haya márgenes que causen gaps
@@ -88,12 +86,11 @@ export default function AppointmentDetailModal({
     }
 
     return () => {
-      document.removeEventListener("keydown", handleEscape);
       document.body.style.overflow = "unset";
       document.body.style.margin = "";
       document.body.style.padding = "";
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -732,7 +729,13 @@ export default function AppointmentDetailModal({
       {/* Modal Container */}
       <div className="fixed inset-0 flex items-center justify-center p-4 pointer-events-none">
         <div
-          className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden pointer-events-auto transform transition-all duration-300 scale-100 animate-in fade-in zoom-in-95"
+          ref={focusTrapRef as React.RefObject<HTMLDivElement>}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-title"
+          aria-describedby="modal-description"
+          tabIndex={-1}
+          className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden pointer-events-auto transform transition-all duration-300 scale-100 animate-in fade-in zoom-in-95 focus:outline-none"
           onClick={(e) => e.stopPropagation()}
           style={{
             boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)",
@@ -741,7 +744,7 @@ export default function AppointmentDetailModal({
           {/* Header con gradiente */}
           <div className="sticky top-0 bg-gradient-to-r from-primary/10 via-primary/5 to-white border-b border-gray-200/50 px-6 py-5 flex items-center justify-between z-10 backdrop-blur-sm">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center" aria-hidden="true">
                 <svg
                   className="w-5 h-5 text-primary"
                   fill="none"
@@ -756,14 +759,15 @@ export default function AppointmentDetailModal({
                   />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+              <h2 id="modal-title" className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
                 Detalles de la Cita
               </h2>
             </div>
             <button
+              ref={closeButtonRef}
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full p-2 transition-all duration-200 hover:scale-110"
-              aria-label="Cerrar modal"
+              className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full p-2 transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+              aria-label="Cerrar modal de detalles de cita"
             >
               <svg
                 className="w-6 h-6"
@@ -784,6 +788,7 @@ export default function AppointmentDetailModal({
           {/* Content */}
           <div 
             ref={contentRef}
+            id="modal-description"
             className="px-6 py-6 space-y-6 overflow-y-auto max-h-[calc(90vh-180px)]"
           >
             {/* Estado */}
@@ -1368,12 +1373,14 @@ export default function AppointmentDetailModal({
                         newMonth.setMonth(newMonth.getMonth() - 1);
                         setCurrentMonth(newMonth);
                       }}
-                      className="p-2 hover:bg-gray-100 rounded-lg"
+                      className="p-2 hover:bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                      aria-label="Mes anterior"
                     >
                       <svg
                         className="w-4 h-4"
                         fill="currentColor"
                         viewBox="0 0 24 24"
+                        aria-hidden="true"
                       >
                         <path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
                       </svg>
@@ -1384,7 +1391,8 @@ export default function AppointmentDetailModal({
                         newMonth.setMonth(newMonth.getMonth() + 1);
                         setCurrentMonth(newMonth);
                       }}
-                      className="p-2 hover:bg-gray-100 rounded-lg"
+                      className="p-2 hover:bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                      aria-label="Mes siguiente"
                     >
                       <svg
                         className="w-4 h-4"
@@ -1425,13 +1433,15 @@ export default function AppointmentDetailModal({
                                 }
                               }, 100);
                             }}
-                            className={`px-3 py-2 rounded-md text-sm whitespace-nowrap snap-center ${
+                            className={`px-3 py-2 rounded-md text-sm whitespace-nowrap snap-center focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
                               isSelected
                                 ? "bg-primary text-white"
                                 : day.isToday
                                 ? "bg-primary/20 text-primary border border-primary/30"
                                 : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
                             }`}
+                            aria-label={`Seleccionar fecha ${day.dayName} ${day.dayNumber}`}
+                            aria-pressed={isSelected}
                           >
                             {day.dayName} {day.dayNumber}
                           </button>
@@ -1477,18 +1487,20 @@ export default function AppointmentDetailModal({
                                   setSelectedTimeSlot(slot.time)
                                 }
                                 disabled={!slot.available}
-                                className={`w-full text-left px-4 py-3 rounded-xl border flex items-center justify-between transition-all ${
+                                className={`w-full text-left px-4 py-3 rounded-xl border flex items-center justify-between transition-all focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
                                   selectedTimeSlot === slot.time
                                     ? "bg-primary/10 border-primary text-primary shadow-md"
                                     : !slot.available
                                     ? "bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed opacity-60"
                                     : "bg-white border-gray-200 hover:bg-green-50 hover:border-green-300 hover:shadow-sm"
                                 }`}
-                                title={
+                                aria-label={
                                   !slot.available
-                                    ? "Este horario está ocupado"
-                                    : "Click para seleccionar"
+                                    ? `Horario ${slot.displayTime} no disponible`
+                                    : `Seleccionar horario ${slot.displayTime}`
                                 }
+                                aria-pressed={selectedTimeSlot === slot.time}
+                                aria-disabled={!slot.available}
                               >
                                 <div className="flex items-center gap-3">
                                   <div
@@ -1549,7 +1561,9 @@ export default function AppointmentDetailModal({
                     <button
                       onClick={handleConfirmReschedule}
                       disabled={isRescheduling}
-                      className="w-full bg-primary text-white py-3 rounded-lg font-bold hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      className="w-full bg-primary text-white py-3 rounded-lg font-bold hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                      aria-label="Confirmar reagendamiento de cita"
+                      aria-busy={isRescheduling}
                     >
                       {isRescheduling ? (
                         <>
@@ -1637,7 +1651,8 @@ export default function AppointmentDetailModal({
                       }
                     }, 200);
                   }}
-                  className="px-6 py-2.5 text-white bg-primary rounded-xl hover:bg-primary-dark transition-all duration-200 font-semibold shadow-sm hover:shadow-md transform hover:-translate-y-0.5 flex items-center gap-2"
+                  className="px-6 py-2.5 text-white bg-primary rounded-xl hover:bg-primary-dark transition-all duration-200 font-semibold shadow-sm hover:shadow-md transform hover:-translate-y-0.5 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                  aria-label="Reagendar cita"
                 >
                   <svg
                     className="w-5 h-5"
@@ -1664,14 +1679,16 @@ export default function AppointmentDetailModal({
                     setSelectedDate(null);
                     setSelectedTimeSlot(null);
                   }}
-                  className="px-6 py-2.5 text-gray-700 bg-white border-2 border-gray-300 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-semibold shadow-sm hover:shadow-md"
+                  className="px-6 py-2.5 text-gray-700 bg-white border-2 border-gray-300 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-semibold shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+                  aria-label="Cancelar reagendamiento"
                 >
                   Cancelar
                 </button>
               )}
               <button
                 onClick={onClose}
-                className="px-6 py-2.5 text-gray-700 bg-white border-2 border-gray-300 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-semibold shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
+                className="px-6 py-2.5 text-gray-700 bg-white border-2 border-gray-300 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-semibold shadow-sm hover:shadow-md transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+                aria-label="Cerrar modal"
               >
                 {isRescheduleMode ? "Cerrar" : "Cerrar"}
               </button>

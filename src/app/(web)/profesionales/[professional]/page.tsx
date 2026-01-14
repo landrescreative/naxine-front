@@ -17,20 +17,15 @@ interface ProfessionalPublicPageProps {
   }>;
 }
 
-export async function generateMetadata({ params }: ProfessionalPublicPageProps) {
-  const { professional: professionalId } = await params;
-
-  const isValidId = /^\d+$/.test(professionalId);
-
-  if (!isValidId || professionalId.length < 1 || professionalId.length > 10) {
-    return {
-      title: "Profesional no encontrado",
-    };
-  }
+export async function generateMetadata({
+  params,
+}: ProfessionalPublicPageProps) {
+  const { professional } = await params;
 
   try {
+    // El backend ahora acepta tanto ID numérico como slug/nombre del profesional
     const response = await professionalsService.getPublicProfessionalById(
-      professionalId
+      professional
     );
 
     if (response.success && response.data) {
@@ -76,23 +71,15 @@ export async function generateMetadata({ params }: ProfessionalPublicPageProps) 
 export default async function ProfessionalPublicPage({
   params,
 }: ProfessionalPublicPageProps) {
-  const { professional: professionalId } = await params;
+  const { professional } = await params;
 
   console.log(
-    `[ProfessionalPublicPage] Loading professional with ID: ${professionalId}`
+    `[ProfessionalPublicPage] Loading professional with identifier: ${professional}`
   );
 
-  const isValidId = /^\d+$/.test(professionalId);
-
-  if (!isValidId || professionalId.length < 1 || professionalId.length > 10) {
-    console.error(
-      `[ProfessionalPublicPage] Invalid professional ID format: ${professionalId}. Expected numeric ID.`
-    );
-    notFound();
-  }
-
+  // El backend ahora acepta tanto ID numérico como slug/nombre del profesional
   const response = await professionalsService.getPublicProfessionalById(
-    professionalId
+    professional
   );
 
   console.log(`[ProfessionalPublicPage] Response:`, {
@@ -124,5 +111,3 @@ export default async function ProfessionalPublicPage({
     </Suspense>
   );
 }
-
-

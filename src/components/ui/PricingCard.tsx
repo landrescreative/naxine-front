@@ -7,7 +7,6 @@ interface PricingCardProps {
   savings?: string;
   isPopular?: boolean;
   onPurchase: () => void;
-  onDetails?: () => void;
 }
 
 export default function PricingCard({
@@ -19,7 +18,6 @@ export default function PricingCard({
   savings,
   isPopular = false,
   onPurchase,
-  onDetails,
 }: PricingCardProps) {
   return (
     <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow relative h-full">
@@ -78,14 +76,6 @@ export default function PricingCard({
           >
             Comprar ahora
           </button>
-          {onDetails && (
-            <button
-              onClick={onDetails}
-              className="bg-white text-primary border border-primary px-6 py-2 rounded-lg hover:bg-primary/5 transition-colors"
-            >
-              Ver detalles
-            </button>
-          )}
         </div>
       </div>
     </div>
