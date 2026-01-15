@@ -31,6 +31,8 @@ import {
   Calendar as CalendarIcon,
   Info,
   Loader2,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { type AdminProfessional } from "@/data/adminProfessionals";
@@ -195,6 +197,14 @@ export default function AdminProfessionalEditPage() {
   }>({});
   const [priceSaveSuccessVisible, setPriceSaveSuccessVisible] = useState(false);
   const [priceSaveError, setPriceSaveError] = useState<string | null>(null);
+  // Estados para crear nuevo precio
+  const [creatingPrice, setCreatingPrice] = useState(false);
+  const [newPriceModalidad, setNewPriceModalidad] = useState<string | null>(null);
+  const [newPriceData, setNewPriceData] = useState<{
+    nombre?: string;
+    precio?: string;
+    duracion?: string;
+  }>({});
 
   // Opciones de duración para precios
   const durationOptions = Array.from({ length: 7 }).map((_, i) => {
@@ -1239,6 +1249,211 @@ export default function AdminProfessionalEditPage() {
     setEditingPriceId(null);
     setEditingPriceData({});
     setPriceSaveError(null);
+  };
+
+  // Función para crear nuevo precio
+  const handleCreatePrice = async () => {
+    if (!professionalIdProfesional || !newPriceModalidad) return;
+
+    // Validar campos requeridos
+    if (!newPriceData.nombre || !newPriceData.precio) {
+      setPriceSaveError("El nombre y el precio son campos requeridos");
+      return;
+    }
+
+    setPriceSaveError(null);
+
+    try {
+      const adminToken =
+        typeof window !== "undefined"
+          ? JSON.parse(window.localStorage.getItem("user") || "{}")?.token
+          : null;
+      if (!adminToken) {
+        setPriceSaveError("Token de administrador no disponible");
+        return;
+      }
+
+      const apiBase = (
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
+      ).replace(/\/$/, "");
+
+      // Convertir duración de "30 min" a minutos numéricos
+      let duracionMinutos = null;
+      if (newPriceData.duracion) {
+        const duracionMatch = newPriceData.duracion.match(/(\d+)\s*min/i);
+        if (duracionMatch) {
+          duracionMinutos = parseInt(duracionMatch[1], 10);
+        }
+      }
+
+      // Normalizar modalidad para el backend
+      // El ENUM de la BD acepta: 'presencial', 'virtual', 'ambas', 'domicilio'
+      // Si es "presencial_virtual", guardar como "presencial" (los precios son compartidos)
+      let modalidadBackend = "presencial";
+      if (newPriceModalidad === "domicilio") {
+        modalidadBackend = "domicilio"; // El ENUM acepta 'domicilio', no 'a_domicilio'
+      } else if (newPriceModalidad === "virtual") {
+        modalidadBackend = "virtual";
+      } else if (newPriceModalidad === "presencial_virtual") {
+        // Si tiene ambas modalidades, guardar como "presencial" ya que los precios son compartidos
+        modalidadBackend = "presencial";
+      }
+      
+
+      const response = await fetch(
+        `${apiBase}/profesionales/admin/${professionalIdProfesional}/precio`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            nombre_paquete: newPriceData.nombre.trim(),
+            precio: parseFloat(newPriceData.precio),
+            descripcion: null,
+            duracion_minutos: duracionMinutos,
+            modalidad: modalidadBackend || "presencial", // Asegurar que siempre haya una modalidad
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage =
+          errorData?.message ||
+          errorData?.error ||
+          "Error al crear el precio";
+        setPriceSaveError(errorMessage);
+        return;
+      }
+
+      const data = await response.json();
+
+      // Recargar los datos del profesional para actualizar la lista de precios
+      const refreshResponse = await fetch(
+        `${apiBase}/profesionales/admin/detalle/${userId}`,
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
+
+      if (refreshResponse.ok) {
+        const refreshData = await refreshResponse.json();
+        if (refreshData.success && refreshData.data && refreshData.data.profesional) {
+          const foundProfessional = refreshData.data.profesional;
+          const mappedProfessional =
+            mapBackendProfessionalToAdminProfessional(foundProfessional);
+          setProfessional(mappedProfessional);
+        }
+      }
+
+      // Limpiar formulario
+      setCreatingPrice(false);
+      setNewPriceModalidad(null);
+      setNewPriceData({});
+      setPriceSaveError(null);
+
+      // Mostrar notificación de éxito
+      setPriceSaveSuccessVisible(true);
+      setTimeout(() => {
+        setPriceSaveSuccessVisible(false);
+      }, 3000);
+    } catch (err: any) {
+      const errorMessage = err?.message || "Error al crear el precio";
+      setPriceSaveError(errorMessage);
+      console.error("Error al crear precio:", err);
+    }
+  };
+
+  const handleCancelCreatePrice = () => {
+    setCreatingPrice(false);
+    setNewPriceModalidad(null);
+    setNewPriceData({});
+    setPriceSaveError(null);
+  };
+
+  // Función para eliminar precio
+  const handleDeletePrice = async (priceIndex: number, price: any) => {
+    if (!professionalIdProfesional) return;
+
+    // Confirmar eliminación
+    if (!confirm("¿Estás seguro de que deseas eliminar este paquete de precios?")) {
+      return;
+    }
+
+    setPriceSaveError(null);
+
+    try {
+      const adminToken =
+        typeof window !== "undefined"
+          ? JSON.parse(window.localStorage.getItem("user") || "{}")?.token
+          : null;
+      if (!adminToken) {
+        setPriceSaveError("Token de administrador no disponible");
+        return;
+      }
+
+      const apiBase = (
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
+      ).replace(/\/$/, "");
+
+      const priceId = price.id_precio || price.id;
+      if (!priceId) {
+        setPriceSaveError("No se pudo identificar el ID del precio");
+        return;
+      }
+
+      const response = await fetch(
+        `${apiBase}/profesionales/admin/${professionalIdProfesional}/precio/${priceId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage =
+          errorData?.message ||
+          errorData?.error ||
+          "Error al eliminar el precio";
+        setPriceSaveError(errorMessage);
+        return;
+      }
+
+      // Recargar los datos del profesional para actualizar la lista de precios
+      const refreshResponse = await fetch(
+        `${apiBase}/profesionales/admin/detalle/${userId}`,
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
+
+      if (refreshResponse.ok) {
+        const refreshData = await refreshResponse.json();
+        if (refreshData.success && refreshData.data && refreshData.data.profesional) {
+          const foundProfessional = refreshData.data.profesional;
+          const mappedProfessional =
+            mapBackendProfessionalToAdminProfessional(foundProfessional);
+          setProfessional(mappedProfessional);
+        }
+      }
+
+      setPriceSaveError(null);
+
+      // Mostrar notificación de éxito
+      setPriceSaveSuccessVisible(true);
+      setTimeout(() => {
+        setPriceSaveSuccessVisible(false);
+      }, 3000);
+    } catch (err: any) {
+      const errorMessage = err?.message || "Error al eliminar el precio";
+      setPriceSaveError(errorMessage);
+      console.error("Error al eliminar precio:", err);
+    }
   };
 
   const handleApprove = async () => {
@@ -3472,16 +3687,90 @@ export default function AdminProfessionalEditPage() {
                 ) {
                   pricesList = Object.values(professional.prices);
                 }
+                
 
-                if (pricesList.length === 0) {
-                  return (
-                    <span className="text-gray-500 text-sm">
-                      No especificados
-                    </span>
-                  );
+                // Función para obtener el nombre de la modalidad
+                const getModalityName = (modality: string) => {
+                  switch (modality.toLowerCase()) {
+                    case "domicilio":
+                    case "a_domicilio":
+                      return "A Domicilio";
+                    case "presencial_virtual":
+                      return "Presencial/Virtual";
+                    case "virtual":
+                    case "en_linea":
+                    case "online":
+                      return "Virtual";
+                    case "presencial":
+                    default:
+                      return "Presencial";
+                  }
+                };
+
+                // Determinar modalidades disponibles del profesional
+                // Los precios de presencial y virtual SIEMPRE son los mismos, solo se separan los de domicilio
+                const availableModalities = new Set<string>();
+                
+                // Verificar modalidades desde el array de modalidades
+                if (professional.modalities && Array.isArray(professional.modalities)) {
+                  professional.modalities.forEach((mod: string) => {
+                    const modLower = mod.toLowerCase().trim();
+                    if (modLower.includes("domicilio") || modLower.includes("a_domicilio")) {
+                      availableModalities.add("domicilio");
+                    } else if (
+                      modLower.includes("virtual") || 
+                      modLower.includes("en_linea") || 
+                      modLower.includes("online") ||
+                      modLower.includes("presencial")
+                    ) {
+                      // Presencial y virtual se tratan como la misma categoría
+                      availableModalities.add("presencial_virtual");
+                    }
+                  });
                 }
+                
+                // También verificar desde campos del backend si están disponibles
+                // Verificar modo_atencion y modalidad_cita desde el objeto raw si existe
+                const rawData = (professional as any).raw || {};
+                const modoAtencion = rawData.modo_atencion || rawData.modoAtencion;
+                const modalidadCita = rawData.modalidad_cita || rawData.modalidadCita;
+                
+                // Verificar si tiene códigos postales de domicilio (indica que ofrece servicios a domicilio)
+                const codigosPostalesDomicilio = professional.homeVisitPostalCodes || rawData.codigos_postales_domicilio;
+                const tieneCodigosPostalesDomicilio = codigosPostalesDomicilio && String(codigosPostalesDomicilio).trim().length > 0;
+                
+                if (modoAtencion) {
+                  const modoLower = String(modoAtencion).toLowerCase().trim();
+                  if (modoLower.includes("domicilio") || modoLower === "a_domicilio") {
+                    availableModalities.add("domicilio");
+                  }
+                }
+                
+                // Si tiene códigos postales de domicilio, significa que ofrece servicios a domicilio
+                if (tieneCodigosPostalesDomicilio) {
+                  availableModalities.add("domicilio");
+                }
+                
+                if (modalidadCita) {
+                  const modalidadLower = String(modalidadCita).toLowerCase().trim();
+                  if (
+                    modalidadLower === "ambas" ||
+                    modalidadLower.includes("presencial") ||
+                    modalidadLower.includes("virtual") ||
+                    modalidadLower.includes("en_linea") ||
+                    modalidadLower.includes("online")
+                  ) {
+                    availableModalities.add("presencial_virtual");
+                  }
+                }
+                
+                // IMPORTANTE: Siempre mostrar ambas categorías para permitir agregar precios
+                // Incluso si no están configuradas, el admin debe poder agregar precios
+                availableModalities.add("presencial_virtual"); // Siempre mostrar presencial/virtual
+                availableModalities.add("domicilio"); // Siempre mostrar domicilio para poder agregar precios
 
                 // Agrupar precios por modalidad
+                // IMPORTANTE: Presencial y Virtual siempre se agrupan juntos, solo Domicilio es separado
                 const pricesByModality: Record<
                   string,
                   { prices: any[]; originalIndices: number[] }
@@ -3490,19 +3779,24 @@ export default function AdminProfessionalEditPage() {
                 pricesList.forEach((value: any, idx: number) => {
                   if (!value) return;
                   const modalidad =
-                    value.modalidad || value.modalidad_atencion || "presencial";
+                    value.modalidad || value.modalidad_atencion || "";
                   const normalizedModality = modalidad.toLowerCase().trim();
 
-                  // Normalizar modalidad: 'domicilio' o 'a_domicilio' -> 'domicilio', otros -> 'presencial' por defecto
-                  const modalityKey =
+                  // Normalizar modalidad:
+                  // - 'domicilio' o 'a_domicilio' -> 'domicilio' (sección separada)
+                  // - Todo lo demás (presencial, virtual, en_linea, online, ambas) -> 'presencial_virtual'
+                  let modalityKey: string;
+                  if (
                     normalizedModality === "domicilio" ||
-                    normalizedModality === "a_domicilio"
-                      ? "domicilio"
-                      : normalizedModality === "virtual" ||
-                        normalizedModality === "en_linea" ||
-                        normalizedModality === "online"
-                      ? "virtual"
-                      : "presencial";
+                    normalizedModality === "a_domicilio" ||
+                    normalizedModality.includes("domicilio")
+                  ) {
+                    modalityKey = "domicilio";
+                  } else {
+                    // Presencial, virtual, en_linea, online, ambas, o cualquier otra cosa
+                    // Todos se agrupan en "presencial_virtual" porque los precios son los mismos
+                    modalityKey = "presencial_virtual";
+                  }
 
                   if (!pricesByModality[modalityKey]) {
                     pricesByModality[modalityKey] = {
@@ -3514,25 +3808,20 @@ export default function AdminProfessionalEditPage() {
                   pricesByModality[modalityKey].originalIndices.push(idx);
                 });
 
-                // Función para obtener el nombre de la modalidad
-                const getModalityName = (modality: string) => {
-                  switch (modality.toLowerCase()) {
-                    case "domicilio":
-                    case "a_domicilio":
-                      return "A Domicilio";
-                    case "virtual":
-                    case "en_linea":
-                    case "online":
-                      return "Virtual Presencial";
-                    case "presencial":
-                    default:
-                      return "Presencial";
-                  }
-                };
-
-                // Orden de visualización: presencial primero, luego domicilio, luego virtual
-                const modalityOrder = ["presencial", "domicilio", "virtual"];
-                const sortedModalities = Object.keys(pricesByModality).sort(
+                // Orden de visualización: presencial_virtual primero, luego domicilio
+                const modalityOrder = ["presencial_virtual", "domicilio"];
+                
+                // Crear un conjunto de todas las modalidades que deben mostrarse
+                // IMPORTANTE: Usar availableModalities como base, ya que contiene las modalidades
+                // que el profesional realmente tiene configuradas, incluso si no tienen precios
+                const allModalitiesToShow = new Set<string>(availableModalities);
+                
+                // También agregar cualquier modalidad que tenga precios (por si acaso)
+                Object.keys(pricesByModality).forEach(mod => allModalitiesToShow.add(mod));
+                
+                
+                // Ordenar todas las modalidades según el orden definido
+                const sortedModalities = Array.from(allModalitiesToShow).sort(
                   (a, b) => {
                     const indexA = modalityOrder.indexOf(a);
                     const indexB = modalityOrder.indexOf(b);
@@ -3542,12 +3831,25 @@ export default function AdminProfessionalEditPage() {
                     );
                   }
                 );
+                
+
+                // Si no hay modalidades disponibles, mostrar mensaje
+                if (availableModalities.size === 0) {
+                  return (
+                    <span className="text-gray-500 text-sm">
+                      No especificados
+                    </span>
+                  );
+                }
 
                 return (
                   <div className="space-y-6">
+                    {/* Mostrar todas las modalidades (con o sin precios) */}
                     {sortedModalities.map((modalityKey) => {
-                      const { prices, originalIndices } =
-                        pricesByModality[modalityKey];
+                      const { prices = [], originalIndices = [] } =
+                        pricesByModality[modalityKey] || { prices: [], originalIndices: [] };
+                      const isCreatingForThisModality = creatingPrice && newPriceModalidad === modalityKey;
+                      const hasPrices = prices.length > 0;
 
                       return (
                         <div key={modalityKey} className="space-y-3">
@@ -3556,15 +3858,115 @@ export default function AdminProfessionalEditPage() {
                             <h4 className="text-base font-semibold text-gray-900">
                               Precios - {getModalityName(modalityKey)}
                             </h4>
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                              {prices.length}{" "}
-                              {prices.length === 1 ? "paquete" : "paquetes"}
-                            </span>
+                            {hasPrices ? (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                                {prices.length}{" "}
+                                {prices.length === 1 ? "paquete" : "paquetes"}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                Sin paquetes
+                              </span>
+                            )}
                           </div>
+
+                          {/* Formulario para crear nuevo precio en esta modalidad */}
+                          {isCreatingForThisModality && (
+                            <div className="rounded-xl border-2 border-primary bg-primary/5 p-4">
+                              <div className="space-y-4">
+                                <div className="grid grid-cols-3 gap-4">
+                                  <div>
+                                    <label className="block text-xs text-gray-500 mb-1">
+                                      Precio *
+                                    </label>
+                                    <div className="relative">
+                                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                                        €
+                                      </span>
+                                      <input
+                                        type="text"
+                                        value={newPriceData.precio || ""}
+                                        onChange={(e) =>
+                                          setNewPriceData({
+                                            ...newPriceData,
+                                            precio: e.target.value,
+                                          })
+                                        }
+                                        placeholder="Ej: 50"
+                                        className="w-full pl-6 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white"
+                                      />
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs text-gray-500 mb-1">
+                                      Nombre del paquete *
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={newPriceData.nombre || ""}
+                                      onChange={(e) =>
+                                        setNewPriceData({
+                                          ...newPriceData,
+                                          nombre: e.target.value,
+                                        })
+                                      }
+                                      placeholder="Ej: Primera sesión"
+                                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs text-gray-500 mb-1">
+                                      Duración
+                                    </label>
+                                    <select
+                                      value={newPriceData.duracion || ""}
+                                      onChange={(e) =>
+                                        setNewPriceData({
+                                          ...newPriceData,
+                                          duracion: e.target.value,
+                                        })
+                                      }
+                                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white"
+                                    >
+                                      <option value="">
+                                        Selecciona duración
+                                      </option>
+                                      {durationOptions.map((opt) => (
+                                        <option key={`new-dur-${opt}`} value={opt}>
+                                          {opt}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                </div>
+                                {priceSaveError && (
+                                  <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                                    {priceSaveError}
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-2 pt-2">
+                                  <button
+                                    onClick={handleCreatePrice}
+                                    className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
+                                  >
+                                    <Save className="h-4 w-4" />
+                                    Crear Paquete
+                                  </button>
+                                  <button
+                                    onClick={handleCancelCreatePrice}
+                                    className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2"
+                                  >
+                                    <X className="h-4 w-4" />
+                                    Cancelar
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
 
                           {/* Lista de precios de esta modalidad */}
                           <div className="space-y-4">
-                            {prices.map((value: any, localIdx: number) => {
+                            {hasPrices && prices.map((value: any, localIdx: number) => {
                               const originalIdx = originalIndices[localIdx];
                               const isEditing = editingPriceId === originalIdx;
                               const price =
@@ -3718,20 +4120,46 @@ export default function AdminProfessionalEditPage() {
                                           </p>
                                         </div>
                                       </div>
-                                      <button
-                                        onClick={() =>
-                                          handleEditPrice(originalIdx, value)
-                                        }
-                                        className="absolute top-0 right-0 p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
-                                        title="Editar precio"
-                                      >
-                                        <Edit className="h-4 w-4" />
-                                      </button>
+                                      <div className="absolute top-0 right-0 flex gap-1">
+                                        <button
+                                          onClick={() =>
+                                            handleEditPrice(originalIdx, value)
+                                          }
+                                          className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
+                                          title="Editar precio"
+                                        >
+                                          <Edit className="h-4 w-4" />
+                                        </button>
+                                        <button
+                                          onClick={() =>
+                                            handleDeletePrice(originalIdx, value)
+                                          }
+                                          className="p-2 text-red-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                                          title="Eliminar precio"
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </button>
+                                      </div>
                                     </div>
                                   )}
                                 </div>
                               );
                             })}
+                            {/* Botón para agregar nuevo paquete en esta modalidad */}
+                            {!isCreatingForThisModality && (
+                              <button
+                                onClick={() => {
+                                  setCreatingPrice(true);
+                                  setNewPriceModalidad(modalityKey);
+                                  setNewPriceData({});
+                                  setPriceSaveError(null);
+                                }}
+                                className="w-full px-4 py-3 text-sm font-medium text-primary border-2 border-dashed border-primary/50 rounded-lg hover:border-primary hover:bg-primary/5 transition-colors flex items-center justify-center gap-2"
+                              >
+                                <Plus className="h-4 w-4" />
+                                {hasPrices ? "Agregar paquete de precios" : `Agregar paquetes de precios para ${getModalityName(modalityKey)}`}
+                              </button>
+                            )}
                           </div>
                         </div>
                       );

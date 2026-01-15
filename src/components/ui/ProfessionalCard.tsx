@@ -19,17 +19,24 @@ interface ProfessionalCardProps {
   professional: Professional;
   categorySlug: string; // ← Necesitamos la categoría para la URL
   serviceSlug?: string; // ← Servicio opcional para la URL
+  modalidad?: string; // ← Modalidad seleccionada
 }
 
 export default function ProfessionalCard({
   professional,
   categorySlug,
   serviceSlug,
+  modalidad,
 }: ProfessionalCardProps) {
-  // Generar URL basada en si hay servicio o no
-  const href = serviceSlug
+  // Generar URL basada en si hay servicio o no, incluyendo modalidad como query param
+  const baseHref = serviceSlug
     ? `/${categorySlug}/${serviceSlug}/${professional.slug}`
     : `/${categorySlug}/${professional.slug}`;
+  
+  // Agregar modalidad como query parameter si está disponible
+  const href = modalidad
+    ? `${baseHref}?modalidad=${encodeURIComponent(modalidad)}`
+    : baseHref;
 
   return (
     <Link

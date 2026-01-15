@@ -83,7 +83,10 @@ export class ProfessionalsService {
     return apiClient.put<any>(`/profesionales/admin/${id}/aprobar`, {});
   }
 
-  async rejectProfessional(id: string, motivoRechazo: string): Promise<ApiResponse<any>> {
+  async rejectProfessional(
+    id: string,
+    motivoRechazo: string
+  ): Promise<ApiResponse<any>> {
     return apiClient.put<any>(`/profesionales/admin/${id}/rechazar`, {
       motivo_rechazo: motivoRechazo,
     });
@@ -102,7 +105,8 @@ export class ProfessionalsService {
     id: string
   ): Promise<ApiResponse<ApiProfessional>> {
     // Usar fetch directo para evitar que apiClient agregue el token de autenticación
-    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+    const API_BASE_URL =
+      process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
     const url = `${API_BASE_URL}/profesionales/${id}`;
 
     try {
@@ -136,7 +140,10 @@ export class ProfessionalsService {
 
       const data = await response.json();
 
-      console.log(`[ProfessionalsService] Respuesta completa del backend para profesional ${id}:`, JSON.stringify(data, null, 2));
+      console.log(
+        `[ProfessionalsService] Respuesta completa del backend para profesional ${id}:`,
+        JSON.stringify(data, null, 2)
+      );
 
       // El backend puede devolver diferentes estructuras
       let professionalRaw: any = null;
@@ -152,7 +159,10 @@ export class ProfessionalsService {
         professionalRaw = data;
       }
 
-      console.log(`[ProfessionalsService] professionalRaw extraído:`, JSON.stringify(professionalRaw, null, 2));
+      console.log(
+        `[ProfessionalsService] professionalRaw extraído:`,
+        JSON.stringify(professionalRaw, null, 2)
+      );
 
       if (!professionalRaw) {
         return {
@@ -164,15 +174,20 @@ export class ProfessionalsService {
       // Mapear profesional del formato del backend al formato del frontend
       // Construir nombre completo
       const nombre = professionalRaw.nombre || professionalRaw.name || "";
-      const apellidos = professionalRaw.apellidos || professionalRaw.lastName || "";
-      const nombreCompleto = professionalRaw.nombre_completo || 
-                            (nombre && apellidos ? `${nombre} ${apellidos}`.trim() : nombre || apellidos) ||
-                            professionalRaw.fullName || "";
+      const apellidos =
+        professionalRaw.apellidos || professionalRaw.lastName || "";
+      const nombreCompleto =
+        professionalRaw.nombre_completo ||
+        (nombre && apellidos
+          ? `${nombre} ${apellidos}`.trim()
+          : nombre || apellidos) ||
+        professionalRaw.fullName ||
+        "";
 
       // Construir especialidad - puede venir como objeto o string
       let especialidad = "";
       if (professionalRaw.especialidad) {
-        if (typeof professionalRaw.especialidad === 'string') {
+        if (typeof professionalRaw.especialidad === "string") {
           especialidad = professionalRaw.especialidad;
         } else if (professionalRaw.especialidad.nombre) {
           especialidad = professionalRaw.especialidad.nombre;
@@ -187,14 +202,18 @@ export class ProfessionalsService {
 
       // Construir ubicación
       const ciudad = professionalRaw.ciudad || professionalRaw.city || "";
-      const direccion = professionalRaw.direccion || professionalRaw.domicilio_consultorio || "";
+      const direccion =
+        professionalRaw.direccion ||
+        professionalRaw.domicilio_consultorio ||
+        "";
       const ubicacion = ciudad || direccion || "";
 
       // Construir biografía
-      const biografia = professionalRaw.biografia || 
-                       professionalRaw.bio || 
-                       professionalRaw.descripcion || 
-                       "";
+      const biografia =
+        professionalRaw.biografia ||
+        professionalRaw.bio ||
+        professionalRaw.descripcion ||
+        "";
 
       // Manejar disponibilidad/horario - el backend devuelve un formato diferente
       let disponibilidad = {
@@ -206,30 +225,33 @@ export class ProfessionalsService {
         saturday: [],
         sunday: [],
       };
-      
+
       if (professionalRaw.disponibilidad) {
-        if (typeof professionalRaw.disponibilidad === 'string') {
+        if (typeof professionalRaw.disponibilidad === "string") {
           try {
             disponibilidad = JSON.parse(professionalRaw.disponibilidad);
           } catch (e) {
             console.warn("Error parsing disponibilidad:", e);
           }
-        } else if (typeof professionalRaw.disponibilidad === 'object') {
+        } else if (typeof professionalRaw.disponibilidad === "object") {
           // El backend puede devolver: { dias: [...], horario: { desde, hasta } }
           // Convertir a formato esperado
-          if (professionalRaw.disponibilidad.dias && Array.isArray(professionalRaw.disponibilidad.dias)) {
+          if (
+            professionalRaw.disponibilidad.dias &&
+            Array.isArray(professionalRaw.disponibilidad.dias)
+          ) {
             const diasMap: { [key: string]: string } = {
-              'Lunes': 'monday',
-              'Martes': 'tuesday',
-              'Miércoles': 'wednesday',
-              'Miercoles': 'wednesday',
-              'Jueves': 'thursday',
-              'Viernes': 'friday',
-              'Sábado': 'saturday',
-              'Sabado': 'saturday',
-              'Domingo': 'sunday',
+              Lunes: "monday",
+              Martes: "tuesday",
+              Miércoles: "wednesday",
+              Miercoles: "wednesday",
+              Jueves: "thursday",
+              Viernes: "friday",
+              Sábado: "saturday",
+              Sabado: "saturday",
+              Domingo: "sunday",
             };
-            
+
             professionalRaw.disponibilidad.dias.forEach((dia: string) => {
               const diaLower = dia.toLowerCase();
               const key = diasMap[dia] || diaLower;
@@ -242,13 +264,13 @@ export class ProfessionalsService {
           }
         }
       } else if (professionalRaw.horario) {
-        if (typeof professionalRaw.horario === 'string') {
+        if (typeof professionalRaw.horario === "string") {
           try {
             disponibilidad = JSON.parse(professionalRaw.horario);
           } catch (e) {
             console.warn("Error parsing horario:", e);
           }
-        } else if (typeof professionalRaw.horario === 'object') {
+        } else if (typeof professionalRaw.horario === "object") {
           disponibilidad = professionalRaw.horario;
         }
       }
@@ -259,13 +281,13 @@ export class ProfessionalsService {
       if (professionalRaw.modalidad_cita) {
         if (Array.isArray(professionalRaw.modalidad_cita)) {
           modalidadCita = professionalRaw.modalidad_cita;
-        } else if (typeof professionalRaw.modalidad_cita === 'string') {
+        } else if (typeof professionalRaw.modalidad_cita === "string") {
           try {
             modalidadCita = JSON.parse(professionalRaw.modalidad_cita);
           } catch (e) {
             // Si es "ambas", convertir a array con ambas opciones
-            if (professionalRaw.modalidad_cita.toLowerCase() === 'ambas') {
-              modalidadCita = ['presencial', 'online'];
+            if (professionalRaw.modalidad_cita.toLowerCase() === "ambas") {
+              modalidadCita = ["presencial", "online"];
             } else {
               modalidadCita = [professionalRaw.modalidad_cita];
             }
@@ -277,7 +299,7 @@ export class ProfessionalsService {
       if (professionalRaw.modo_atencion) {
         if (Array.isArray(professionalRaw.modo_atencion)) {
           modoAtencion = professionalRaw.modo_atencion;
-        } else if (typeof professionalRaw.modo_atencion === 'string') {
+        } else if (typeof professionalRaw.modo_atencion === "string") {
           try {
             modoAtencion = JSON.parse(professionalRaw.modo_atencion);
           } catch (e) {
@@ -297,6 +319,7 @@ export class ProfessionalsService {
             precio: precio.precio || 0,
             moneda: precio.moneda || "EUR",
             duracion: precio.duracion || precio.duration || undefined,
+            modalidad: precio.modalidad || undefined,
           }));
         }
       }
@@ -306,9 +329,11 @@ export class ProfessionalsService {
       if (professionalRaw.modalidades_sesiones) {
         if (Array.isArray(professionalRaw.modalidades_sesiones)) {
           modalidadesSesiones = professionalRaw.modalidades_sesiones;
-        } else if (typeof professionalRaw.modalidades_sesiones === 'string') {
+        } else if (typeof professionalRaw.modalidades_sesiones === "string") {
           try {
-            modalidadesSesiones = JSON.parse(professionalRaw.modalidades_sesiones);
+            modalidadesSesiones = JSON.parse(
+              professionalRaw.modalidades_sesiones
+            );
           } catch (e) {
             modalidadesSesiones = [professionalRaw.modalidades_sesiones];
           }
@@ -316,58 +341,117 @@ export class ProfessionalsService {
       }
 
       const professional: ApiProfessional = {
-        id: String(professionalRaw.id_profesional || professionalRaw.id_usuario || professionalRaw.id || ""),
+        id: String(
+          professionalRaw.id_profesional ||
+            professionalRaw.id_usuario ||
+            professionalRaw.id ||
+            ""
+        ),
         name: nombre || "Profesional",
         fullName: nombreCompleto || nombre || "Profesional",
         email: professionalRaw.email || professionalRaw.email_usuario || "",
         phone: professionalRaw.telefono || professionalRaw.phone || "",
-        username: professionalRaw.username || (professionalRaw.email || "").split("@")[0] || "",
+        username:
+          professionalRaw.username ||
+          (professionalRaw.email || "").split("@")[0] ||
+          "",
         city: ciudad || direccion || "",
-        postalCode: professionalRaw.codigo_postal || professionalRaw.postalCode || "",
+        postalCode:
+          professionalRaw.codigo_postal || professionalRaw.postalCode || "",
         specialty: especialidad || "Especialista",
-        licenseNumber: professionalRaw.numero_colegiado || professionalRaw.licenseNumber || "",
-        experience: professionalRaw.experiencia_años || professionalRaw.experience || 0,
+        licenseNumber:
+          professionalRaw.numero_colegiado ||
+          professionalRaw.licenseNumber ||
+          "",
+        experience:
+          professionalRaw.experiencia_años || professionalRaw.experience || 0,
         rating: professionalRaw.calificacion || professionalRaw.rating || 0,
-        totalSessions: professionalRaw.total_sesiones || professionalRaw.totalSessions || 0,
+        totalSessions:
+          professionalRaw.total_sesiones || professionalRaw.totalSessions || 0,
         incomeUsd: professionalRaw.ingreso || professionalRaw.incomeUsd || 0,
-        status: (professionalRaw.estado_aprobacion === "aprobado" ? "activo" : professionalRaw.estado || professionalRaw.status || "pendiente") as "activo" | "inactivo" | "pendiente" | "suspendido",
-        joinDate: professionalRaw.created_at || professionalRaw.joinDate || new Date().toISOString(),
-        lastActive: professionalRaw.updated_at || professionalRaw.lastActive || new Date().toISOString(),
-        profileImage: professionalRaw.imagen_perfil || professionalRaw.enlace_publico || professionalRaw.profileImage || undefined,
+        status: (professionalRaw.estado_aprobacion === "aprobado"
+          ? "activo"
+          : professionalRaw.estado || professionalRaw.status || "pendiente") as
+          | "activo"
+          | "inactivo"
+          | "pendiente"
+          | "suspendido",
+        joinDate:
+          professionalRaw.created_at ||
+          professionalRaw.joinDate ||
+          new Date().toISOString(),
+        lastActive:
+          professionalRaw.updated_at ||
+          professionalRaw.lastActive ||
+          new Date().toISOString(),
+        profileImage:
+          professionalRaw.foto_perfil ||
+          professionalRaw.imagen_perfil ||
+          professionalRaw.enlace_publico ||
+          professionalRaw.profileImage ||
+          undefined,
         bio: biografia || "",
-        education: Array.isArray(professionalRaw.educacion) ? professionalRaw.educacion : (professionalRaw.education || []),
-        certifications: Array.isArray(professionalRaw.certificaciones) ? professionalRaw.certificaciones : (professionalRaw.certifications || []),
-        languages: Array.isArray(professionalRaw.idiomas) ? professionalRaw.idiomas : (professionalRaw.languages || []),
+        education: Array.isArray(professionalRaw.educacion)
+          ? professionalRaw.educacion
+          : professionalRaw.education || [],
+        certifications: Array.isArray(professionalRaw.certificaciones)
+          ? professionalRaw.certificaciones
+          : professionalRaw.certifications || [],
+        languages: Array.isArray(professionalRaw.idiomas)
+          ? professionalRaw.idiomas
+          : professionalRaw.languages || [],
         availability: disponibilidad,
-        createdAt: professionalRaw.created_at || professionalRaw.createdAt || new Date().toISOString(),
-        updatedAt: professionalRaw.updated_at || professionalRaw.updatedAt || new Date().toISOString(),
+        createdAt:
+          professionalRaw.created_at ||
+          professionalRaw.createdAt ||
+          new Date().toISOString(),
+        updatedAt:
+          professionalRaw.updated_at ||
+          professionalRaw.updatedAt ||
+          new Date().toISOString(),
         // Campos adicionales del perfil público
-        videoUrl: professionalRaw.video_presentacion || professionalRaw.videoUrl || undefined,
-        tarifaPorHora: professionalRaw.tarifa_por_hora || professionalRaw.tarifaPorHora || 0,
-        verificado: professionalRaw.usuario_verificado || professionalRaw.verificado || false,
+        videoUrl:
+          professionalRaw.video_presentacion ||
+          professionalRaw.videoUrl ||
+          undefined,
+        tarifaPorHora:
+          professionalRaw.tarifa_por_hora || professionalRaw.tarifaPorHora || 0,
+        verificado:
+          professionalRaw.usuario_verificado ||
+          professionalRaw.verificado ||
+          false,
         direccion: direccion || "",
-        domicilio_consultorio: professionalRaw.domicilio_consultorio || undefined,
+        domicilio_consultorio:
+          professionalRaw.domicilio_consultorio || undefined,
         modalidadCita: modalidadCita,
         modoAtencion: modoAtencion,
         precios: precios.length > 0 ? precios : undefined,
-        modalidadesSesiones: modalidadesSesiones.length > 0 ? modalidadesSesiones : undefined,
+        modalidadesSesiones:
+          modalidadesSesiones.length > 0 ? modalidadesSesiones : undefined,
         // Guardar datos originales de disponibilidad para acceso directo
         disponibilidadRaw: professionalRaw.disponibilidad || undefined,
         // Guardar objeto raw completo para acceso a campos no mapeados
         raw: professionalRaw,
       };
 
-      console.log(`[ProfessionalsService] Profesional mapeado:`, JSON.stringify(professional, null, 2));
+      console.log(
+        `[ProfessionalsService] Profesional mapeado:`,
+        JSON.stringify(professional, null, 2)
+      );
 
       return {
         success: true,
         data: professional,
       };
     } catch (error) {
-      console.error(`[ProfessionalsService] Error al cargar profesional público:`, error);
+      console.error(
+        `[ProfessionalsService] Error al cargar profesional público:`,
+        error
+      );
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error occurred",
+        error:
+          error instanceof Error ? error.message : "Unknown error occurred",
       };
     }
   }
@@ -462,22 +546,23 @@ export class ProfessionalsService {
     }
   ): Promise<ApiResponse<ApiPaginatedResponse<ApiProfessional>>> {
     // Usar fetch directo para evitar que apiClient agregue el token de autenticación
-    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
-    
+    const API_BASE_URL =
+      process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+
     // Construir URL con parámetros de consulta
     const queryParams = new URLSearchParams();
-    
+
     // Filtro por ID de especialidad (requerido)
     queryParams.append("id_especialidad", specialtyId);
-    
+
     // Parámetros de paginación (el backend usa offset y limit)
     const limit = params?.limit || 20;
     const page = params?.page || 1;
     const offset = (page - 1) * limit;
-    
+
     queryParams.append("limit", String(limit));
     queryParams.append("offset", String(offset));
-    
+
     // Filtros opcionales
     if (params?.especialidad) {
       queryParams.append("especialidad", params.especialidad);
@@ -491,9 +576,9 @@ export class ProfessionalsService {
     if (params?.apellidos) {
       queryParams.append("apellidos", params.apellidos);
     }
-    
+
     const url = `${API_BASE_URL}/profesionales/public?${queryParams.toString()}`;
-    
+
     try {
       const response = await fetch(url, {
         method: "GET",
@@ -518,10 +603,16 @@ export class ProfessionalsService {
       }
 
       const data = await response.json();
-      
-      console.log(`[ProfessionalsService] Respuesta completa de profesionales públicos para especialidad ${specialtyId}:`, data);
-      console.log(`[ProfessionalsService] Estructura de la respuesta:`, JSON.stringify(data, null, 2));
-      
+
+      console.log(
+        `[ProfessionalsService] Respuesta completa de profesionales públicos para especialidad ${specialtyId}:`,
+        data
+      );
+      console.log(
+        `[ProfessionalsService] Estructura de la respuesta:`,
+        JSON.stringify(data, null, 2)
+      );
+
       // Manejar diferentes formatos de respuesta del backend
       let professionalsRaw: any[] = [];
       let paginationInfo: any = {};
@@ -542,101 +633,150 @@ export class ProfessionalsService {
       } else if (Array.isArray(data)) {
         // Formato: array directo
         professionalsRaw = data;
-      } else if (data?.data?.profesionales && Array.isArray(data.data.profesionales)) {
+      } else if (
+        data?.data?.profesionales &&
+        Array.isArray(data.data.profesionales)
+      ) {
         // Formato anidado: { data: { profesionales: [...], pagination: {...} } }
         professionalsRaw = data.data.profesionales;
         paginationInfo = data.data.pagination || {};
       }
 
-      console.log(`[ProfessionalsService] Profesionales encontrados (raw):`, professionalsRaw.length);
-      console.log(`[ProfessionalsService] Información de paginación:`, paginationInfo);
+      console.log(
+        `[ProfessionalsService] Profesionales encontrados (raw):`,
+        professionalsRaw.length
+      );
+      console.log(
+        `[ProfessionalsService] Información de paginación:`,
+        paginationInfo
+      );
 
       // Mapear profesionales del formato del backend al formato del frontend
-      const professionals: ApiProfessional[] = professionalsRaw.map((prof: any) => {
-        // El backend devuelve campos en español, mapearlos al formato esperado
-        // Derivar modalidades del backend si están disponibles
-        const modalidadesSesiones: string[] = [];
-        const modalidadCitaRaw = prof.modalidad_cita || prof.modalidadCita;
-        const modoAtencionRaw = prof.modo_atencion || prof.modoAtencion;
-        if (modalidadCitaRaw === "ambas") {
-          modalidadesSesiones.push("En Linea", "Presencial");
-        } else if (modalidadCitaRaw === "virtual") {
-          modalidadesSesiones.push("En Linea");
-        } else if (modalidadCitaRaw === "presencial") {
-          modalidadesSesiones.push("Presencial");
-        }
-        if (modoAtencionRaw === "a_domicilio") {
-          modalidadesSesiones.push("A domicilio");
-        }
+      const professionals: ApiProfessional[] = professionalsRaw.map(
+        (prof: any) => {
+          // El backend devuelve campos en español, mapearlos al formato esperado
+          // Derivar modalidades del backend si están disponibles
+          const modalidadesSesiones: string[] = [];
+          const modalidadCitaRaw = prof.modalidad_cita || prof.modalidadCita;
+          const modoAtencionRaw = prof.modo_atencion || prof.modoAtencion;
+          if (modalidadCitaRaw === "ambas") {
+            modalidadesSesiones.push("En Linea", "Presencial");
+          } else if (modalidadCitaRaw === "virtual") {
+            modalidadesSesiones.push("En Linea");
+          } else if (modalidadCitaRaw === "presencial") {
+            modalidadesSesiones.push("Presencial");
+          }
+          if (modoAtencionRaw === "a_domicilio") {
+            modalidadesSesiones.push("A domicilio");
+          }
 
-        const rawPrices: ProfessionalPrice[] = Array.isArray(prof.precios)
-          ? prof.precios.map((precio: any): ProfessionalPrice => ({
-              id_precio: precio.id_precio ?? precio.id ?? 0,
-              nombre_servicio:
-                precio.nombre_servicio ||
-                precio.nombre_paquete ||
-                precio.nombre ||
-                "Servicio",
-              descripcion: precio.descripcion ?? "",
-              precio: typeof precio.precio === "number" ? precio.precio : Number(precio.precio) || 0,
-              moneda: precio.moneda || "EUR",
-              duracion:
-                precio.duracion ||
-                (precio.duracion_minutos ? `${precio.duracion_minutos} min` : undefined),
-            }))
-          : [];
+          const rawPrices: ProfessionalPrice[] = Array.isArray(prof.precios)
+            ? prof.precios.map(
+                (precio: any): ProfessionalPrice => ({
+                  id_precio: precio.id_precio ?? precio.id ?? 0,
+                  nombre_servicio:
+                    precio.nombre_servicio ||
+                    precio.nombre_paquete ||
+                    precio.nombre ||
+                    "Servicio",
+                  descripcion: precio.descripcion ?? "",
+                  precio:
+                    typeof precio.precio === "number"
+                      ? precio.precio
+                      : Number(precio.precio) || 0,
+                  moneda: precio.moneda || "EUR",
+                  duracion:
+                    precio.duracion ||
+                    (precio.duracion_minutos
+                      ? `${precio.duracion_minutos} min`
+                      : undefined),
+                  modalidad: precio.modalidad || undefined,
+                })
+              )
+            : [];
 
-        return {
-          id: String(prof.id_profesional || prof.id_usuario || prof.id || ""),
-          name: prof.nombre || prof.name || "",
-          fullName: prof.nombre_completo || `${prof.nombre || ""} ${prof.apellidos || ""}`.trim() || prof.fullName || "",
-          email: prof.email || prof.email_usuario || "",
-          phone: prof.telefono || prof.phone || "",
-          username: prof.username || (prof.email || "").split("@")[0] || "",
-          city: prof.ciudad || prof.city || "",
-          postalCode: prof.codigo_postal || prof.postalCode || "",
-          specialty: prof.especialidad || prof.specialty || "",
-          licenseNumber: prof.numero_colegiado || prof.licenseNumber || "",
-          experience: prof.experiencia_años || prof.experience || 0,
-          rating: prof.calificacion || prof.rating || 0,
-          totalSessions: prof.total_sesiones || prof.totalSessions || 0,
-          incomeUsd: prof.ingreso || prof.incomeUsd || 0,
-          status: (prof.estado_aprobacion === "aprobado" ? "activo" : prof.estado || prof.status || "pendiente") as "activo" | "inactivo" | "pendiente" | "suspendido",
-          joinDate: prof.created_at || prof.joinDate || new Date().toISOString(),
-          lastActive: prof.updated_at || prof.lastActive || new Date().toISOString(),
-          profileImage: prof.imagen_perfil || prof.foto_perfil || prof.profileImage || undefined,
-          bio: prof.biografia || prof.bio || prof.descripcion || "",
-          education: prof.educacion || prof.education || [],
-          certifications: prof.certificaciones || prof.certifications || [],
-          languages: prof.idiomas || prof.languages || [],
-          availability: prof.disponibilidad || prof.availability || {
-            monday: [],
-            tuesday: [],
-            wednesday: [],
-            thursday: [],
-            friday: [],
-            saturday: [],
-            sunday: [],
-          },
-          // Campos adicionales útiles para filtros
-          direccion: prof.direccion || prof.domicilio_consultorio || prof.address || undefined,
-          modalidadesSesiones,
-          modalidadCita: modalidadCitaRaw ? [modalidadCitaRaw] : undefined,
-          modoAtencion: modoAtencionRaw ? [modoAtencionRaw] : undefined,
-          precios: rawPrices,
-          createdAt: prof.created_at || prof.createdAt || new Date().toISOString(),
-          updatedAt: prof.updated_at || prof.updatedAt || new Date().toISOString(),
-        };
-      });
+          return {
+            id: String(prof.id_profesional || prof.id_usuario || prof.id || ""),
+            name: prof.nombre || prof.name || "",
+            fullName:
+              prof.nombre_completo ||
+              `${prof.nombre || ""} ${prof.apellidos || ""}`.trim() ||
+              prof.fullName ||
+              "",
+            email: prof.email || prof.email_usuario || "",
+            phone: prof.telefono || prof.phone || "",
+            username: prof.username || (prof.email || "").split("@")[0] || "",
+            city: prof.ciudad || prof.city || "",
+            postalCode: prof.codigo_postal || prof.postalCode || "",
+            specialty: prof.especialidad || prof.specialty || "",
+            licenseNumber: prof.numero_colegiado || prof.licenseNumber || "",
+            experience: prof.experiencia_años || prof.experience || 0,
+            rating: prof.calificacion || prof.rating || 0,
+            totalSessions: prof.total_sesiones || prof.totalSessions || 0,
+            incomeUsd: prof.ingreso || prof.incomeUsd || 0,
+            status: (prof.estado_aprobacion === "aprobado"
+              ? "activo"
+              : prof.estado || prof.status || "pendiente") as
+              | "activo"
+              | "inactivo"
+              | "pendiente"
+              | "suspendido",
+            joinDate:
+              prof.created_at || prof.joinDate || new Date().toISOString(),
+            lastActive:
+              prof.updated_at || prof.lastActive || new Date().toISOString(),
+            profileImage:
+              prof.foto_perfil ||
+              prof.imagen_perfil ||
+              prof.profileImage ||
+              undefined,
+            bio: prof.biografia || prof.bio || prof.descripcion || "",
+            education: prof.educacion || prof.education || [],
+            certifications: prof.certificaciones || prof.certifications || [],
+            languages: prof.idiomas || prof.languages || [],
+            availability: prof.disponibilidad ||
+              prof.availability || {
+                monday: [],
+                tuesday: [],
+                wednesday: [],
+                thursday: [],
+                friday: [],
+                saturday: [],
+                sunday: [],
+              },
+            codigosPostalesDomicilio: prof.codigos_postales_domicilio || undefined,
+            // Campos adicionales útiles para filtros
+            direccion:
+              prof.direccion ||
+              prof.domicilio_consultorio ||
+              prof.address ||
+              undefined,
+            modalidadesSesiones,
+            modalidadCita: modalidadCitaRaw ? [modalidadCitaRaw] : undefined,
+            modoAtencion: modoAtencionRaw ? [modoAtencionRaw] : undefined,
+            precios: rawPrices,
+            createdAt:
+              prof.created_at || prof.createdAt || new Date().toISOString(),
+            updatedAt:
+              prof.updated_at || prof.updatedAt || new Date().toISOString(),
+          };
+        }
+      );
 
       // Extraer información de paginación
-      const total = paginationInfo.total || paginationInfo.count || professionals.length;
+      const total =
+        paginationInfo.total || paginationInfo.count || professionals.length;
       const currentLimit = paginationInfo.limit || limit;
       const currentOffset = paginationInfo.offset || offset;
       const totalPages = Math.ceil(total / currentLimit);
 
-      console.log(`[ProfessionalsService] Profesionales mapeados:`, professionals.length);
-      console.log(`[ProfessionalsService] Total: ${total}, Página: ${page}, Total páginas: ${totalPages}`);
+      console.log(
+        `[ProfessionalsService] Profesionales mapeados:`,
+        professionals.length
+      );
+      console.log(
+        `[ProfessionalsService] Total: ${total}, Página: ${page}, Total páginas: ${totalPages}`
+      );
 
       return {
         success: true,
@@ -653,10 +793,14 @@ export class ProfessionalsService {
         },
       };
     } catch (error) {
-      console.error(`[ProfessionalsService] Error al cargar profesionales:`, error);
+      console.error(
+        `[ProfessionalsService] Error al cargar profesionales:`,
+        error
+      );
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error occurred",
+        error:
+          error instanceof Error ? error.message : "Unknown error occurred",
       };
     }
   }

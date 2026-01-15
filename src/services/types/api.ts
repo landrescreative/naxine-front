@@ -117,6 +117,7 @@ export interface ProfessionalPrice {
   precio: number;
   moneda: string;
   duracion?: string;
+  modalidad?: string;
 }
 
 export interface ApiProfessional {
@@ -167,6 +168,7 @@ export interface ApiProfessional {
   domicilio_consultorio?: string; // Dirección del consultorio del profesional
   modalidadCita?: string[];
   modoAtencion?: string[];
+  codigosPostalesDomicilio?: string;
   precios?: ProfessionalPrice[];
   modalidadesSesiones?: string[];
   // Datos originales del backend para acceso directo

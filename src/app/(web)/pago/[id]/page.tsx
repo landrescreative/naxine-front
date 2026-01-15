@@ -38,6 +38,53 @@ function PaymentForm({
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [taxInfo, setTaxInfo] = useState<{
+    base: number;
+    tax: number;
+    total: number;
+    taxExempt: boolean;
+  } | null>(null);
+
+  // Obtener información de impuestos del Payment Intent cuando esté disponible
+  useEffect(() => {
+    const fetchTaxInfo = async () => {
+      if (!stripe || !clientSecret) return;
+
+      try {
+        // Extraer payment_intent_id del clientSecret
+        // El formato es: pi_xxx_secret_xxx
+        const paymentIntentId = clientSecret.split("_secret_")[0];
+        
+        if (paymentIntentId) {
+          const paymentIntent = await stripe.retrievePaymentIntent(paymentIntentId);
+          
+          if (paymentIntent.paymentIntent) {
+            const taxAmount = paymentIntent.paymentIntent.total_details?.amount_tax || 0;
+            const amountTotal = paymentIntent.paymentIntent.amount; // En centavos
+            const amountBase = amountTotal - taxAmount; // En centavos
+
+            setTaxInfo({
+              base: amountBase / 100,
+              tax: taxAmount / 100,
+              total: amountTotal / 100,
+              taxExempt: taxAmount === 0,
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("No se pudo obtener información de impuestos:", err);
+        // Si no se puede obtener, usar el monto base sin impuestos
+        setTaxInfo({
+          base: amount,
+          tax: 0,
+          total: amount,
+          taxExempt: true,
+        });
+      }
+    };
+
+    fetchTaxInfo();
+  }, [stripe, clientSecret, amount]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -62,6 +109,18 @@ function PaymentForm({
         setErrorMessage(error.message || "Error al procesar el pago");
         onError(error.message || "Error al procesar el pago");
       } else if (paymentIntent && paymentIntent.status === "succeeded") {
+        // Actualizar información de impuestos después del pago exitoso
+        const taxAmount = paymentIntent.total_details?.amount_tax || 0;
+        const amountTotal = paymentIntent.amount;
+        const amountBase = amountTotal - taxAmount;
+        
+        setTaxInfo({
+          base: amountBase / 100,
+          tax: taxAmount / 100,
+          total: amountTotal / 100,
+          taxExempt: taxAmount === 0,
+        });
+        
         onSuccess();
       }
     } catch (err: any) {
@@ -88,13 +147,50 @@ function PaymentForm({
         </div>
       )}
 
-      <div className="bg-gray-50 p-4 rounded-lg">
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-gray-600">Total a pagar:</span>
-          <span className="text-2xl font-bold text-gray-900">
-            € {amount.toFixed(2)} EUR
-          </span>
-        </div>
+      {/* Desglose de impuestos */}
+      <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+        {taxInfo && (
+          <>
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-gray-600">Subtotal (sin impuestos):</span>
+              <span className="font-medium text-gray-900">
+                € {taxInfo.base.toFixed(2)}
+              </span>
+            </div>
+            {!taxInfo.taxExempt && taxInfo.tax > 0 && (
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-600">Impuestos (IVA):</span>
+                <span className="font-medium text-gray-900">
+                  € {taxInfo.tax.toFixed(2)}
+                </span>
+              </div>
+            )}
+            {taxInfo.taxExempt && (
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-600">Impuestos:</span>
+                <span className="font-medium text-green-600">
+                  Exento
+                </span>
+              </div>
+            )}
+            <div className="border-t border-gray-300 pt-2 mt-2">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-700 font-medium">Total a pagar:</span>
+                <span className="text-2xl font-bold text-gray-900">
+                  € {taxInfo.total.toFixed(2)} EUR
+                </span>
+              </div>
+            </div>
+          </>
+        )}
+        {!taxInfo && (
+          <div className="flex justify-between items-center">
+            <span className="text-gray-600">Total a pagar:</span>
+            <span className="text-2xl font-bold text-gray-900">
+              € {amount.toFixed(2)} EUR
+            </span>
+          </div>
+        )}
       </div>
 
       <button
@@ -102,7 +198,9 @@ function PaymentForm({
         disabled={!stripe || isProcessing}
         className="w-full bg-primary text-white py-3 px-4 rounded-lg font-bold hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
-        {isProcessing ? "Procesando..." : `Pagar € ${amount.toFixed(2)} EUR`}
+        {isProcessing
+          ? "Procesando..."
+          : `Pagar € ${taxInfo ? taxInfo.total.toFixed(2) : amount.toFixed(2)} EUR`}
       </button>
     </form>
   );

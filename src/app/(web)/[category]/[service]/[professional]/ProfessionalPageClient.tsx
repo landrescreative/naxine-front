@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
 import { useState, useMemo, useEffect, useRef } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import SeparatorSection from "@/components/ui/SeparatorSection";
 import PricingCard from "@/components/ui/PricingCard";
 import { ApiProfessional, ProfessionalPrice } from "@/services/types/api";
@@ -10,11 +10,19 @@ import { useAuth } from "@/hooks/useAuth";
 
 interface ProfessionalPageClientProps {
   professional: ApiProfessional;
+  modalidadInicial?: string;
 }
 
 export default function ProfessionalPageClient({
   professional,
+  modalidadInicial: modalidadInicialProp,
 }: ProfessionalPageClientProps) {
+  const searchParams = useSearchParams();
+  // Leer modalidad de la URL dinámicamente, con fallback a prop
+  const modalidadInicial = useMemo(() => {
+    const modalidadFromUrl = searchParams.get("modalidad");
+    return modalidadFromUrl || modalidadInicialProp || null;
+  }, [searchParams, modalidadInicialProp]);
   // Video popup state
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
@@ -28,11 +36,20 @@ export default function ProfessionalPageClient({
   const [existingAppointments, setExistingAppointments] = useState<any[]>([]);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
   const [isCreatingAppointment, setIsCreatingAppointment] = useState(false);
-  const [selectedTipoAtencion, setSelectedTipoAtencion] = useState<
-    "presencial" | "en_linea" | "a_domicilio" | null
-  >(null);
+  // Convertir modalidadInicial de la URL a tipoAtencion para usar en la lógica
+  // modalidadInicial puede ser: "presencial", "en_linea", "a_domicilio" o null
+  const tipoAtencion = useMemo(() => {
+    if (!modalidadInicial) return null;
+    const modalidadLower = modalidadInicial.toLowerCase().trim();
+    if (modalidadLower === "presencial") return "presencial";
+    if (modalidadLower === "en_linea" || modalidadLower === "en línea") return "en_linea";
+    if (modalidadLower === "a_domicilio" || modalidadLower === "a domicilio") return "a_domicilio";
+    return null;
+  }, [modalidadInicial]);
   const [loadingHorarios, setLoadingHorarios] = useState(false);
   const [direccionDomicilio, setDireccionDomicilio] = useState<string>("");
+  const [codigoPostal, setCodigoPostal] = useState<string>("");
+  const [codigoPostalError, setCodigoPostalError] = useState<string | null>(null);
   const hasAutoSelectedPrice = useRef(false); // Rastrear si ya se seleccionó automáticamente un precio
   const router = useRouter();
   const params = useParams<{
@@ -62,14 +79,15 @@ export default function ProfessionalPageClient({
   // Obtener códigos postales para atención a domicilio
   const codigosPostalesDomicilio = useMemo(() => {
     const raw: any = professional as any;
-    
+
     // Buscar en el objeto principal primero
     let codigos =
       raw?.codigos_postales_domicilio ||
       raw?.homeVisitPostalCodes ||
       raw?.codigosPostales ||
+      (professional as any)?.codigosPostalesDomicilio ||
       null;
-    
+
     // Si no se encuentra, buscar en el objeto raw del backend
     if (!codigos && raw?.raw) {
       codigos =
@@ -78,7 +96,7 @@ export default function ProfessionalPageClient({
         raw.raw?.codigosPostales ||
         null;
     }
-    
+
     // Verificar que no sea una cadena vacía
     if (codigos && typeof codigos === "string" && codigos.trim()) {
       console.log(
@@ -87,21 +105,66 @@ export default function ProfessionalPageClient({
       );
       return codigos.trim();
     }
-    
+
     console.log(
       "[ProfessionalPageClient] No se encontraron códigos postales. Campos disponibles:",
       {
         codigos_postales_domicilio: raw?.codigos_postales_domicilio,
         homeVisitPostalCodes: raw?.homeVisitPostalCodes,
         codigosPostales: raw?.codigosPostales,
+        codigosPostalesDomicilio: (professional as any)?.codigosPostalesDomicilio,
         raw_codigos_postales_domicilio: raw?.raw?.codigos_postales_domicilio,
         professionalKeys: Object.keys(raw || {}),
         rawKeys: raw?.raw ? Object.keys(raw.raw) : [],
       }
     );
-    
+
     return null;
   }, [professional]);
+
+  // Validar que el código postal esté en la lista del profesional
+  const validarCodigoPostal = (cp: string): { valido: boolean; error: string | null } => {
+    if (!codigosPostalesDomicilio || !codigosPostalesDomicilio.trim()) {
+      return { valido: true, error: null }; // Si el profesional no especifica códigos, no validar
+    }
+    
+    const codigoPostalIngresado = cp.trim();
+    
+    if (!codigoPostalIngresado) {
+      return {
+        valido: false,
+        error: "Por favor, ingresa un código postal."
+      };
+    }
+    
+    // Validar formato (5 dígitos para España)
+    if (!/^\d{5}$/.test(codigoPostalIngresado)) {
+      return {
+        valido: false,
+        error: "El código postal debe tener 5 dígitos."
+      };
+    }
+    
+    // Normalizar códigos postales del profesional (separar por comas/espacios y limpiar)
+    const codigosProfesional = codigosPostalesDomicilio
+      .split(/[,\s]+/)
+      .map(cp => cp.trim())
+      .filter(cp => cp.length > 0);
+    
+    // Verificar si el código postal ingresado está en la lista
+    const codigoEncontrado = codigosProfesional.find(
+      cpProf => cpProf === codigoPostalIngresado
+    );
+    
+    if (!codigoEncontrado) {
+      return {
+        valido: false,
+        error: `El código postal ${codigoPostalIngresado} no está en las zonas de servicio del profesional. Códigos postales disponibles: ${codigosProfesional.join(", ")}`
+      };
+    }
+    
+    return { valido: true, error: null };
+  };
 
   // Helper function to convert YouTube/Vimeo URLs to embed format
   const getEmbedUrl = (url: string | null): string | null => {
@@ -593,12 +656,17 @@ export default function ProfessionalPageClient({
     return tipos;
   }, [todosLosHorarios, professional.modalidadCita, professional.modoAtencion]);
 
-  // Auto-seleccionar el primer tipo disponible cuando hay tipos disponibles
+  // Validar que la modalidad de la URL sea compatible con los tipos disponibles
   useEffect(() => {
-    if (tiposAtencionDisponibles.length > 0 && !selectedTipoAtencion) {
-      setSelectedTipoAtencion(tiposAtencionDisponibles[0]);
+    if (tipoAtencion && tiposAtencionDisponibles.length > 0) {
+      if (!tiposAtencionDisponibles.includes(tipoAtencion)) {
+        console.warn(
+          `[ProfessionalPageClient] La modalidad "${tipoAtencion}" de la URL no está disponible. Tipos disponibles:`,
+          tiposAtencionDisponibles
+        );
+      }
     }
-  }, [tiposAtencionDisponibles.length, selectedTipoAtencion]);
+  }, [tipoAtencion, tiposAtencionDisponibles]);
 
   // Resetear la referencia cuando cambia el profesional
   useEffect(() => {
@@ -606,68 +674,7 @@ export default function ProfessionalPageClient({
   }, [professional?.id]);
 
   // Auto-seleccionar el primer paquete de precios cuando están disponibles
-  useEffect(() => {
-    // Verificar que tenemos precios y que no se ha seleccionado automáticamente ya
-    if (
-      professional?.precios &&
-      Array.isArray(professional.precios) &&
-      professional.precios.length > 0 &&
-      !hasAutoSelectedPrice.current &&
-      !selectedPrice
-    ) {
-      console.log(
-        "[ProfessionalPageClient] Auto-seleccionando primer paquete de precios",
-        {
-          totalPrecios: professional.precios.length,
-          precios: professional.precios,
-        }
-      );
-
-      // Usar la misma lógica de normalización y ordenamiento que en el renderizado
-      const preciosNormalizados = professional.precios
-        .map((p: any) => {
-          const nombre_servicio =
-            p.nombre_servicio ||
-            p.nombre_paquete ||
-            p.nombre ||
-            "Servicio";
-          const descripcion = p.descripcion || "";
-          const precioValor =
-            typeof p.precio === "number"
-              ? p.precio
-              : Number(p.precio) || 0;
-          const moneda = "EUR";
-          const duracion =
-            p.duracion ||
-            (p.duracion_minutos
-              ? `${p.duracion_minutos} min`
-              : undefined);
-          return {
-            id_precio:
-              p.id_precio ||
-              p.id ||
-              `${nombre_servicio}-${precioValor}`,
-            nombre_servicio,
-            descripcion,
-            precio: precioValor,
-            moneda,
-            duracion,
-            raw: p,
-          };
-        })
-        .sort((a: any, b: any) => a.precio - b.precio); // Ordenar por precio ascendente
-
-      // Seleccionar el primer precio (el más barato después del ordenamiento)
-      if (preciosNormalizados.length > 0) {
-        console.log(
-          "[ProfessionalPageClient] Seleccionando precio:",
-          preciosNormalizados[0]
-        );
-        hasAutoSelectedPrice.current = true;
-        setSelectedPrice(preciosNormalizados[0]);
-      }
-    }
-  }, [professional?.precios]);
+  // Nota: Este useEffect se moverá después de la definición de preciosFiltrados
 
   // Función helper para normalizar nombres de días (manejar acentos y mayúsculas)
   const normalizarDia = (dia: string): string => {
@@ -692,24 +699,24 @@ export default function ProfessionalPageClient({
     domingo: 0,
   };
 
-  // Filtrar horarios según el tipo de atención seleccionado
+  // Filtrar horarios según el tipo de atención de la URL
   const horariosCargados = useMemo(() => {
-    if (!selectedTipoAtencion) {
+    if (!tipoAtencion) {
       console.log(
-        `[ProfessionalPageClient] No hay tipo de atención seleccionado, retornando array vacío`
+        `[ProfessionalPageClient] No hay tipo de atención en la URL, retornando array vacío`
       );
       return [];
     }
-    // Filtrar todosLosHorarios por el tipo de atención seleccionado
+    // Filtrar todosLosHorarios por el tipo de atención de la URL
     const filtrados = todosLosHorarios.filter(
-      (horario) => horario.tipo_atencion === selectedTipoAtencion
+      (horario) => horario.tipo_atencion === tipoAtencion
     );
     console.log(
-      `[ProfessionalPageClient] Horarios filtrados para tipo "${selectedTipoAtencion}": ${filtrados.length} de ${todosLosHorarios.length} totales`
+      `[ProfessionalPageClient] Horarios filtrados para tipo "${tipoAtencion}": ${filtrados.length} de ${todosLosHorarios.length} totales`
     );
     console.log(`[ProfessionalPageClient] Horarios filtrados:`, filtrados);
     return filtrados;
-  }, [todosLosHorarios, selectedTipoAtencion]);
+  }, [todosLosHorarios, tipoAtencion]);
 
   // Extraer horarios disponibles del profesional filtrados por tipo de atención seleccionado
   const horariosDisponibles = useMemo(() => {
@@ -720,7 +727,7 @@ export default function ProfessionalPageClient({
     // Si hay horarios cargados (ya filtrados por tipo de atención), usarlos
     if (horariosCargados.length > 0) {
       console.log(
-        `[ProfessionalPageClient] Procesando ${horariosCargados.length} horarios para tipo ${selectedTipoAtencion}`
+        `[ProfessionalPageClient] Procesando ${horariosCargados.length} horarios para tipo ${tipoAtencion}`
       );
 
       horariosCargados.forEach((horario) => {
@@ -760,7 +767,7 @@ export default function ProfessionalPageClient({
         `[ProfessionalPageClient] Horarios disponibles procesados:`,
         horarios
       );
-    } else if (!selectedTipoAtencion) {
+    } else if (!tipoAtencion) {
       // Fallback: usar disponibilidadRaw del objeto professional solo si no hay tipo seleccionado
       const disponibilidadRaw = (professional as any).disponibilidadRaw;
 
@@ -798,7 +805,7 @@ export default function ProfessionalPageClient({
     }
 
     return horarios;
-  }, [horariosCargados, professional, selectedTipoAtencion]);
+  }, [horariosCargados, professional, tipoAtencion]);
 
   // Función helper para crear fecha UTC que representa la hora seleccionada en España
   // IMPORTANTE: El usuario selecciona la hora pensando que es hora de España
@@ -932,7 +939,7 @@ export default function ProfessionalPageClient({
   const getAvailableDays = useMemo(() => {
     return () => {
       console.log(
-        `[ProfessionalPageClient] getAvailableDays - Tipo seleccionado: ${selectedTipoAtencion}, Horarios disponibles:`,
+        `[ProfessionalPageClient] getAvailableDays - Tipo de URL: ${tipoAtencion}, Horarios disponibles:`,
         horariosDisponibles
       );
 
@@ -1068,7 +1075,7 @@ export default function ProfessionalPageClient({
   const generateTimeSlots = (
     date: Date
   ): Array<{ time: string; displayTime: string; available: boolean }> => {
-    if (!selectedPrice || !date || !selectedTipoAtencion) return [];
+    if (!selectedPrice || !date || !tipoAtencion) return [];
 
     const dayOfWeek = date.getDay();
 
@@ -1098,7 +1105,7 @@ export default function ProfessionalPageClient({
       const diaHorarioNormalizado = normalizarDia(h.dia_semana);
       const coincide =
         diaHorarioNormalizado === diaSemanaNormalizado &&
-        h.tipo_atencion === selectedTipoAtencion;
+        h.tipo_atencion === tipoAtencion;
       if (coincide) {
         console.log(
           `[ProfessionalPageClient] Horario encontrado para ${diaSemanaNombre}: ${h.hora_inicio} - ${h.hora_fin}`
@@ -1108,7 +1115,7 @@ export default function ProfessionalPageClient({
     });
 
     console.log(
-      `[ProfessionalPageClient] Horarios del día ${diaSemanaNombre} (${diaSemanaNormalizado}) para tipo ${selectedTipoAtencion}: ${horariosDelDia.length}`
+      `[ProfessionalPageClient] Horarios del día ${diaSemanaNombre} (${diaSemanaNormalizado}) para tipo ${tipoAtencion}: ${horariosDelDia.length}`
     );
     console.log(
       `[ProfessionalPageClient] ¿Es hoy? ${isToday}, Hora actual: ${currentTime.getHours()}:${currentTime.getMinutes()}`
@@ -1533,9 +1540,10 @@ export default function ProfessionalPageClient({
 
       // Si hay fechas válidas (al menos 24 horas en el futuro), seleccionar la primera
       // Si no hay fechas válidas, seleccionar la primera disponible (puede ser mañana)
-      const fechaASeleccionar = fechasValidas.length > 0 
-        ? fechasValidas[0]?.date 
-        : availableDays[0]?.date;
+      const fechaASeleccionar =
+        fechasValidas.length > 0
+          ? fechasValidas[0]?.date
+          : availableDays[0]?.date;
 
       if (fechaASeleccionar) {
         console.log(
@@ -1546,7 +1554,7 @@ export default function ProfessionalPageClient({
             ahora: ahora,
             mañana24Horas: mañana24Horas,
             fechasValidas: fechasValidas.length,
-            totalDisponibles: availableDays.length
+            totalDisponibles: availableDays.length,
           }
         );
         setSelectedDate(fechaASeleccionar);
@@ -1562,8 +1570,143 @@ export default function ProfessionalPageClient({
     existingAppointments,
     horariosDisponibles,
     horariosCargados,
-    selectedTipoAtencion,
+    tipoAtencion,
   ]);
+
+  // Filtrar precios según la modalidad seleccionada desde la página de servicio
+  const preciosFiltrados = useMemo(() => {
+    if (!professional.precios || professional.precios.length === 0) {
+      return [];
+    }
+
+    // Si no hay modalidad inicial, mostrar todos los precios
+    if (!modalidadInicial) {
+      return professional.precios;
+    }
+
+    // Normalizar modalidad de la URL
+    const modalidadNormalizada = modalidadInicial.toLowerCase().trim();
+
+    // Mapear modalidad de URL a valores del backend
+    const modalidadesBackend: string[] = [];
+
+    if (modalidadNormalizada === "presencial") {
+      // Presencial y en_linea muestran los mismos precios (presencial, virtual, ambas, sin modalidad)
+      modalidadesBackend.push(
+        "presencial",
+        "virtual",
+        "en_linea",
+        "online",
+        "ambas"
+      );
+    } else if (modalidadNormalizada === "en_linea") {
+      // Presencial y en_linea muestran los mismos precios (presencial, virtual, ambas, sin modalidad)
+      modalidadesBackend.push(
+        "presencial",
+        "virtual",
+        "en_linea",
+        "online",
+        "ambas"
+      );
+    } else if (modalidadNormalizada === "a_domicilio") {
+      // "ambas" NO aplica para domicilio, solo para presencial/virtual
+      modalidadesBackend.push("a_domicilio", "domicilio");
+    }
+
+    // Filtrar precios que coincidan con la modalidad
+    return professional.precios.filter((p: any) => {
+      // Obtener modalidad del precio desde diferentes posibles ubicaciones
+      const precioModalidad = (
+        p.modalidad ||
+        p.raw?.modalidad ||
+        (p as any).raw?.modalidad ||
+        ""
+      )
+        .toLowerCase()
+        .trim();
+
+      // Si el precio no tiene modalidad:
+      // - Para presencial/en_linea: incluirlo (aplican para ambas)
+      // - Para a_domicilio: NO incluirlo (solo precios específicos de domicilio)
+      // - Si no hay modalidad inicial: incluirlo (compatibilidad hacia atrás)
+      if (!precioModalidad) {
+        if (!modalidadInicial) {
+          return true; // Sin filtro, mostrar todos
+        }
+        // Si hay filtro, solo incluir si es presencial o en_linea
+        return (
+          modalidadNormalizada === "presencial" ||
+          modalidadNormalizada === "en_linea"
+        );
+      }
+
+      // Si el precio tiene modalidad "ambas", siempre incluirlo
+      if (precioModalidad === "ambas") {
+        return true;
+      }
+
+      // Verificar si la modalidad del precio coincide con alguna de las modalidades permitidas
+      return modalidadesBackend.some(
+        (m) => precioModalidad === m.toLowerCase()
+      );
+    });
+  }, [professional.precios, modalidadInicial]);
+
+  // Auto-seleccionar el primer paquete de precios cuando están disponibles (usando precios filtrados)
+  useEffect(() => {
+    // Verificar que tenemos precios filtrados y que no se ha seleccionado automáticamente ya
+    if (
+      preciosFiltrados &&
+      Array.isArray(preciosFiltrados) &&
+      preciosFiltrados.length > 0 &&
+      !hasAutoSelectedPrice.current &&
+      !selectedPrice
+    ) {
+      console.log(
+        "[ProfessionalPageClient] Auto-seleccionando primer paquete de precios (filtrados por modalidad)",
+        {
+          modalidadInicial,
+          totalPrecios: preciosFiltrados.length,
+          precios: preciosFiltrados,
+        }
+      );
+
+      // Usar la misma lógica de normalización y ordenamiento que en el renderizado
+      const preciosNormalizados = preciosFiltrados
+        .map((p: any) => {
+          const nombre_servicio =
+            p.nombre_servicio || p.nombre_paquete || p.nombre || "Servicio";
+          const descripcion = p.descripcion || "";
+          const precioValor =
+            typeof p.precio === "number" ? p.precio : Number(p.precio) || 0;
+          const moneda = "EUR";
+          const duracion =
+            p.duracion ||
+            (p.duracion_minutos ? `${p.duracion_minutos} min` : undefined);
+          return {
+            id_precio:
+              p.id_precio || p.id || `${nombre_servicio}-${precioValor}`,
+            nombre_servicio,
+            descripcion,
+            precio: precioValor,
+            moneda,
+            duracion,
+            raw: p,
+          };
+        })
+        .sort((a: any, b: any) => a.precio - b.precio); // Ordenar por precio ascendente
+
+      // Seleccionar el primer precio (el más barato después del ordenamiento)
+      if (preciosNormalizados.length > 0) {
+        console.log(
+          "[ProfessionalPageClient] Seleccionando precio:",
+          preciosNormalizados[0]
+        );
+        hasAutoSelectedPrice.current = true;
+        setSelectedPrice(preciosNormalizados[0]);
+      }
+    }
+  }, [preciosFiltrados, selectedPrice]);
 
   const monthNames = [
     "Enero",
@@ -1610,24 +1753,38 @@ export default function ProfessionalPageClient({
   const handleConfirmAppointment = async () => {
     if (!selectedPrice || !selectedDate || !selectedTimeSlot) return;
 
-    // Validar que se haya seleccionado un tipo de atención si hay tipos disponibles
-    if (tiposAtencionDisponibles.length > 0 && !selectedTipoAtencion) {
-      alert(
-        "Por favor, selecciona un tipo de atención antes de confirmar la cita."
-      );
-      return;
-    }
+      // Validar que haya un tipo de atención en la URL
+      if (!tipoAtencion) {
+        alert(
+          "No se ha especificado un tipo de atención. Por favor, regresa a la página de servicio y selecciona una modalidad."
+        );
+        return;
+      }
 
-    // Validar dirección cuando es a domicilio
-    if (
-      selectedTipoAtencion === "a_domicilio" &&
-      (!direccionDomicilio || direccionDomicilio.trim() === "")
-    ) {
-      alert(
-        "Por favor, proporciona tu dirección para la atención a domicilio."
-      );
-      return;
-    }
+      // Validar dirección y código postal cuando es a domicilio
+      if (tipoAtencion === "a_domicilio") {
+        if (!direccionDomicilio || direccionDomicilio.trim() === "") {
+          alert(
+            "Por favor, proporciona tu dirección completa para la atención a domicilio."
+          );
+          return;
+        }
+        
+        if (!codigoPostal || codigoPostal.trim() === "") {
+          alert(
+            "Por favor, ingresa el código postal de tu dirección."
+          );
+          return;
+        }
+        
+        // Validar código postal
+        const validacion = validarCodigoPostal(codigoPostal);
+        if (!validacion.valido) {
+          alert(validacion.error || "El código postal ingresado no es válido para este profesional.");
+          setCodigoPostalError(validacion.error);
+          return;
+        }
+      }
 
     // Verificar autenticación
     if (!isAuthenticated || !user) {
@@ -1775,11 +1932,11 @@ export default function ProfessionalPageClient({
         fecha_fin: fechaFin.toISOString(),
         crear_payment_intent: true,
         moneda: "eur", // Moneda en euros para España
-        tipo_atencion: selectedTipoAtencion || undefined, // Tipo de atención seleccionado
+        tipo_atencion: tipoAtencion || undefined, // Tipo de atención de la URL
         direccion_domicilio:
-          selectedTipoAtencion === "a_domicilio"
-            ? direccionDomicilio
-            : undefined, // Dirección si es a domicilio
+          tipoAtencion === "a_domicilio"
+            ? `${direccionDomicilio}${codigoPostal ? `, ${codigoPostal}` : ""}`
+            : undefined, // Dirección completa con código postal si es a domicilio
       });
 
       // Log completo de la respuesta para debugging
@@ -2078,47 +2235,6 @@ export default function ProfessionalPageClient({
                     {displayName.toUpperCase()}
                   </h2>
 
-                  {/* Modality Buttons - Mostrar basándose en tiposAtencionDisponibles */}
-                  {tiposAtencionDisponibles.length > 0 && (
-                    <div className="flex flex-wrap gap-3 mb-6">
-                      {tiposAtencionDisponibles.includes("presencial") && (
-                        <button className="bg-primary-foreground text-white px-4 py-2 rounded-full flex items-center space-x-2">
-                          <svg
-                            className="w-4 h-4"
-                            fill="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                          </svg>
-                          <span>Presencial</span>
-                        </button>
-                      )}
-                      {tiposAtencionDisponibles.includes("en_linea") && (
-                        <button className="bg-primary-foreground text-white px-4 py-2 rounded-full flex items-center space-x-2">
-                          <svg
-                            className="w-4 h-4"
-                            fill="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V8h16v10zm-8-2c-1.38 0-2.5-1.12-2.5-2.5S10.62 11 12 11s2.5 1.12 2.5 2.5S13.38 16 12 16z" />
-                          </svg>
-                          <span>En línea</span>
-                        </button>
-                      )}
-                      {tiposAtencionDisponibles.includes("a_domicilio") && (
-                        <button className="bg-primary-foreground text-white px-4 py-2 rounded-full flex items-center space-x-2">
-                          <svg
-                            className="w-4 h-4"
-                            fill="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
-                          </svg>
-                          <span>A Domicilio</span>
-                        </button>
-                      )}
-                    </div>
-                  )}
 
                   {/* Experience and Price */}
                   <div className="flex flex-wrap gap-4 mb-6 text-sm text-gray-600">
@@ -2179,9 +2295,9 @@ export default function ProfessionalPageClient({
       <div className="bg-white py-10 sm:py-12 md:py-16">
         <div className="container mx-auto px-4 sm:px-6">
           {/* Service Cards */}
-          {professional.precios && professional.precios.length > 0 ? (
+          {preciosFiltrados && preciosFiltrados.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 sm:gap-6 items-stretch">
-              {professional.precios
+              {preciosFiltrados
                 .map((p: any) => {
                   // Normalizar precio para soportar distintas estructuras del backend
                   const nombre_servicio =
@@ -2201,6 +2317,13 @@ export default function ProfessionalPageClient({
                     (p.duracion_minutos
                       ? `${p.duracion_minutos} min`
                       : undefined);
+                  // Extraer modalidad desde diferentes ubicaciones posibles
+                  const precioModalidad =
+                    p.modalidad ||
+                    (p as any).raw?.modalidad ||
+                    p.raw?.modalidad ||
+                    null;
+
                   return {
                     id_precio:
                       p.id_precio ||
@@ -2211,6 +2334,7 @@ export default function ProfessionalPageClient({
                     precio: precioValor,
                     moneda,
                     duracion,
+                    modalidad: precioModalidad,
                     raw: p,
                   };
                 })
@@ -2243,7 +2367,21 @@ export default function ProfessionalPageClient({
                     extraerDuracion(precio.descripcion || "") ||
                     undefined;
                   const esPopular =
-                    index === Math.floor(professional.precios!.length / 2); // Marcar el del medio como popular
+                    index === Math.floor(preciosFiltrados.length / 2); // Marcar el del medio como popular
+
+                  // Determinar modalidad para el label:
+                  // - Si el precio es específicamente "a_domicilio" o "domicilio", usar la modalidad del precio
+                  // - En todos los demás casos (virtual, presencial, ambas, sin modalidad), usar el filtro seleccionado
+                  const precioModalidadLower = (precio.modalidad || "")
+                    .toLowerCase()
+                    .trim();
+                  const esDomicilio =
+                    precioModalidadLower === "a_domicilio" ||
+                    precioModalidadLower === "domicilio";
+
+                  const modalidadParaLabel = esDomicilio
+                    ? precio.modalidad
+                    : modalidadInicial || precio.modalidad || null;
 
                   return (
                     <PricingCard
@@ -2254,6 +2392,7 @@ export default function ProfessionalPageClient({
                       duration={duracion || "Consultar"}
                       price={formatearPrecio(precio.precio, precio.moneda)}
                       isPopular={esPopular}
+                      modalidad={modalidadParaLabel}
                       onPurchase={() => {
                         setSelectedPrice(precio.raw || precio);
                         setTimeout(() => {
@@ -2269,8 +2408,26 @@ export default function ProfessionalPageClient({
                   );
                 })}
             </div>
+          ) : professional.precios && professional.precios.length > 0 ? (
+            // Mensaje cuando hay precios pero ninguno coincide con la modalidad seleccionada
+            <div className="text-center py-12">
+              <p className="text-gray-600 mb-2">
+                {modalidadInicial
+                  ? `No hay precios disponibles para la modalidad "${
+                      modalidadInicial === "presencial"
+                        ? "Presencial"
+                        : modalidadInicial === "en_linea"
+                        ? "En Línea"
+                        : "A Domicilio"
+                    }"`
+                  : "No hay precios disponibles"}
+              </p>
+              <p className="text-sm text-gray-500">
+                Por favor, selecciona otra modalidad o contacta al profesional.
+              </p>
+            </div>
           ) : (
-            // Fallback si no hay precios disponibles
+            // Fallback si no hay precios en absoluto
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 sm:gap-6 items-stretch">
               <PricingCard
                 title="Primera sesión"
@@ -2310,103 +2467,19 @@ export default function ProfessionalPageClient({
         id="appointment-scheduler"
         className="bg-white py-10 sm:py-12 md:py-16"
       >
-          <div className="container mx-auto px-4 sm:px-6">
-            <div className="text-center mb-12">
-              <p className="text-gray-500 text-sm mb-2">Horarios Disponibles</p>
-              <h2 className="text-3xl font-bold text-gray-900">
-                Disponibilidad
-              </h2>
-            </div>
+        <div className="container mx-auto px-4 sm:px-6">
+          <div className="text-center mb-12">
+            <p className="text-gray-500 text-sm mb-2">Horarios Disponibles</p>
+            <h2 className="text-3xl font-bold text-gray-900">Disponibilidad</h2>
+          </div>
 
-            {/* Selector de Tipo de Atención */}
-            {tiposAtencionDisponibles.length > 0 && (
-              <div className="mb-8">
-                <label className="block text-sm font-medium text-gray-700 mb-3 text-center">
-                  Tipo de atención
-                </label>
-                <div className="flex flex-wrap gap-3 justify-center">
-                  {tiposAtencionDisponibles.map((tipo) => {
-                    const isSelected = selectedTipoAtencion === tipo;
-                    const labels: { [key: string]: string } = {
-                      presencial: "Presencial",
-                      en_linea: "En Línea",
-                      a_domicilio: "A Domicilio",
-                    };
-                    const icons: { [key: string]: React.ReactElement } = {
-                      presencial: (
-                        <svg
-                          className="w-5 h-5"
-                          fill="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                        </svg>
-                      ),
-                      en_linea: (
-                        <svg
-                          className="w-5 h-5"
-                          fill="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V8h16v10zm-8-2c-1.38 0-2.5-1.12-2.5-2.5S10.62 11 12 11s2.5 1.12 2.5 2.5S13.38 16 12 16z" />
-                        </svg>
-                      ),
-                      a_domicilio: (
-                        <svg
-                          className="w-5 h-5"
-                          fill="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
-                        </svg>
-                      ),
-                    };
-
-                    return (
-                      <button
-                        key={tipo}
-                        onClick={() => {
-                          const tipoAnterior = selectedTipoAtencion;
-                          setSelectedTipoAtencion(tipo);
-                          // Limpiar fecha y hora cuando cambia el tipo de atención
-                          // para que el usuario vea los nuevos horarios disponibles
-                          setSelectedDate(null);
-                          setSelectedTimeSlot(null);
-                          // Limpiar dirección si cambia de tipo
-                          if (tipo !== "a_domicilio") {
-                            setDireccionDomicilio("");
-                          }
-                          console.log(
-                            `[ProfessionalPageClient] Tipo de atención cambiado de ${tipoAnterior} a ${tipo}`
-                          );
-                        }}
-                        className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${
-                          isSelected
-                            ? "bg-primary text-white shadow-md"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                        }`}
-                      >
-                        {icons[tipo]}
-                        <span>{labels[tipo]}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                {loadingHorarios && (
-                  <p className="text-center text-sm text-gray-500 mt-3">
-                    Cargando horarios...
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Campo de dirección para citas a domicilio */}
-            {selectedTipoAtencion === "a_domicilio" && (
-              <div className="mb-8">
-                {/* Información de códigos postales de servicio */}
-                {codigosPostalesDomicilio &&
-                  codigosPostalesDomicilio.trim() &&
-                  codigosPostalesDomicilio.length > 0 && (
+          {/* Campo de dirección para citas a domicilio */}
+          {tipoAtencion === "a_domicilio" && (
+            <div className="mb-8">
+              {/* Información de códigos postales de servicio */}
+              {codigosPostalesDomicilio &&
+                codigosPostalesDomicilio.trim() &&
+                codigosPostalesDomicilio.length > 0 && (
                   <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <div className="flex items-start gap-3">
                       <svg
@@ -2437,7 +2510,8 @@ export default function ProfessionalPageClient({
                           siguientes códigos postales:
                         </p>
                         <div className="flex flex-wrap gap-2">
-                          {codigosPostalesDomicilio.split(/[,\s]+/)
+                          {codigosPostalesDomicilio
+                            .split(/[,\s]+/)
                             .filter((cp: string) => cp.trim())
                             .map((cp: string, index: number) => (
                               <span
@@ -2452,411 +2526,492 @@ export default function ProfessionalPageClient({
                     </div>
                   </div>
                 )}
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Dirección para atención a domicilio{" "}
-                  <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  value={direccionDomicilio}
-                  onChange={(e) => setDireccionDomicilio(e.target.value)}
-                  placeholder="Ingresa tu dirección completa (calle, número, ciudad, código postal)"
-                  rows={2}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  El profesional llegará a esta dirección en la fecha y hora
-                  seleccionada.
-                </p>
-              </div>
-            )}
-
-            {/* Mensaje informativo para citas presenciales */}
-            {selectedTipoAtencion === "presencial" && (
-              <div className="mb-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-start gap-3">
-                  <svg
-                    className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0"
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                  </svg>
-                  <div>
-                    <h4 className="text-sm font-semibold text-blue-900 mb-1">
-                      Cita Presencial
-                    </h4>
-                    <p className="text-sm text-blue-800">
-                      Recibirás la dirección del consultorio por correo
-                      electrónico después de confirmar tu pago.
-                    </p>
-                    <p className="text-xs text-blue-600 mt-2">
-                      Te recomendamos llegar 10 minutos antes de la hora
-                      programada.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Calendario y horarios - Mostrar siempre si hay tipos disponibles, o si hay uno seleccionado */}
-            {(selectedTipoAtencion || tiposAtencionDisponibles.length > 0) && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 lg:gap-10">
-                {/* Left: Calendar and times (2 cols) */}
-                <div className="md:col-span-2">
-                  {/* Month header */}
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-semibold text-gray-700">
-                      {monthNames[currentMonth.getMonth()]}{" "}
-                      {currentMonth.getFullYear()}
-                    </h3>
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => {
-                          const newMonth = new Date(currentMonth);
-                          newMonth.setMonth(newMonth.getMonth() - 1);
-                          setCurrentMonth(newMonth);
-                        }}
-                        className="p-2 hover:bg-gray-100 rounded-lg"
+              <div className="space-y-4">
+                {/* Campo de código postal */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Código Postal <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={codigoPostal}
+                    onChange={(e) => {
+                      // Solo permitir números y máximo 5 dígitos
+                      const valor = e.target.value.replace(/\D/g, "").slice(0, 5);
+                      setCodigoPostal(valor);
+                      
+                      // Validar en tiempo real si hay texto
+                      if (valor.trim().length > 0) {
+                        const validacion = validarCodigoPostal(valor);
+                        setCodigoPostalError(validacion.error);
+                      } else {
+                        setCodigoPostalError(null);
+                      }
+                    }}
+                    onBlur={() => {
+                      // Validar al perder el foco
+                      if (codigoPostal.trim().length > 0) {
+                        const validacion = validarCodigoPostal(codigoPostal);
+                        setCodigoPostalError(validacion.error);
+                      }
+                    }}
+                    placeholder="28001"
+                    maxLength={5}
+                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                      codigoPostalError
+                        ? "border-red-500 focus:border-red-500 focus:ring-red-200"
+                        : "border-gray-300 focus:border-primary focus:ring-primary/20"
+                    }`}
+                    required
+                  />
+                  {codigoPostalError ? (
+                    <p className="text-xs text-red-600 mt-1 flex items-start gap-1">
+                      <svg
+                        className="w-4 h-4 mt-0.5 flex-shrink-0"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
                       >
-                        <svg
-                          className="w-4 h-4"
-                          fill="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => {
-                          const newMonth = new Date(currentMonth);
-                          newMonth.setMonth(newMonth.getMonth() + 1);
-                          setCurrentMonth(newMonth);
-                        }}
-                        className="p-2 hover:bg-gray-100 rounded-lg"
-                      >
-                        <svg
-                          className="w-4 h-4"
-                          fill="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Date chips */}
-                  {availableDays.length > 0 ? (
-                    <>
-                      <div className="flex w-full max-w-full gap-2 mb-6 overflow-x-auto snap-x snap-mandatory px-1 sm:px-2">
-                        {availableDays.slice(0, 14).map((day, i) => {
-                          const isSelected =
-                            selectedDate &&
-                            day.date.getTime() === selectedDate.getTime();
-                          return (
-                            <button
-                              key={i}
-                              onClick={() => handleDateSelect(day.date)}
-                              className={`px-3 py-2 rounded-md text-sm whitespace-nowrap snap-center ${
-                                isSelected
-                                  ? "bg-orange-500 text-white"
-                                  : day.isToday
-                                  ? "bg-orange-100 text-orange-700 border border-orange-300"
-                                  : "bg-white text-gray-700 border border-gray-200"
-                              }`}
-                            >
-                              {day.dayName} {day.dayNumber}
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      {/* Times list blocks */}
-                      {selectedDate ? (
-                        loadingAppointments ? (
-                          <div className="text-center py-8 text-gray-500">
-                            Cargando horarios...
-                          </div>
-                        ) : timeSlots.length > 0 ? (
-                          <div className="space-y-3">
-                            <div className="mb-4">
-                              <p className="text-sm text-gray-600 mb-2">
-                                Horarios disponibles para{" "}
-                                {selectedDate.toLocaleDateString("es-ES", {
-                                  weekday: "long",
-                                  year: "numeric",
-                                  month: "long",
-                                  day: "numeric",
-                                })}
-                              </p>
-                              <div className="flex items-center gap-4 text-xs text-gray-500">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-3 h-3 bg-green-100 border border-green-300 rounded"></div>
-                                  <span>Disponible</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <div className="w-3 h-3 bg-gray-200 border border-gray-300 rounded"></div>
-                                  <span>Ocupado</span>
-                                </div>
-                              </div>
-                            </div>
-                            {timeSlots.map((slot, idx) => (
-                              <button
-                                key={idx}
-                                onClick={() => {
-                                  if (slot.available && selectedDate && selectedPrice) {
-                                    // Navegar a la página de selección de horario
-                                    const fechaISO = selectedDate.toISOString();
-                                    const precioId = selectedPrice.id_precio?.toString() || "";
-                                    const tipoAtencion = selectedTipoAtencion || "presencial";
-                                    
-                                    router.push(
-                                      `/${params.category}/${params.service}/${params.professional}/seleccionar-horario?fecha=${encodeURIComponent(fechaISO)}&precioId=${encodeURIComponent(precioId)}&tipoAtencion=${encodeURIComponent(tipoAtencion)}&horario=${encodeURIComponent(slot.time)}`
-                                    );
-                                  }
-                                }}
-                                disabled={!slot.available}
-                                className={`w-full text-left px-3 md:px-4 py-3 md:py-4 rounded-xl border flex items-center justify-between transition-all ${
-                                  selectedTimeSlot === slot.time
-                                    ? "bg-purple-100 border-purple-300 text-purple-800 shadow-md"
-                                    : !slot.available
-                                    ? "bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed opacity-60"
-                                    : "bg-white border-gray-200 hover:bg-green-50 hover:border-green-300 hover:shadow-sm"
-                                }`}
-                                title={
-                                  !slot.available
-                                    ? "Este horario está ocupado"
-                                    : "Click para seleccionar"
-                                }
-                              >
-                                <div className="flex items-center gap-3">
-                                  <div
-                                    className={`w-2 h-2 rounded-full ${
-                                      slot.available
-                                        ? "bg-green-500"
-                                        : "bg-gray-400"
-                                    }`}
-                                  ></div>
-                                  <span
-                                    className={`text-sm font-medium ${
-                                      !slot.available && "line-through"
-                                    }`}
-                                  >
-                                    {slot.displayTime}
-                                  </span>
-                                  {!slot.available && (
-                                    <span className="text-xs text-gray-400 italic">
-                                      (Ocupado)
-                                    </span>
-                                  )}
-                                </div>
-                                {slot.available ? (
-                                  <svg
-                                    className="w-4 h-4 text-gray-400"
-                                    fill="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path d="M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
-                                  </svg>
-                                ) : (
-                                  <svg
-                                    className="w-4 h-4 text-gray-400"
-                                    fill="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
-                                  </svg>
-                                )}
-                              </button>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-center py-8 text-gray-500">
-                            No hay horarios disponibles para esta fecha
-                          </div>
-                        )
-                      ) : (
-                        <div className="text-center py-8 text-gray-500">
-                          Selecciona una fecha para ver los horarios disponibles
-                        </div>
-                      )}
-                    </>
+                        <path
+                          fillRule="evenodd"
+                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      <span>{codigoPostalError}</span>
+                    </p>
                   ) : (
-                    <div className="text-center py-8 text-gray-500">
-                      No hay días disponibles este mes
-                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Ingresa el código postal de tu dirección
+                    </p>
                   )}
                 </div>
 
-                {/* Right: Summary */}
-                <aside className="space-y-4">
-                  <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5">
-                    {selectedPrice ? (
-                      <>
-                        <div className="flex items-center space-x-3 mb-4">
-                          {displayImage && (
-                            <div className="w-10 h-10 rounded-full overflow-hidden relative">
-                              <Image
-                                src={displayImage}
-                                alt={displayName}
-                                fill
-                                className="object-cover"
-                                onError={(e) => {
-                                  console.error(
-                                    "[ProfessionalPageClient] Next/Image onError avatar",
-                                    {
-                                      src: (e as any)?.currentTarget?.src,
-                                    }
-                                  );
-                                }}
-                                onLoad={() => {
-                                  console.log(
-                                    "[ProfessionalPageClient] Avatar image loaded OK"
-                                  );
-                                }}
-                              />
-                            </div>
-                          )}
-                          <div>
-                            <p className="text-sm font-semibold">
-                              {selectedPrice.nombre_servicio}
+                {/* Campo de dirección */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Dirección completa{" "}
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    value={direccionDomicilio}
+                    onChange={(e) => setDireccionDomicilio(e.target.value)}
+                    placeholder="Calle, número, ciudad"
+                    rows={2}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    El profesional llegará a esta dirección en la fecha y hora
+                    seleccionada.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Mensaje informativo para citas presenciales */}
+          {tipoAtencion === "presencial" && (
+            <div className="mb-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <svg
+                  className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                </svg>
+                <div>
+                  <h4 className="text-sm font-semibold text-blue-900 mb-1">
+                    Cita Presencial
+                  </h4>
+                  <p className="text-sm text-blue-800">
+                    Recibirás la dirección del consultorio por correo
+                    electrónico después de confirmar tu pago.
+                  </p>
+                  <p className="text-xs text-blue-600 mt-2">
+                    Te recomendamos llegar 10 minutos antes de la hora
+                    programada.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Calendario y horarios - Mostrar siempre si hay tipo de atención en la URL */}
+          {tipoAtencion && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 lg:gap-10">
+              {/* Left: Calendar and times (2 cols) */}
+              <div className="md:col-span-2">
+                {/* Month header */}
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-semibold text-gray-700">
+                    {monthNames[currentMonth.getMonth()]}{" "}
+                    {currentMonth.getFullYear()}
+                  </h3>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => {
+                        const newMonth = new Date(currentMonth);
+                        newMonth.setMonth(newMonth.getMonth() - 1);
+                        setCurrentMonth(newMonth);
+                      }}
+                      className="p-2 hover:bg-gray-100 rounded-lg"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => {
+                        const newMonth = new Date(currentMonth);
+                        newMonth.setMonth(newMonth.getMonth() + 1);
+                        setCurrentMonth(newMonth);
+                      }}
+                      className="p-2 hover:bg-gray-100 rounded-lg"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Date chips */}
+                {availableDays.length > 0 ? (
+                  <>
+                    <div className="flex w-full max-w-full gap-2 mb-6 overflow-x-auto snap-x snap-mandatory px-1 sm:px-2">
+                      {availableDays.slice(0, 14).map((day, i) => {
+                        const isSelected =
+                          selectedDate &&
+                          day.date.getTime() === selectedDate.getTime();
+                        return (
+                          <button
+                            key={i}
+                            onClick={() => handleDateSelect(day.date)}
+                            className={`px-3 py-2 rounded-md text-sm whitespace-nowrap snap-center ${
+                              isSelected
+                                ? "bg-orange-500 text-white"
+                                : day.isToday
+                                ? "bg-orange-100 text-orange-700 border border-orange-300"
+                                : "bg-white text-gray-700 border border-gray-200"
+                            }`}
+                          >
+                            {day.dayName} {day.dayNumber}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Times list blocks */}
+                    {selectedDate ? (
+                      loadingAppointments ? (
+                        <div className="text-center py-8 text-gray-500">
+                          Cargando horarios...
+                        </div>
+                      ) : timeSlots.length > 0 ? (
+                        <div className="space-y-3">
+                          <div className="mb-4">
+                            <p className="text-sm text-gray-600 mb-2">
+                              Horarios disponibles para{" "}
+                              {selectedDate.toLocaleDateString("es-ES", {
+                                weekday: "long",
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                              })}
                             </p>
-                            <p className="text-xs text-gray-500">
-                              {displayName}
-                              <br />
-                              {cityLabel}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between text-sm text-gray-600 py-2">
-                          <span>{selectedPrice.nombre_servicio}</span>
-                          <span>€{selectedPrice.precio.toFixed(2)} EUR</span>
-                        </div>
-                        {selectedPrice.duracion && (
-                          <div className="flex items-center justify-between text-sm text-gray-600 py-2">
-                            <span>Duración</span>
-                            <span>{selectedPrice.duracion}</span>
-                          </div>
-                        )}
-                        {selectedTipoAtencion && (
-                          <div className="flex items-center justify-between text-sm text-gray-600 py-2">
-                            <span>Tipo de atención</span>
-                            <span className="capitalize">
-                              {selectedTipoAtencion === "presencial"
-                                ? "Presencial"
-                                : selectedTipoAtencion === "en_linea"
-                                ? "En Línea"
-                                : "A Domicilio"}
-                            </span>
-                          </div>
-                        )}
-                        {selectedTipoAtencion === "en_linea" && (
-                          <div className="flex items-center justify-between text-sm text-gray-600 py-2">
-                            <span>Plataforma</span>
-                            <span className="text-green-600 font-medium">
-                              Google Meet
-                            </span>
-                          </div>
-                        )}
-                        {selectedTipoAtencion === "a_domicilio" &&
-                          direccionDomicilio && (
-                            <div className="text-sm text-gray-600 py-2">
-                              <span className="block mb-1 font-medium">
-                                Dirección de atención:
-                              </span>
-                              <span className="text-xs">{direccionDomicilio}</span>
-                            </div>
-                          )}
-                        <div className="h-px bg-gray-200 my-2" />
-                        <div className="flex items-center justify-between font-semibold">
-                          <span>Total</span>
-                          <span>EUR {selectedPrice.precio.toFixed(2)}</span>
-                        </div>
-                        {selectedDate && selectedTimeSlot && (
-                          <>
-                            <div className="h-px bg-gray-200 my-2" />
-                            <div className="text-xs text-gray-600 space-y-1">
-                              <div>
-                                <strong>Fecha:</strong>{" "}
-                                {selectedDate.toLocaleDateString("es-ES", {
-                                  weekday: "long",
-                                  year: "numeric",
-                                  month: "long",
-                                  day: "numeric",
-                                })}
+                            <div className="flex items-center gap-4 text-xs text-gray-500">
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 bg-green-100 border border-green-300 rounded"></div>
+                                <span>Disponible</span>
                               </div>
-                              <div>
-                                <strong>Hora:</strong>{" "}
-                                {
-                                  timeSlots.find((s) => s.time === selectedTimeSlot)
-                                    ?.displayTime
-                                }
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 bg-gray-200 border border-gray-300 rounded"></div>
+                                <span>Ocupado</span>
                               </div>
                             </div>
+                          </div>
+                          {timeSlots.map((slot, idx) => (
                             <button
-                              onClick={handleConfirmAppointment}
-                              disabled={isCreatingAppointment}
-                              className="w-full mt-4 bg-primary text-white py-3 rounded-lg font-bold hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              key={idx}
+                              onClick={() => {
+                                if (
+                                  slot.available &&
+                                  selectedDate &&
+                                  selectedPrice
+                                ) {
+                                  // Navegar a la página de selección de horario
+                                  const fechaISO = selectedDate.toISOString();
+                                  const precioId =
+                                    selectedPrice.id_precio?.toString() || "";
+                                  const tipoAtencionParam = tipoAtencion || "presencial";
+
+                                  router.push(
+                                    `/${params.category}/${params.service}/${
+                                      params.professional
+                                    }/seleccionar-horario?fecha=${encodeURIComponent(
+                                      fechaISO
+                                    )}&precioId=${encodeURIComponent(
+                                      precioId
+                                    )}&tipoAtencion=${encodeURIComponent(
+                                      tipoAtencionParam
+                                    )}&horario=${encodeURIComponent(slot.time)}`
+                                  );
+                                }
+                              }}
+                              disabled={!slot.available}
+                              className={`w-full text-left px-3 md:px-4 py-3 md:py-4 rounded-xl border flex items-center justify-between transition-all ${
+                                selectedTimeSlot === slot.time
+                                  ? "bg-purple-100 border-purple-300 text-purple-800 shadow-md"
+                                  : !slot.available
+                                  ? "bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed opacity-60"
+                                  : "bg-white border-gray-200 hover:bg-green-50 hover:border-green-300 hover:shadow-sm"
+                              }`}
+                              title={
+                                !slot.available
+                                  ? "Este horario está ocupado"
+                                  : "Click para seleccionar"
+                              }
                             >
-                              {isCreatingAppointment
-                                ? "Creando cita..."
-                                : "Confirmar Cita"}
+                              <div className="flex items-center gap-3">
+                                <div
+                                  className={`w-2 h-2 rounded-full ${
+                                    slot.available
+                                      ? "bg-green-500"
+                                      : "bg-gray-400"
+                                  }`}
+                                ></div>
+                                <span
+                                  className={`text-sm font-medium ${
+                                    !slot.available && "line-through"
+                                  }`}
+                                >
+                                  {slot.displayTime}
+                                </span>
+                                {!slot.available && (
+                                  <span className="text-xs text-gray-400 italic">
+                                    (Ocupado)
+                                  </span>
+                                )}
+                              </div>
+                              {slot.available ? (
+                                <svg
+                                  className="w-4 h-4 text-gray-400"
+                                  fill="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path d="M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
+                                </svg>
+                              ) : (
+                                <svg
+                                  className="w-4 h-4 text-gray-400"
+                                  fill="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                                </svg>
+                              )}
                             </button>
-                          </>
-                        )}
-                        <button
-                          onClick={() => {
-                            setSelectedPrice(null);
-                            setSelectedDate(null);
-                            setSelectedTimeSlot(null);
-                          }}
-                          className="w-full mt-2 text-sm text-gray-600 hover:text-gray-800 underline"
-                        >
-                          Cambiar paquete
-                        </button>
-                      </>
-                    ) : (
-                      <div className="text-center py-8">
-                        <p className="text-sm text-gray-600 mb-4">
-                          Selecciona un paquete de precios arriba para ver el resumen de tu cita
-                        </p>
-                        <div className="flex items-center space-x-3 mb-4">
-                          {displayImage && (
-                            <div className="w-10 h-10 rounded-full overflow-hidden relative">
-                              <Image
-                                src={displayImage}
-                                alt={displayName}
-                                fill
-                                className="object-cover"
-                              />
-                            </div>
-                          )}
-                          <div className="text-left">
-                            <p className="text-sm font-semibold">{displayName}</p>
-                            <p className="text-xs text-gray-500">{cityLabel}</p>
-                          </div>
+                          ))}
                         </div>
-                        {selectedTipoAtencion && (
-                          <div className="flex items-center justify-between text-sm text-gray-600 py-2 border-t border-gray-200 pt-4">
-                            <span>Tipo de atención</span>
-                            <span className="capitalize">
-                              {selectedTipoAtencion === "presencial"
-                                ? "Presencial"
-                                : selectedTipoAtencion === "en_linea"
-                                ? "En Línea"
-                                : "A Domicilio"}
-                            </span>
-                          </div>
-                        )}
+                      ) : (
+                        <div className="text-center py-8 text-gray-500">
+                          No hay horarios disponibles para esta fecha
+                        </div>
+                      )
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        Selecciona una fecha para ver los horarios disponibles
                       </div>
                     )}
+                  </>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    No hay días disponibles este mes
                   </div>
-                </aside>
+                )}
               </div>
-            )}
-          </div>
+
+              {/* Right: Summary */}
+              <aside className="space-y-4">
+                <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5">
+                  {selectedPrice ? (
+                    <>
+                      <div className="flex items-center space-x-3 mb-4">
+                        {displayImage && (
+                          <div className="w-10 h-10 rounded-full overflow-hidden relative">
+                            <Image
+                              src={displayImage}
+                              alt={displayName}
+                              fill
+                              className="object-cover"
+                              onError={(e) => {
+                                console.error(
+                                  "[ProfessionalPageClient] Next/Image onError avatar",
+                                  {
+                                    src: (e as any)?.currentTarget?.src,
+                                  }
+                                );
+                              }}
+                              onLoad={() => {
+                                console.log(
+                                  "[ProfessionalPageClient] Avatar image loaded OK"
+                                );
+                              }}
+                            />
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-sm font-semibold">
+                            {selectedPrice.nombre_servicio}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {displayName}
+                            <br />
+                            {cityLabel}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between text-sm text-gray-600 py-2">
+                        <span>{selectedPrice.nombre_servicio}</span>
+                        <span>€{selectedPrice.precio.toFixed(2)} EUR</span>
+                      </div>
+                      {selectedPrice.duracion && (
+                        <div className="flex items-center justify-between text-sm text-gray-600 py-2">
+                          <span>Duración</span>
+                          <span>{selectedPrice.duracion}</span>
+                        </div>
+                      )}
+                      {tipoAtencion && (
+                        <div className="flex items-center justify-between text-sm text-gray-600 py-2">
+                          <span>Tipo de atención</span>
+                          <span className="capitalize">
+                            {tipoAtencion === "presencial"
+                              ? "Presencial"
+                              : tipoAtencion === "en_linea"
+                              ? "En Línea"
+                              : "A Domicilio"}
+                          </span>
+                        </div>
+                      )}
+                      {tipoAtencion === "en_linea" && (
+                        <div className="flex items-center justify-between text-sm text-gray-600 py-2">
+                          <span>Plataforma</span>
+                          <span className="text-green-600 font-medium">
+                            Google Meet
+                          </span>
+                        </div>
+                      )}
+                      {tipoAtencion === "a_domicilio" &&
+                        direccionDomicilio && (
+                          <div className="text-sm text-gray-600 py-2">
+                            <span className="block mb-1 font-medium">
+                              Dirección de atención:
+                            </span>
+                            <span className="text-xs">
+                              {direccionDomicilio}
+                            </span>
+                          </div>
+                        )}
+                      <div className="h-px bg-gray-200 my-2" />
+                      <div className="flex items-center justify-between font-semibold">
+                        <span>Total</span>
+                        <span>EUR {selectedPrice.precio.toFixed(2)}</span>
+                      </div>
+                      {selectedDate && selectedTimeSlot && (
+                        <>
+                          <div className="h-px bg-gray-200 my-2" />
+                          <div className="text-xs text-gray-600 space-y-1">
+                            <div>
+                              <strong>Fecha:</strong>{" "}
+                              {selectedDate.toLocaleDateString("es-ES", {
+                                weekday: "long",
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                              })}
+                            </div>
+                            <div>
+                              <strong>Hora:</strong>{" "}
+                              {
+                                timeSlots.find(
+                                  (s) => s.time === selectedTimeSlot
+                                )?.displayTime
+                              }
+                            </div>
+                          </div>
+                          <button
+                            onClick={handleConfirmAppointment}
+                            disabled={isCreatingAppointment}
+                            className="w-full mt-4 bg-primary text-white py-3 rounded-lg font-bold hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isCreatingAppointment
+                              ? "Creando cita..."
+                              : "Confirmar Cita"}
+                          </button>
+                        </>
+                      )}
+                      <button
+                        onClick={() => {
+                          setSelectedPrice(null);
+                          setSelectedDate(null);
+                          setSelectedTimeSlot(null);
+                        }}
+                        className="w-full mt-2 text-sm text-gray-600 hover:text-gray-800 underline"
+                      >
+                        Cambiar paquete
+                      </button>
+                    </>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-sm text-gray-600 mb-4">
+                        Selecciona un paquete de precios arriba para ver el
+                        resumen de tu cita
+                      </p>
+                      <div className="flex items-center space-x-3 mb-4">
+                        {displayImage && (
+                          <div className="w-10 h-10 rounded-full overflow-hidden relative">
+                            <Image
+                              src={displayImage}
+                              alt={displayName}
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                        )}
+                        <div className="text-left">
+                          <p className="text-sm font-semibold">{displayName}</p>
+                          <p className="text-xs text-gray-500">{cityLabel}</p>
+                        </div>
+                      </div>
+                      {tipoAtencion && (
+                        <div className="flex items-center justify-between text-sm text-gray-600 py-2 border-t border-gray-200 pt-4">
+                          <span>Tipo de atención</span>
+                          <span className="capitalize">
+                            {tipoAtencion === "presencial"
+                              ? "Presencial"
+                              : tipoAtencion === "en_linea"
+                              ? "En Línea"
+                              : "A Domicilio"}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </aside>
+            </div>
+          )}
         </div>
+      </div>
 
       {/* Video Popup Modal */}
       {isPopupOpen && (

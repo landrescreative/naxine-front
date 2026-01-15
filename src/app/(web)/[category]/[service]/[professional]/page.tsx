@@ -12,6 +12,9 @@ interface ProfessionalPageProps {
     service: string;
     professional: string; // ahora puede ser "123" o un slug basado en el nombre
   }>;
+  searchParams: Promise<{
+    modalidad?: string;
+  }>;
 }
 
 export async function generateMetadata({ params }: ProfessionalPageProps) {
@@ -64,8 +67,10 @@ export async function generateMetadata({ params }: ProfessionalPageProps) {
 
 export default async function ProfessionalPage({
   params,
+  searchParams,
 }: ProfessionalPageProps) {
   const { professional } = await params;
+  const { modalidad } = await searchParams;
 
   console.log(
     `[ProfessionalPage] Loading professional with identifier: ${professional}`
@@ -106,7 +111,7 @@ export default async function ProfessionalPage({
         </div>
       }
     >
-      <ProfessionalPageClient professional={response.data} />
+      <ProfessionalPageClient professional={response.data} modalidadInicial={modalidad} />
     </Suspense>
   );
 }

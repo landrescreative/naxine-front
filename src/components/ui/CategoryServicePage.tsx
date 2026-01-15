@@ -1,6 +1,6 @@
 "use client";
 
-import { notFound } from "next/navigation";
+import { notFound, useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import PurpleSection from "@/components/ui/PurpleSection";
 import ProfessionalCard from "@/components/ui/ProfessionalCard";
@@ -40,13 +40,42 @@ export default function CategoryServicePage({
   specialtyData,
   serviceData,
 }: CategoryServicePageProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [currentPage, setCurrentPage] = useState(1);
   const professionalsPerPage = 15; // 5 filas x 3 columnas = 15 profesionales
   const [professionals, setProfessionals] = useState<ApiProfessional[]>([]);
   const [loadingProfessionals, setLoadingProfessionals] = useState(true);
   const [totalProfessionals, setTotalProfessionals] = useState(0);
-  // Filtros
-  const [filterModalidad, setFilterModalidad] = useState<string>("Online");
+  // Filtros - Leer de la URL o usar valor por defecto
+  const [filterModalidad, setFilterModalidad] = useState<string>(() => {
+    const modalidadFromUrl = searchParams.get("modalidad");
+    return modalidadFromUrl || "presencial";
+  });
+  const hasInitializedModalidad = useRef(false);
+
+  // Inicializar modalidad en la URL si no existe
+  useEffect(() => {
+    if (!hasInitializedModalidad.current) {
+      const modalidadFromUrl = searchParams.get("modalidad");
+      if (!modalidadFromUrl) {
+        // Si no hay modalidad en la URL, establecer la por defecto
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("modalidad", filterModalidad);
+        router.replace(`?${params.toString()}`, { scroll: false });
+      }
+      hasInitializedModalidad.current = true;
+    }
+  }, []);
+
+  // Sincronizar modalidad con la URL cuando cambie desde fuera (navegación del navegador)
+  useEffect(() => {
+    if (!hasInitializedModalidad.current) return;
+    const modalidadFromUrl = searchParams.get("modalidad");
+    if (modalidadFromUrl && modalidadFromUrl !== filterModalidad) {
+      setFilterModalidad(modalidadFromUrl);
+    }
+  }, [searchParams]);
 
   // Intentar usar datos del backend primero, sino usar datos hardcodeados como fallback
   const categoryData = categoriesData[categorySlug];
@@ -189,10 +218,18 @@ export default function CategoryServicePage({
       }
       const attempted = enrichmentAttemptedIdsRef.current;
       // Seleccionar los que no tienen precios y que no se hayan intentado ya
+      // Si el filtro es "a_domicilio", también intentar cargar precios para profesionales
+      // que podrían tener precios de domicilio pero aún no se han cargado
       const targets = professionals.filter((p) => {
         const noPrices = !Array.isArray(p.precios) || p.precios.length === 0;
         const id = String(p.id || "");
-        return noPrices && id && !attempted.has(id);
+        // Si el filtro es a_domicilio y el profesional tiene codigosPostalesDomicilio,
+        // intentar cargar precios aunque ya se haya intentado antes (para recargar)
+        const shouldRetry = 
+          filterModalidad === "a_domicilio" && 
+          (p as any).codigosPostalesDomicilio && 
+          noPrices;
+        return id && (noPrices && !attempted.has(id) || shouldRetry);
       });
       if (targets.length === 0) return;
       try {
@@ -231,6 +268,7 @@ export default function CategoryServicePage({
                 (precio.duracion_minutos
                   ? `${precio.duracion_minutos} min`
                   : undefined),
+              modalidad: precio.modalidad || undefined,
             }));
             const foto =
               profData.foto_perfil ||
@@ -271,27 +309,184 @@ export default function CategoryServicePage({
     if (!loadingProfessionals && professionals.length > 0) {
       enrichMissingData();
     }
-  }, [professionals, loadingProfessionals]);
+  }, [professionals, loadingProfessionals, filterModalidad]); // Agregar filterModalidad para recargar cuando cambia el filtro
+
+  // Limpiar el ref de enriquecimiento cuando cambia el filtro para permitir recargar precios
+  // Esto es especialmente importante para "a_domicilio" donde los precios pueden no estar cargados inicialmente
+  useEffect(() => {
+    if (enrichmentAttemptedIdsRef.current && filterModalidad === "a_domicilio") {
+      console.log(`[CategoryServicePage] Limpiando ref de enriquecimiento al cambiar filtro a: ${filterModalidad}`);
+      // Limpiar el ref para permitir recargar precios cuando cambia a a_domicilio
+      enrichmentAttemptedIdsRef.current.clear();
+    }
+  }, [filterModalidad]);
 
   // Guardar IDs de profesionales ya intentados para enriquecimiento (evita spam de peticiones)
   const enrichmentAttemptedIdsRef = useRef<Set<string>>(new Set());
 
-  // Lógica de paginación
-  const totalPages = Math.ceil(totalProfessionals / professionalsPerPage);
   // Aplicar filtros en cliente
   const currentProfessionals = professionals.filter((prof) => {
-    // Modalidad: solo se permite Online
+    // Modalidad: filtrar según la modalidad seleccionada
     const modalidad = filterModalidad.toLowerCase();
     const modalidades = (prof.modalidadesSesiones || []).map((m) =>
       m.toLowerCase()
     );
-    const matchesModalidad =
-      modalidad === "online" &&
-      (modalidades.includes("en linea") || modalidades.includes("en línea"));
+
+    // Verificar si el profesional tiene precios cargados
+    const tienePreciosCargados =
+      prof.precios && Array.isArray(prof.precios) && prof.precios.length > 0;
+
+    let matchesModalidad = false;
+
+    // Debug: Log para entender qué está pasando con el filtro
+    if (modalidad === "a_domicilio") {
+      console.log(`[CategoryServicePage] Filtrando profesional ${prof.id} para a_domicilio:`, {
+        modalidadesSesiones: prof.modalidadesSesiones,
+        modoAtencion: prof.modoAtencion,
+        tienePreciosCargados,
+        precios: prof.precios,
+        preciosCount: prof.precios?.length || 0,
+      });
+    }
+
+    if (modalidad === "presencial" || modalidad === "en_linea") {
+      // Presencial y en_linea muestran los mismos profesionales
+      // Verificar modalidades de sesión
+      matchesModalidad = modalidades.some(
+        (m) =>
+          m.includes("presencial") ||
+          m.includes("en linea") ||
+          m.includes("en línea") ||
+          m.includes("online")
+      );
+      // También verificar si hay precios con modalidad presencial, virtual, ambas, o sin modalidad
+      if (!matchesModalidad && tienePreciosCargados) {
+        matchesModalidad = prof.precios.some((p: any) => {
+          const precioModalidad = (p.modalidad || "").toLowerCase().trim();
+          // Incluir precios sin modalidad (aplican para ambas)
+          if (!precioModalidad) {
+            return true;
+          }
+          // "ambas" aplica para presencial y en_linea
+          return (
+            precioModalidad === "presencial" ||
+            precioModalidad === "virtual" ||
+            precioModalidad === "en_linea" ||
+            precioModalidad === "online" ||
+            precioModalidad === "ambas"
+          );
+        });
+      }
+      // Si no tiene precios cargados todavía, incluir temporalmente si tiene la modalidad en modalidadesSesiones
+      // (esto evita que desaparezcan mientras se cargan los precios)
+      if (!matchesModalidad && !tienePreciosCargados) {
+        matchesModalidad = modalidades.some(
+          (m) =>
+            m.includes("presencial") ||
+            m.includes("en linea") ||
+            m.includes("en línea") ||
+            m.includes("online")
+        );
+      }
+    } else if (modalidad === "a_domicilio") {
+      // PRIORIDAD 1: Si tiene precios cargados, verificar primero los precios
+      // Esto es más confiable que depender de modalidadesSesiones o modoAtencion
+      if (tienePreciosCargados) {
+        console.log(`[CategoryServicePage] Verificando precios para profesional ${prof.id}:`, {
+          precios: prof.precios,
+        });
+        matchesModalidad = prof.precios.some((p: any) => {
+          // Extraer modalidad desde diferentes ubicaciones posibles
+          const precioModalidad = (
+            p.modalidad ||
+            (p as any).raw?.modalidad ||
+            p.raw?.modalidad ||
+            ""
+          )
+            .toLowerCase()
+            .trim();
+
+          // "ambas" NO aplica para domicilio, solo para presencial/virtual
+          // Solo buscar "domicilio" o "a_domicilio"
+          const matches =
+            precioModalidad === "a_domicilio" ||
+            precioModalidad === "domicilio";
+
+          // Debug: loggear todos los precios para ver qué modalidades tienen
+          console.log(`[CategoryServicePage] Precio del profesional ${prof.id}:`, {
+            precioModalidad,
+            precioCompleto: p,
+            matches,
+          });
+
+          return matches;
+        });
+      }
+
+      // PRIORIDAD 2: Verificar si tiene códigos postales de domicilio
+      // Si tiene codigos_postales_domicilio, significa que ofrece servicio a domicilio
+      if (!matchesModalidad && (prof as any).codigosPostalesDomicilio) {
+        const codigosPostales = String((prof as any).codigosPostalesDomicilio || "").trim();
+        if (codigosPostales.length > 0) {
+          console.log(`[CategoryServicePage] Profesional ${prof.id} tiene códigos postales de domicilio:`, codigosPostales);
+          matchesModalidad = true;
+        }
+      }
+
+      // PRIORIDAD 3: Verificar modalidadesSesiones
+      if (!matchesModalidad) {
+        matchesModalidad = modalidades.some(
+          (m) => m.includes("domicilio") || m.includes("a domicilio")
+        );
+      }
+
+      // PRIORIDAD 4: Verificar modoAtencion del profesional
+      if (
+        !matchesModalidad &&
+        prof.modoAtencion &&
+        Array.isArray(prof.modoAtencion)
+      ) {
+        matchesModalidad = prof.modoAtencion.some((m: string) => {
+          const modoLower = (m || "").toLowerCase().trim();
+          return modoLower === "a_domicilio" || modoLower === "domicilio";
+        });
+      }
+    }
+
+    // Debug final
+    if (modalidad === "a_domicilio" && !matchesModalidad) {
+      console.log(`[CategoryServicePage] Profesional ${prof.id} NO coincide con a_domicilio después de todas las verificaciones`);
+    } else if (modalidad === "a_domicilio" && matchesModalidad) {
+      console.log(`[CategoryServicePage] ✅ Profesional ${prof.id} SÍ coincide con a_domicilio`);
+    }
+
     if (!matchesModalidad) return false;
 
     return true;
   });
+
+  // Lógica de paginación - usar el total de profesionales filtrados
+  const totalProfessionalsFiltrados = currentProfessionals.length;
+  const startIndex = (currentPage - 1) * professionalsPerPage;
+  const endIndex = startIndex + professionalsPerPage;
+  const currentProfessionalsPaginated = currentProfessionals.slice(
+    startIndex,
+    endIndex
+  );
+  const totalPages = Math.ceil(
+    totalProfessionalsFiltrados / professionalsPerPage
+  );
+
+  // Debug: Log para verificar el filtrado
+  useEffect(() => {
+    console.log(`[CategoryServicePage] Filtro de modalidad: "${filterModalidad}"`, {
+      totalProfesionales: professionals.length,
+      profesionalesFiltrados: totalProfessionalsFiltrados,
+      profesionalesPagina: currentProfessionalsPaginated.length,
+      paginaActual: currentPage,
+      totalPaginas: totalPages,
+    });
+  }, [filterModalidad, totalProfessionalsFiltrados, currentProfessionalsPaginated.length, currentPage, totalPages, professionals.length]);
 
   // Funciones de paginación
   const goToPage = (page: number) => {
@@ -347,10 +542,21 @@ export default function CategoryServicePage({
                 id="modalidad-filter"
                 className="w-full appearance-none px-3 sm:px-4 py-2 pr-8 border border-gray-300 rounded-lg bg-white text-gray-600 text-sm sm:text-base focus:ring-2 focus:ring-purple-500 focus:border-transparent min-w-[140px]"
                 value={filterModalidad}
-                onChange={(e) => setFilterModalidad(e.target.value)}
+                onChange={(e) => {
+                  const nuevaModalidad = e.target.value;
+                  setFilterModalidad(nuevaModalidad);
+                  // Resetear a la página 1 cuando cambia el filtro
+                  setCurrentPage(1);
+                  // Actualizar la URL con la nueva modalidad
+                  const params = new URLSearchParams(searchParams.toString());
+                  params.set("modalidad", nuevaModalidad);
+                  router.push(`?${params.toString()}`, { scroll: false });
+                }}
                 aria-label="Modalidad de sesión"
               >
-                <option value="Online">Online</option>
+                <option value="presencial">Presencial</option>
+                <option value="en_linea">En Línea</option>
+                <option value="a_domicilio">A Domicilio</option>
               </select>
               <div
                 className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none"
@@ -398,33 +604,126 @@ export default function CategoryServicePage({
               role="list"
               aria-label="Profesionales disponibles"
             >
-              {currentProfessionals.map((professional) => {
+              {currentProfessionalsPaginated.map((professional) => {
                 // Usar el serviceSlug si existe, sino usar el slug de la especialidad
                 const effectiveServiceSlug = serviceSlug || categorySlug;
 
                 // Mapear ApiProfessional al formato que espera ProfessionalCard
                 // Los datos ya vienen mapeados del servicio, solo necesitamos adaptarlos al formato del card
+                // Calcular precio mínimo filtrando por la modalidad seleccionada
                 const minPrice = (() => {
                   const prices = Array.isArray(professional.precios)
                     ? professional.precios
                     : [];
+                  
                   if (prices.length > 0) {
-                    const values = prices
-                      .map((p) =>
-                        typeof p.precio === "number"
-                          ? p.precio
-                          : Number(p.precio) || 0
-                      )
-                      .filter((v) => v > 0);
-                    if (values.length > 0) {
-                      return Number(Math.min(...values).toFixed(2));
+                    // Filtrar precios según la modalidad seleccionada
+                    let preciosFiltrados = prices;
+                    const modalidadLower = filterModalidad.toLowerCase();
+                    
+                    if (modalidadLower === "presencial" || modalidadLower === "en_linea") {
+                      // Para presencial/en_linea: incluir presencial, virtual, ambas, y sin modalidad
+                      preciosFiltrados = prices.filter((p: any) => {
+                        const precioModalidad = (p.modalidad || "").toLowerCase().trim();
+                        return (
+                          !precioModalidad ||
+                          precioModalidad === "presencial" ||
+                          precioModalidad === "virtual" ||
+                          precioModalidad === "en_linea" ||
+                          precioModalidad === "online" ||
+                          precioModalidad === "ambas"
+                        );
+                      });
+                    } else if (modalidadLower === "a_domicilio") {
+                      // Para domicilio: solo incluir precios de domicilio
+                      preciosFiltrados = prices.filter((p: any) => {
+                        const precioModalidad = (p.modalidad || "").toLowerCase().trim();
+                        return (
+                          precioModalidad === "a_domicilio" ||
+                          precioModalidad === "domicilio"
+                        );
+                      });
+                    }
+                    
+                    // Calcular el mínimo de los precios filtrados
+                    if (preciosFiltrados.length > 0) {
+                      const values = preciosFiltrados
+                        .map((p: any) => {
+                          // Extraer precio desde diferentes ubicaciones posibles
+                          // El precio puede estar en p.precio directamente
+                          let precioValor = 0;
+                          
+                          // Intentar desde p.precio primero
+                          if (typeof p.precio === "number") {
+                            precioValor = p.precio;
+                          } else if (p.precio !== undefined && p.precio !== null && p.precio !== "") {
+                            const parsed = Number(p.precio);
+                            if (!isNaN(parsed)) {
+                              precioValor = parsed;
+                            }
+                          }
+                          
+                          // Si no hay precio, intentar desde raw
+                          if (precioValor === 0 && p.raw) {
+                            if (typeof p.raw.precio === "number") {
+                              precioValor = p.raw.precio;
+                            } else if (p.raw.precio !== undefined && p.raw.precio !== null && p.raw.precio !== "") {
+                              const parsed = Number(p.raw.precio);
+                              if (!isNaN(parsed)) {
+                                precioValor = parsed;
+                              }
+                            }
+                          }
+                          
+                          // Debug: loggear si encontramos un precio
+                          if (precioValor > 0) {
+                            console.log(`[CategoryServicePage] Precio encontrado para ${professional.id}:`, {
+                              precioValor,
+                              precioCompleto: p,
+                              modalidad: p.modalidad,
+                            });
+                          } else {
+                            console.warn(`[CategoryServicePage] No se pudo extraer precio de:`, p);
+                          }
+                          
+                          return precioValor;
+                        })
+                        .filter((v) => v > 0);
+                      if (values.length > 0) {
+                        const min = Number(Math.min(...values).toFixed(2));
+                        console.log(`[CategoryServicePage] ✅ Precio mínimo para ${professional.id}:`, {
+                          modalidad: filterModalidad,
+                          preciosTotales: prices.length,
+                          preciosFiltrados: preciosFiltrados.length,
+                          valores: values,
+                          minimo: min,
+                        });
+                        return min;
+                      } else {
+                        console.warn(`[CategoryServicePage] ⚠️ No se encontraron valores de precio válidos para ${professional.id} con modalidad ${filterModalidad}:`, {
+                          preciosFiltrados,
+                          preciosTotales: prices,
+                        });
+                      }
+                    } else {
+                      console.warn(`[CategoryServicePage] ⚠️ No hay precios filtrados para ${professional.id} con modalidad ${filterModalidad}:`, {
+                        preciosTotales: prices,
+                        modalidadFiltro: filterModalidad,
+                      });
                     }
                   }
+                  
+                  // Fallback a tarifa por hora si no hay precios
                   if (professional.tarifaPorHora) {
                     return Number(
                       Number(professional.tarifaPorHora).toFixed(2)
                     );
                   }
+                  
+                  console.warn(`[CategoryServicePage] No se encontró precio para profesional ${professional.id} con modalidad ${filterModalidad}`, {
+                    precios: professional.precios,
+                    tarifaPorHora: professional.tarifaPorHora,
+                  });
                   return 0;
                 })();
 
@@ -463,6 +762,7 @@ export default function CategoryServicePage({
                     professional={mappedProfessional}
                     categorySlug={categorySlug}
                     serviceSlug={effectiveServiceSlug}
+                    modalidad={filterModalidad}
                   />
                 );
               })}
@@ -548,17 +848,14 @@ export default function CategoryServicePage({
             )}
 
             {/* Información de paginación */}
-            {totalProfessionals > 0 && (
+            {totalProfessionalsFiltrados > 0 && (
               <div
                 className="mt-6 text-center text-xs sm:text-sm text-gray-500"
                 aria-live="polite"
               >
-                Mostrando {(currentPage - 1) * professionalsPerPage + 1} -{" "}
-                {Math.min(
-                  currentPage * professionalsPerPage,
-                  totalProfessionals
-                )}{" "}
-                de {totalProfessionals} profesionales
+                Mostrando {startIndex + 1} -{" "}
+                {Math.min(endIndex, totalProfessionalsFiltrados)}{" "}
+                de {totalProfessionalsFiltrados} profesionales
               </div>
             )}
           </>
@@ -566,7 +863,7 @@ export default function CategoryServicePage({
       </section>
 
       {/* Empty State */}
-      {!loadingProfessionals && totalProfessionals === 0 && (
+      {!loadingProfessionals && totalProfessionalsFiltrados === 0 && (
         <section
           className="container mx-auto px-4 py-12 text-center"
           role="status"

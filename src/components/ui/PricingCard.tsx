@@ -6,6 +6,7 @@ interface PricingCardProps {
   price: string;
   savings?: string;
   isPopular?: boolean;
+  modalidad?: string;
   onPurchase: () => void;
 }
 
@@ -17,8 +18,25 @@ export default function PricingCard({
   price,
   savings,
   isPopular = false,
+  modalidad,
   onPurchase,
 }: PricingCardProps) {
+  // Mapear modalidad a texto legible
+  const getModalidadLabel = (mod?: string): string => {
+    if (!mod) return "";
+    const modLower = mod.toLowerCase().trim();
+    if (modLower === "presencial" || modLower === "ambas") {
+      return "Presencial";
+    } else if (modLower === "virtual" || modLower === "en_linea" || modLower === "online") {
+      return "En Línea";
+    } else if (modLower === "a_domicilio" || modLower === "domicilio") {
+      return "A Domicilio";
+    }
+    return mod;
+  };
+
+  const modalidadLabel = getModalidadLabel(modalidad);
+
   return (
     <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow relative h-full">
       {/* Popular Badge - Fixed in top left corner */}
@@ -26,6 +44,15 @@ export default function PricingCard({
         <div className="absolute top-0 left-0">
           <span className="bg-primary text-white text-xs font-semibold px-3 py-1 rounded-tl-2xl rounded-br-lg">
             Mas popular
+          </span>
+        </div>
+      )}
+      
+      {/* Modalidad Badge - Fixed in top right corner */}
+      {modalidadLabel && (
+        <div className="absolute top-0 right-0">
+          <span className="bg-purple-100 text-purple-700 text-xs font-semibold px-3 py-1 rounded-tr-2xl rounded-bl-lg border border-purple-200">
+            {modalidadLabel}
           </span>
         </div>
       )}
