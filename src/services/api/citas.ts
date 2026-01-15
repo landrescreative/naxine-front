@@ -12,6 +12,7 @@ export interface CreateCitaRequest {
   moneda?: string; // Moneda para el Payment Intent (EUR por defecto para España)
   tipo_atencion?: 'presencial' | 'en_linea' | 'a_domicilio'; // Tipo de atención de la cita
   direccion_domicilio?: string; // Dirección del cliente para citas a domicilio
+  notas?: string; // Notas adicionales del cliente
 }
 
 export interface CreateCitaResponse {
@@ -159,10 +160,10 @@ export class CitasService {
     const params: Record<string, string> = {};
     if (fechaInicio) params.fecha_inicio = fechaInicio;
     if (fechaFin) params.fecha_fin = fechaFin;
-    
+
     const queryString = new URLSearchParams(params).toString();
     const url = `/citas/profesional/${profesionalId}/ocupadas${queryString ? `?${queryString}` : ''}`;
-    
+
     return apiClient.get<CitasOcupadasResponse>(url);
   }
 
@@ -187,7 +188,7 @@ export class CitasService {
 
     const queryString = new URLSearchParams(queryParams).toString();
     const url = `/citas${queryString ? `?${queryString}` : ''}`;
-    
+
     return apiClient.get<CitasResponse>(url);
   }
 

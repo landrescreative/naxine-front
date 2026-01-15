@@ -69,8 +69,8 @@ function VerifyCodeForm() {
           setPendingApproval(true);
           setApprovalMessage(
             backendResponse.message ||
-              actualData.profesional.mensaje ||
-              "Tu solicitud está pendiente de aprobación por un administrador."
+            actualData.profesional.mensaje ||
+            "Tu solicitud está pendiente de aprobación por un administrador."
           );
           // NO redirigir - mantener al usuario en esta pantalla
           return;
@@ -104,9 +104,10 @@ function VerifyCodeForm() {
           window.dispatchEvent(new CustomEvent("userLogin"));
 
           setIsVerified(true);
-          // Redirigir al dashboard después de iniciar sesión
+          // Redirigir al dashboard o a la URL especificada después de iniciar sesión
+          const redirectTarget = searchParams.get("redirect") || "/";
           setTimeout(() => {
-            router.push("/");
+            router.push(redirectTarget);
           }, 1500);
         } else {
           // Si no hay token, solo mostrar éxito y redirigir al login
@@ -156,7 +157,7 @@ function VerifyCodeForm() {
       } else {
         setError(
           response.error ||
-            "Error al reenviar el código. Por favor, intenta de nuevo."
+          "Error al reenviar el código. Por favor, intenta de nuevo."
         );
       }
     } catch (err) {

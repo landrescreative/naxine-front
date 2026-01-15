@@ -1,18 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { validateEmail, validatePassword } from "@/services/utils/api-helpers";
 
-export default function RegisterPage() {
+function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [cancellationAccepted, setCancellationAccepted] = useState(false);
-  
+
   // Estado del formulario
   const [formData, setFormData] = useState({
     nombre: "",
@@ -20,9 +20,10 @@ export default function RegisterPage() {
     password: "",
     confirmPassword: "",
   });
-  
+
   const [errors, setErrors] = useState<Record<string, string>>({});
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { register, error: authError, loading } = useAuth();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -92,7 +93,15 @@ export default function RegisterPage() {
 
       if (result.success && result.email) {
         // Redirigir a la página de verificación de código con el email
-        router.push(`/verificar-codigo?email=${encodeURIComponent(result.email)}`);
+        const redirectParam = searchParams.get("redirect");
+        const redirectQuery = redirectParam
+          ? `&redirect=${encodeURIComponent(redirectParam)}`
+          : "";
+        router.push(
+          `/verificar-codigo?email=${encodeURIComponent(
+            result.email
+          )}${redirectQuery}`
+        );
       } else {
         setErrors({ submit: authError || "Error al registrar. Por favor, intenta de nuevo." });
       }
@@ -175,9 +184,8 @@ export default function RegisterPage() {
                 id="nombre"
                 value={formData.nombre}
                 onChange={handleInputChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
-                  errors.nombre ? "border-red-300" : "border-gray-300"
-                }`}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${errors.nombre ? "border-red-300" : "border-gray-300"
+                  }`}
                 placeholder="Ingresa tu nombre"
                 required
                 aria-invalid={Boolean(errors.nombre)}
@@ -203,9 +211,8 @@ export default function RegisterPage() {
                 id="email"
                 value={formData.email}
                 onChange={handleInputChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
-                  errors.email ? "border-red-300" : "border-gray-300"
-                }`}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${errors.email ? "border-red-300" : "border-gray-300"
+                  }`}
                 placeholder="Ingresa tu email"
                 required
                 aria-invalid={Boolean(errors.email)}
@@ -232,9 +239,8 @@ export default function RegisterPage() {
                   id="password"
                   value={formData.password}
                   onChange={handleInputChange}
-                  className={`w-full px-4 py-3 pr-12 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
-                    errors.password ? "border-red-300" : "border-gray-300"
-                  }`}
+                  className={`w-full px-4 py-3 pr-12 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${errors.password ? "border-red-300" : "border-gray-300"
+                    }`}
                   placeholder="Ingresa tu contraseña"
                   required
                   aria-invalid={Boolean(errors.password)}
@@ -305,9 +311,8 @@ export default function RegisterPage() {
                   id="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
-                  className={`w-full px-4 py-3 pr-12 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
-                    errors.confirmPassword ? "border-red-300" : "border-gray-300"
-                  }`}
+                  className={`w-full px-4 py-3 pr-12 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${errors.confirmPassword ? "border-red-300" : "border-gray-300"
+                    }`}
                   placeholder="Confirma tu contraseña"
                   required
                   aria-invalid={Boolean(errors.confirmPassword)}
@@ -383,7 +388,7 @@ export default function RegisterPage() {
                 <span className="ml-3 text-sm text-gray-700">
                   He leído y acepto la{" "}
                   <Link
-                    href="/politica-privacidad"
+                    href="/politica-de-privacidad"
                     className="text-primary hover:text-primary/80"
                   >
                     Política de Privacidad
@@ -529,5 +534,22 @@ export default function RegisterPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-gray-600">Cargando...</p>
+          </div>
+        </div>
+      }
+    >
+      <RegisterForm />
+    </Suspense>
   );
 }

@@ -23,6 +23,7 @@ import {
   RotateCcw,
   Copy,
   CheckCircle,
+  CheckCircle2,
   XCircle,
   AlertCircle,
   Calendar,
@@ -33,6 +34,7 @@ import {
   Loader2,
   Plus,
   Trash2,
+  Pencil,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { type AdminProfessional } from "@/data/adminProfessionals";
@@ -929,6 +931,8 @@ export default function AdminProfessionalEditPage() {
         nifCif: "nif_cif",
         correoPublico: "correo_profesional_publico",
         codigosPostales: "codigos_postales_domicilio",
+        servicios: "servicios_ofrecidos",
+        observaciones: "observaciones",
       };
 
       const backendField = fieldMapping[field];
@@ -969,6 +973,10 @@ export default function AdminProfessionalEditPage() {
         updateData.correo_profesional_publico = editValue.trim() || null;
       } else if (field === "codigosPostales") {
         updateData.codigos_postales_domicilio = editValue.trim() || null;
+      } else if (field === "servicios") {
+        updateData.servicios_ofrecidos = editValue.trim() || null;
+      } else if (field === "observaciones") {
+        updateData.observaciones = editValue.trim() || null;
       } else if (field === "numeroUsuario") {
         // El número de usuario (ID) no se puede editar
         alert("El número de usuario no se puede modificar");
@@ -1026,6 +1034,10 @@ export default function AdminProfessionalEditPage() {
             updatedProfessional.publicEmail = editValue.trim();
           } else if (field === "codigosPostales") {
             updatedProfessional.homeVisitPostalCodes = editValue.trim();
+          } else if (field === "servicios") {
+            (updatedProfessional as any).services = editValue.trim();
+          } else if (field === "observaciones") {
+            (updatedProfessional as any).observations = editValue.trim();
           }
 
           setProfessional(updatedProfessional);
@@ -3097,10 +3109,67 @@ export default function AdminProfessionalEditPage() {
                   </h4>
                   <div className="flex flex-wrap gap-2">
                     {(() => {
-                      // Obtener modalidades
-                      let modalidadesList: string[] = [];
+                      // Extraer modalidades únicas de los precios del profesional
+                      const modalidadesSet = new Set<string>();
+                      
+                      // Obtener lista de precios
+                      let pricesList: any[] = [];
+                      if (Array.isArray(professional.prices)) {
+                        pricesList = professional.prices;
+                      } else if (typeof professional.prices === "string") {
+                        try {
+                          const parsed = JSON.parse(professional.prices);
+                          pricesList = Array.isArray(parsed) ? parsed : [];
+                        } catch (e) {
+                          console.warn("Error al parsear precios:", e);
+                        }
+                      } else if (
+                        typeof professional.prices === "object" &&
+                        professional.prices !== null
+                      ) {
+                        pricesList = Object.values(professional.prices);
+                      }
 
-                      if (professional.modalities) {
+                      // Extraer modalidades de cada precio
+                      pricesList.forEach((precio: any) => {
+                        if (!precio) return;
+                        const modalidad =
+                          precio.modalidad ||
+                          precio.modalidad_atencion ||
+                          "";
+                        const normalizedModality = modalidad.toLowerCase().trim();
+
+                        if (normalizedModality) {
+                          // Normalizar modalidades:
+                          // - domicilio o a_domicilio -> "A Domicilio"
+                          // - presencial, virtual, en_linea, online, ambas -> "Presencial/Virtual"
+                          if (
+                            normalizedModality === "domicilio" ||
+                            normalizedModality === "a_domicilio" ||
+                            normalizedModality.includes("domicilio")
+                          ) {
+                            modalidadesSet.add("A Domicilio");
+                          } else if (
+                            normalizedModality === "presencial" ||
+                            normalizedModality === "virtual" ||
+                            normalizedModality === "en_linea" ||
+                            normalizedModality === "online" ||
+                            normalizedModality === "ambas"
+                          ) {
+                            modalidadesSet.add("Presencial/Virtual");
+                          } else {
+                            // Si es otra modalidad, normalizarla para mostrar
+                            const modalidadNombre = modalidad
+                              .replace(/_/g, " ")
+                              .replace(/\b\w/g, (char) => char.toUpperCase());
+                            modalidadesSet.add(modalidadNombre);
+                          }
+                        }
+                      });
+
+                      // Si no hay modalidades en los precios, intentar obtenerlas del campo modalities
+                      if (modalidadesSet.size === 0 && professional.modalities) {
+                        let modalidadesList: string[] = [];
                         if (Array.isArray(professional.modalities)) {
                           modalidadesList = professional.modalities;
                         } else if (
@@ -3113,13 +3182,34 @@ export default function AdminProfessionalEditPage() {
                               : [];
                           } catch (e) {
                             console.warn("Error al parsear modalidades:", e);
-                            modalidadesList = [];
                           }
                         }
+
+                        modalidadesList.forEach((mod: string) => {
+                          const modLower = mod.toLowerCase().trim();
+                          if (
+                            modLower.includes("domicilio") ||
+                            modLower.includes("a_domicilio")
+                          ) {
+                            modalidadesSet.add("A Domicilio");
+                          } else if (
+                            modLower.includes("virtual") ||
+                            modLower.includes("en_linea") ||
+                            modLower.includes("online") ||
+                            modLower.includes("presencial")
+                          ) {
+                            modalidadesSet.add("Presencial/Virtual");
+                          } else {
+                            const modalidadNombre = mod
+                              .replace(/_/g, " ")
+                              .replace(/\b\w/g, (char) => char.toUpperCase());
+                            modalidadesSet.add(modalidadNombre);
+                          }
+                        });
                       }
 
                       // Si no hay modalidades, mostrar mensaje
-                      if (modalidadesList.length === 0) {
+                      if (modalidadesSet.size === 0) {
                         return (
                           <span className="text-gray-500 text-sm italic">
                             No especificadas
@@ -3128,92 +3218,194 @@ export default function AdminProfessionalEditPage() {
                       }
 
                       // Mapear y mostrar las modalidades
-                      return modalidadesList.map((mod: string, idx: number) => {
-                        // Normalizar el nombre de la modalidad para mostrar
-                        const modalidadNombre = mod
-                          .replace(/_/g, " ")
-                          .replace(/\b\w/g, (char) => char.toUpperCase());
-
-                        return (
-                          <span
-                            key={idx}
-                            className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-medium"
-                          >
-                            {modalidadNombre}
-                          </span>
-                        );
-                      });
+                      return Array.from(modalidadesSet).map(
+                        (mod: string, idx: number) => {
+                          return (
+                            <span
+                              key={idx}
+                              className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-medium"
+                            >
+                              {mod}
+                            </span>
+                          );
+                        }
+                      );
                     })()}
                   </div>
                 </div>
 
                 {/* Services */}
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">
-                    Servicios Ofrecidos
-                  </h4>
-                  <div className="text-sm text-gray-600 whitespace-pre-line">
-                    {(() => {
-                      if (!professional.services) {
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-medium text-gray-700">
+                      Servicios Ofrecidos
+                    </h4>
+                    <button
+                      onClick={() =>
+                        handleEditField("servicios", professional.services || "")
+                      }
+                      className="text-xs text-primary hover:text-primary-dark flex items-center gap-1"
+                    >
+                      <Pencil className="w-3 h-3" />
+                      Editar
+                    </button>
+                  </div>
+                  {editingField === "servicios" ? (
+                    <div className="space-y-2">
+                      <textarea
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border-2 border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all min-h-[80px] resize-y"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Escape") handleCancelEdit();
+                        }}
+                      />
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleSaveEdit("servicios")}
+                          disabled={saving}
+                          className="px-3 py-1.5 text-xs font-medium bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                        >
+                          {saving ? (
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              Guardando...
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2 className="w-3 h-3" />
+                              Guardar
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={handleCancelEdit}
+                          className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 flex items-center gap-1"
+                        >
+                          <XCircle className="w-3 h-3" />
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-600 whitespace-pre-line">
+                      {(() => {
+                        if (!professional.services) {
+                          return (
+                            <span className="text-gray-500 italic">
+                              No especificados
+                            </span>
+                          );
+                        }
+
+                        const servicesData = professional.services;
+
+                        // Si es un string JSON, intentar parsearlo
+                        if (
+                          typeof servicesData === "string" &&
+                          (servicesData.startsWith("[") ||
+                            servicesData.startsWith("{"))
+                        ) {
+                          try {
+                            const parsed = JSON.parse(servicesData);
+                            if (Array.isArray(parsed)) {
+                              return parsed.join(", ");
+                            }
+                            if (typeof parsed === "object") {
+                              return Object.values(parsed).join(", ");
+                            }
+                            return servicesData;
+                          } catch {
+                            return servicesData;
+                          }
+                        }
+
+                        // Si es un string normal, mostrarlo
+                        if (
+                          typeof servicesData === "string" &&
+                          servicesData.trim()
+                        ) {
+                          return servicesData;
+                        }
+
+                        // Si es un array, unirlo con comas
+                        if (Array.isArray(servicesData)) {
+                          return servicesData.join(", ");
+                        }
+
                         return (
                           <span className="text-gray-500 italic">
                             No especificados
                           </span>
                         );
-                      }
-
-                      const servicesData = professional.services;
-
-                      // Si es un string JSON, intentar parsearlo
-                      if (
-                        typeof servicesData === "string" &&
-                        (servicesData.startsWith("[") ||
-                          servicesData.startsWith("{"))
-                      ) {
-                        try {
-                          const parsed = JSON.parse(servicesData);
-                          if (Array.isArray(parsed)) {
-                            return parsed.join(", ");
-                          }
-                          if (typeof parsed === "object") {
-                            return Object.values(parsed).join(", ");
-                          }
-                          return servicesData;
-                        } catch {
-                          return servicesData;
-                        }
-                      }
-
-                      // Si es un string normal, mostrarlo
-                      if (
-                        typeof servicesData === "string" &&
-                        servicesData.trim()
-                      ) {
-                        return servicesData;
-                      }
-
-                      // Si es un array, unirlo con comas
-                      if (Array.isArray(servicesData)) {
-                        return servicesData.join(", ");
-                      }
-
-                      return (
-                        <span className="text-gray-500 italic">
-                          No especificados
-                        </span>
-                      );
-                    })()}
-                  </div>
+                      })()}
+                    </div>
+                  )}
                 </div>
 
                 {/* Observations */}
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">
-                    Observaciones
-                  </h4>
-                  <p className="text-sm text-gray-600 whitespace-pre-line">
-                    {professional.observations || "Sin observaciones"}
-                  </p>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-medium text-gray-700">
+                      Observaciones
+                    </h4>
+                    <button
+                      onClick={() =>
+                        handleEditField(
+                          "observaciones",
+                          professional.observations || ""
+                        )
+                      }
+                      className="text-xs text-primary hover:text-primary-dark flex items-center gap-1"
+                    >
+                      <Pencil className="w-3 h-3" />
+                      Editar
+                    </button>
+                  </div>
+                  {editingField === "observaciones" ? (
+                    <div className="space-y-2">
+                      <textarea
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border-2 border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all min-h-[80px] resize-y"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Escape") handleCancelEdit();
+                        }}
+                      />
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleSaveEdit("observaciones")}
+                          disabled={saving}
+                          className="px-3 py-1.5 text-xs font-medium bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                        >
+                          {saving ? (
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              Guardando...
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2 className="w-3 h-3" />
+                              Guardar
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={handleCancelEdit}
+                          className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 flex items-center gap-1"
+                        >
+                          <XCircle className="w-3 h-3" />
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-600 whitespace-pre-line">
+                      {professional.observations || "Sin observaciones"}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

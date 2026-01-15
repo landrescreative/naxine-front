@@ -122,18 +122,28 @@ function ConfirmarCitaAuthPageContent() {
   const registroHref = useMemo(() => {
     const base = "/registro";
     const redirectTarget = citaInfo.returnUrl || "/";
+    const separator = redirectTarget.includes("?") ? "&" : "?";
+    const targetWithNotes = notas
+      ? `${redirectTarget}${separator}notes=${encodeURIComponent(notas)}`
+      : redirectTarget;
+
     const params = new URLSearchParams();
-    params.set("redirect", redirectTarget);
+    params.set("redirect", targetWithNotes);
     return `${base}?${params.toString()}`;
-  }, [citaInfo.returnUrl]);
+  }, [citaInfo.returnUrl, notas]);
 
   const loginHref = useMemo(() => {
     const base = "/iniciar-sesion";
     const redirectTarget = citaInfo.returnUrl || "/";
+    const separator = redirectTarget.includes("?") ? "&" : "?";
+    const targetWithNotes = notas
+      ? `${redirectTarget}${separator}notes=${encodeURIComponent(notas)}`
+      : redirectTarget;
+
     const params = new URLSearchParams();
-    params.set("redirect", redirectTarget);
+    params.set("redirect", targetWithNotes);
     return `${base}?${params.toString()}`;
-  }, [citaInfo.returnUrl]);
+  }, [citaInfo.returnUrl, notas]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -183,7 +193,7 @@ function ConfirmarCitaAuthPageContent() {
             <div className="space-y-4 max-w-md">
               <Link
                 href={registroHref}
-                className="block w-full text-center bg-[#4C1DFF] hover:bg-[#3b15cc] text-white font-semibold py-3 rounded-full transition-colors"
+                className="block w-full flex items-center justify-center text-center bg-[#4C1DFF] hover:bg-[#3b15cc] text-white font-semibold py-3 rounded-full transition-colors"
               >
                 Regístrate para continuar
               </Link>

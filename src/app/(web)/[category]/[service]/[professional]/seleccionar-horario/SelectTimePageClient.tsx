@@ -1,6 +1,6 @@
 "use client";
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { ApiProfessional, ProfessionalPrice } from "@/services/types/api";
 import { appointmentsService, citasService } from "@/services";
 import { useAuth } from "@/hooks/useAuth";
@@ -27,6 +27,7 @@ export default function SelectTimePageClient({
     service: string;
     professional: string;
   }>();
+  const searchParams = useSearchParams();
   const { user, isAuthenticated } = useAuth();
 
   const [selectedDate, setSelectedDate] = useState<Date | null>(
@@ -925,7 +926,7 @@ export default function SelectTimePageClient({
     generateTimeSlots,
   ]);
 
-  const handleDateSelect = (date: Date) => {
+  const handleDateSelect = async (date: Date) => {
     if (date < new Date(new Date().setHours(0, 0, 0, 0))) return;
     const dayOfWeek = date.getDay();
     if (!horariosDisponibles[dayOfWeek]) return;
@@ -948,6 +949,33 @@ export default function SelectTimePageClient({
 
     setSelectedDate(date);
     setSelectedTimeSlot(null);
+    
+    // Refrescar horarios ocupados cuando se selecciona una nueva fecha
+    // Esto asegura que se muestren las citas más recientes (incluyendo las que están en proceso de pago)
+    if (professional.id) {
+      try {
+        const apiBaseUrl =
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1;
+        const response = await fetch(
+          `${apiBaseUrl}/citas/profesional/${professional.id}/ocupadas?year=${year}&month=${month}`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && Array.isArray(data.data)) {
+            setExistingAppointments(
+              data.data.map((apt: any) => ({
+                ...apt,
+                dateTimeUTC: apt.dateTimeUTC || apt.dateTime,
+              }))
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Error al refrescar horarios ocupados:", error);
+      }
+    }
   };
 
   const handleConfirmAppointment = async () => {
@@ -974,6 +1002,7 @@ export default function SelectTimePageClient({
       // Si el usuario no ha iniciado sesión, redirigir a una página de
       // pre-confirmación donde pueda registrarse o iniciar sesión
       try {
+        // Construimos primero los parámetros base de la cita
         const queryParams = new URLSearchParams();
 
         // Datos básicos de la cita
@@ -1026,10 +1055,11 @@ export default function SelectTimePageClient({
           queryParams.set("taxIsExempt", taxInfo.isExempt ? "true" : "false");
         }
 
-        // URL a la que queremos volver después de registrarnos / iniciar sesión
-        if (typeof window !== "undefined") {
-          queryParams.set("returnUrl", window.location.href);
-        }
+        // Queremos que, tras registrarse, el usuario vuelva a la propia
+        // página de confirmación (con la misma info de la cita).
+        const baseConfirmQuery = queryParams.toString();
+        const confirmReturnUrl = `/confirmar-cita?${baseConfirmQuery}`;
+        queryParams.set("returnUrl", confirmReturnUrl);
 
         const confirmPath = `/confirmar-cita?${queryParams.toString()}`;
         router.push(confirmPath);
@@ -1067,6 +1097,52 @@ export default function SelectTimePageClient({
         slotDateTimeUTC.getTime() + duracionMinutos * 60000
       ).toISOString();
 
+      // Verificar disponibilidad justo antes de crear la cita
+      // Esto previene que dos usuarios confirmen el mismo horario simultáneamente
+      try {
+        const disponibilidadResponse = await citasService.getCitasOcupadas(
+          Number(professional.id),
+          fechaInicio,
+          fechaFin
+        );
+
+        if (disponibilidadResponse.success && disponibilidadResponse.data?.citas) {
+          const citasOcupadas = disponibilidadResponse.data.citas;
+          if (citasOcupadas.length > 0) {
+            // Refrescar los horarios ocupados para mostrar el estado actualizado
+            const apiBaseUrl =
+              process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+            const response = await fetch(
+              `${apiBaseUrl}/citas/profesional/${professional.id}/ocupadas?year=${year}&month=${month + 1}`
+            );
+            if (response.ok) {
+              const data = await response.json();
+              if (data.success && Array.isArray(data.data)) {
+                setExistingAppointments(
+                  data.data.map((apt: any) => ({
+                    ...apt,
+                    dateTimeUTC: apt.dateTimeUTC || apt.dateTime,
+                  }))
+                );
+              }
+            }
+
+            setIsCreatingAppointment(false);
+            alert(
+              "Este horario ya no está disponible. Por favor, selecciona otro horario."
+            );
+            return;
+          }
+        }
+      } catch (disponibilidadError) {
+        console.warn(
+          "Error al verificar disponibilidad, continuando con la creación:",
+          disponibilidadError
+        );
+        // Continuar con la creación si falla la verificación
+        // El backend también verificará con LOCK
+      }
+
       const response = await citasService.createCita({
         id_cliente: Number(user?.id || 0),
         id_profesional: Number(professional.id),
@@ -1083,6 +1159,7 @@ export default function SelectTimePageClient({
           selectedTipoAtencion === "a_domicilio"
             ? direccionDomicilio
             : undefined,
+        notas: searchParams.get("notes") || undefined,
       });
 
       if (response.success && response.data) {
@@ -1095,8 +1172,47 @@ export default function SelectTimePageClient({
           );
         }
       } else {
-        // Verificar si el error es sobre perfil de cliente incompleto
+        // Verificar si el error es por conflicto de horario
         const errorMessage = response.error || "";
+        const errorData = (response as any).data;
+        
+        if (
+          errorMessage.includes("ya tiene una cita programada") ||
+          errorMessage.includes("horario") ||
+          (errorData?.conflictos && errorData.conflictos.length > 0)
+        ) {
+          // Refrescar los horarios ocupados
+          const apiBaseUrl =
+            process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+          const year = selectedDate.getFullYear();
+          const month = selectedDate.getMonth();
+          try {
+            const refreshResponse = await fetch(
+              `${apiBaseUrl}/citas/profesional/${professional.id}/ocupadas?year=${year}&month=${month + 1}`
+            );
+            if (refreshResponse.ok) {
+              const refreshData = await refreshResponse.json();
+              if (refreshData.success && Array.isArray(refreshData.data)) {
+                setExistingAppointments(
+                  refreshData.data.map((apt: any) => ({
+                    ...apt,
+                    dateTimeUTC: apt.dateTimeUTC || apt.dateTime,
+                  }))
+                );
+              }
+            }
+          } catch (refreshError) {
+            console.error("Error al refrescar horarios:", refreshError);
+          }
+
+          alert(
+            "Este horario ya no está disponible. Por favor, selecciona otro horario."
+          );
+          setIsCreatingAppointment(false);
+          return;
+        }
+
+        // Verificar si el error es sobre perfil de cliente incompleto
         if (
           errorMessage.includes("perfil de cliente") ||
           errorMessage.includes("No se encontró un perfil de cliente") ||
@@ -1448,10 +1564,10 @@ export default function SelectTimePageClient({
                           key={i}
                           onClick={() => handleDateSelect(day.date)}
                           className={`px-3 py-2 rounded-md text-sm whitespace-nowrap snap-center ${isSelected
-                              ? "bg-orange-500 text-white"
-                              : day.isToday
-                                ? "bg-orange-100 text-orange-700 border border-orange-300"
-                                : "bg-white text-gray-700 border border-gray-200"
+                            ? "bg-orange-500 text-white"
+                            : day.isToday
+                              ? "bg-orange-100 text-orange-700 border border-orange-300"
+                              : "bg-white text-gray-700 border border-gray-200"
                             }`}
                         >
                           {day.dayName} {day.dayNumber}
@@ -1517,10 +1633,10 @@ export default function SelectTimePageClient({
                           }
                           disabled={!slot.available}
                           className={`w-full text-left px-3 md:px-4 py-3 md:py-4 rounded-xl border flex items-center justify-between transition-all ${selectedTimeSlot === slot.time
-                              ? "bg-purple-100 border-purple-300 text-purple-800 shadow-md"
-                              : !slot.available
-                                ? "bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed opacity-60"
-                                : "bg-white border-gray-200 hover:bg-green-50 hover:border-green-300 hover:shadow-sm"
+                            ? "bg-purple-100 border-purple-300 text-purple-800 shadow-md"
+                            : !slot.available
+                              ? "bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed opacity-60"
+                              : "bg-white border-gray-200 hover:bg-green-50 hover:border-green-300 hover:shadow-sm"
                             }`}
                         >
                           <div className="flex items-center gap-3">

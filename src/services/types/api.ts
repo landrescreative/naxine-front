@@ -181,6 +181,10 @@ export interface ApiProfessional {
   };
   // Objeto raw completo del backend para acceso a campos no mapeados
   raw?: any;
+  // Campos adicionales: servicios y observaciones públicas del profesional
+  servicios_ofrecidos?: string | null;
+  services?: string | string[] | null;
+  observaciones?: string | null;
 }
 
 export interface ApiClient {

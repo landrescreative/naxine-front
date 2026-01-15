@@ -43,7 +43,7 @@ export function middleware(request: NextRequest) {
       "/proximamente",
       "/registro-profesional",
       "/terminos-condiciones",
-      "/politica-privacidad",
+      "/politica-de-privacidad",
       "/politica-cookies",
       "/politica-cancelacion",
       "/terminos-condiciones-profesionales",

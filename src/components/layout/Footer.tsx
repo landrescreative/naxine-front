@@ -92,7 +92,7 @@ export default function Footer() {
             <h3 className="text-black font-bold text-base" id="footer-empresa">Empresa</h3>
             <nav className="space-y-2" aria-labelledby="footer-empresa">
               <Link
-                href="/politica-privacidad"
+                href="/politica-de-privacidad"
                 className="block text-black hover:text-purple-600 focus:text-purple-600 focus:outline-none focus:underline transition-colors text-sm"
                 aria-label="Política de privacidad"
               >

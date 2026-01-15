@@ -383,6 +383,18 @@ export default function ProfessionalPageClient({
     `¡Hola! Soy ${
       displayName.split(" ")[0]
     }, ${displaySpecialty.toLowerCase()}.`;
+  // Obtener servicios ofrecidos desde la base de datos
+  const displayServiciosOfrecidos = useMemo(() => {
+    const raw = professional as any;
+    const servicios = 
+      raw?.servicios_ofrecidos ||
+      raw?.services ||
+      raw?.serviciosOfrecidos ||
+      raw?.raw?.servicios_ofrecidos ||
+      "";
+    
+    return servicios;
+  }, [professional]);
 
   // Intentar cargar foto de perfil desde API si no vino en el objeto
   useEffect(() => {
@@ -2277,6 +2289,16 @@ export default function ProfessionalPageClient({
                     <p className="text-secondary leading-relaxed text-sm whitespace-pre-line">
                       {displayBio}
                     </p>
+                    {displayServiciosOfrecidos && displayServiciosOfrecidos.trim() && (
+                      <div className="mt-6">
+                        <h4 className="text-lg font-semibold text-secondary mb-2">
+                          Servicios ofrecidos
+                        </h4>
+                        <p className="text-secondary leading-relaxed text-sm whitespace-pre-line">
+                          {displayServiciosOfrecidos}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

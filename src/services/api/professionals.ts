@@ -432,6 +432,9 @@ export class ProfessionalsService {
         disponibilidadRaw: professionalRaw.disponibilidad || undefined,
         // Guardar objeto raw completo para acceso a campos no mapeados
         raw: professionalRaw,
+        servicios_ofrecidos: professionalRaw.servicios_ofrecidos || null,
+        services: professionalRaw.servicios_ofrecidos || null,
+        observaciones: professionalRaw.observaciones || null,
       };
 
       console.log(
@@ -490,6 +493,8 @@ export class ProfessionalsService {
       correo_profesional_publico?: string;
       codigos_postales_domicilio?: string;
       titulacion?: string;
+      servicios_ofrecidos?: string | null;
+      observaciones?: string | null;
     }
   ): Promise<ApiResponse<any>> {
     // PUT /api/profesionales/:id
@@ -759,6 +764,9 @@ export class ProfessionalsService {
               prof.created_at || prof.createdAt || new Date().toISOString(),
             updatedAt:
               prof.updated_at || prof.updatedAt || new Date().toISOString(),
+            servicios_ofrecidos: prof.servicios_ofrecidos || null,
+            services: prof.servicios_ofrecidos || null,
+            observaciones: prof.observaciones || null,
           };
         }
       );

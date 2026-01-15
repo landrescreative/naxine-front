@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { X, HelpCircle, Check } from "lucide-react";
+import { X, HelpCircle, Check, Mail, Phone, MapPin } from "lucide-react";
 import { authService } from "@/services/api/auth";
 import { validateEmail, validatePassword } from "@/services/utils/api-helpers";
 import { SpecialtiesService } from "@/services/api/specialties";
@@ -1438,6 +1438,70 @@ export default function RegisterProfessionalPage() {
       {/* Left Side - Registration Form */}
       <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-8 lg:py-12 overflow-y-auto">
         <div className="w-full">
+          {/* Información de NAXINE - Arriba del título */}
+          <div className="text-center mb-8 lg:mb-10 space-y-6">
+            {/* Descripción de NAXINE */}
+            <div className="space-y-4 max-w-3xl mx-auto">
+              <p className="text-gray-700 text-base md:text-lg leading-relaxed">
+                <span className="text-[#FF6B35] font-bold">NAXINE</span> es un{" "}
+                <span className="italic">marketplace digital</span> que facilita
+                la contratación de{" "}
+                <span className="italic">servicios profesionales</span> en áreas
+                como psicología, nutrición, derecho, fisioterapia, logopedia y
+                desarrollo personal.
+              </p>
+              <p className="text-gray-700 text-base md:text-lg leading-relaxed">
+                La plataforma incorpora una{" "}
+                <span className="italic">herramienta de accesibilidad digital</span>{" "}
+                que permite a personas con discapacidad visual o dificultades
+                específicas navegar, reservar y contratar de forma autónoma y
+                segura.
+              </p>
+            </div>
+
+            {/* Próximamente */}
+            <div className="py-4">
+              <p className="text-gray-800 text-xl md:text-2xl font-semibold">
+                Próximamente disponible.
+              </p>
+            </div>
+
+            {/* Información de contacto */}
+            <div className="space-y-4 pt-4">
+              {/* Email y Teléfono */}
+              <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 text-gray-700">
+                <a
+                  href="mailto:info@naxine.com"
+                  className="flex items-center gap-2 hover:text-[#0a51f2] transition-colors"
+                >
+                  <Mail className="w-5 h-5 text-[#0a51f2]" />
+                  <span className="text-base md:text-lg">info@naxine.com</span>
+                </a>
+                <span className="hidden md:inline text-gray-400">|</span>
+                <a
+                  href="tel:+34919933510"
+                  className="flex items-center gap-2 hover:text-[#0a51f2] transition-colors"
+                >
+                  <Phone className="w-5 h-5 text-[#FF6B35]" />
+                  <span className="text-base md:text-lg">+34 919 933 510</span>
+                </a>
+              </div>
+
+              {/* Ubicación */}
+              <div className="flex items-center justify-center gap-2">
+                <MapPin className="w-5 h-5 text-[#FF6B35]" />
+                <a
+                  href="https://maps.app.goo.gl/DjYCs5jqRUST2t4y9"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#0a51f2] hover:underline text-base md:text-lg"
+                >
+                  Ver ubicación en Google Maps
+                </a>
+              </div>
+            </div>
+          </div>
+
           {/* Header */}
           <div className="text-center mb-6 lg:mb-8">
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-2">
@@ -3511,11 +3575,19 @@ export default function RegisterProfessionalPage() {
                 </Link>
                 <span className="text-gray-400">•</span>
                 <Link
-                  href="/politica-privacidad"
+                  href="/politica-de-privacidad"
                   className="text-primary hover:text-primary/80 hover:underline transition-colors"
                   target="_blank"
                 >
                   Política de Privacidad
+                </Link>
+                <span className="text-gray-400">•</span>
+                <Link
+                  href="/politica-cookies"
+                  className="text-primary hover:text-primary/80 hover:underline transition-colors"
+                  target="_blank"
+                >
+                  Política de Cookies
                 </Link>
               </div>
             </div>
