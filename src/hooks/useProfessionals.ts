@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { professionalsService } from "@/services";
 import { AdminProfessional } from "@/data/adminProfessionals";
+import { ApiProfessional } from "@/services/types/api";
 
 interface UseProfessionalsOptions {
   page?: number;
@@ -23,6 +24,16 @@ export const useProfessionals = (options: UseProfessionalsOptions = {}) => {
     specialties: [] as string[],
   });
 
+  // Helper function to convert ApiProfessional to AdminProfessional
+  const convertToAdminProfessional = useCallback((apiProf: ApiProfessional): AdminProfessional => {
+    return {
+      ...apiProf,
+      services: Array.isArray(apiProf.services) 
+        ? apiProf.services.join(", ") 
+        : (apiProf.services || undefined),
+    } as AdminProfessional;
+  }, []);
+
   const loadProfessionals = useCallback(async () => {
     try {
       setLoading(true);
@@ -34,7 +45,8 @@ export const useProfessionals = (options: UseProfessionalsOptions = {}) => {
       const response = await professionalsService.getProfessionals(params);
 
       if (response.success && response.data) {
-        setProfessionals(response.data.data);
+        const convertedProfessionals = response.data.data.map(convertToAdminProfessional);
+        setProfessionals(convertedProfessionals);
       } else {
         setError(response.error || "Error al cargar profesionales");
       }
@@ -44,7 +56,7 @@ export const useProfessionals = (options: UseProfessionalsOptions = {}) => {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, specialty]);
+  }, [page, limit, specialty, convertToAdminProfessional]);
 
   const searchProfessionals = useCallback(
     async (query: string) => {
@@ -58,7 +70,8 @@ export const useProfessionals = (options: UseProfessionalsOptions = {}) => {
         });
 
         if (response.success && response.data) {
-          setProfessionals(response.data.data);
+          const convertedProfessionals = response.data.data.map(convertToAdminProfessional);
+          setProfessionals(convertedProfessionals);
         } else {
           setError(response.error || "Error en la búsqueda");
         }
@@ -69,7 +82,7 @@ export const useProfessionals = (options: UseProfessionalsOptions = {}) => {
         setLoading(false);
       }
     },
-    [page, limit]
+    [page, limit, convertToAdminProfessional]
   );
 
   const loadStats = useCallback(async () => {
@@ -94,7 +107,8 @@ export const useProfessionals = (options: UseProfessionalsOptions = {}) => {
         );
 
         if (response.success && response.data) {
-          setProfessionals(response.data.data);
+          const convertedProfessionals = response.data.data.map(convertToAdminProfessional);
+          setProfessionals(convertedProfessionals);
         } else {
           setError(
             response.error || "Error al cargar profesionales por especialidad"
@@ -107,7 +121,7 @@ export const useProfessionals = (options: UseProfessionalsOptions = {}) => {
         setLoading(false);
       }
     },
-    []
+    [convertToAdminProfessional]
   );
 
   const getProfessionalAvailability = useCallback(
