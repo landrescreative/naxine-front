@@ -8,9 +8,16 @@ import OurProcess from "@/components/ui/OurProcess";
 import BenefitsSection from "@/components/ui/BenefitsSection";
 import AccesibilitySection from "@/components/ui/AccesibilitySection";
 import FAQSection from "@/components/ui/FAQSection";
+import dynamicImport from "next/dynamic";
 
 // Forzar rendering dinámico para que el middleware se ejecute
 export const dynamic = "force-dynamic";
+
+// Cargar dinámicamente el componente de registro-profesional solo cuando sea necesario
+const RegisterProfessionalPage = dynamicImport(
+  () => import("../(auth)/registro-profesional/page"),
+  { ssr: true }
+);
 
 export const metadata: Metadata = {
   title: "Inicio",
@@ -118,7 +125,16 @@ const SERVICIOS_DESTACADOS = [
 ];
 
 export default function Home() {
-  // Proteger esta ruta en producción (redirige a /proximamente)
+  // En producción, mostrar directamente el contenido de registro-profesional
+  const appEnv = process.env.NEXT_PUBLIC_APP_ENV || "development";
+  const isProductionMode = appEnv === "production";
+
+  if (isProductionMode) {
+    // En producción, mostrar el formulario de registro-profesional directamente
+    return <RegisterProfessionalPage />;
+  }
+
+  // En desarrollo/staging, mostrar la página de inicio normal
   ProductionGuard("/");
 
   return (

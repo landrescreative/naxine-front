@@ -9,8 +9,11 @@ import { redirect } from "next/navigation";
 
 /**
  * Lista de rutas permitidas en producción
+ * La raíz "/" está permitida porque muestra el contenido de registro-profesional
+ * gracias al rewrite en next.config.ts
  */
 const ALLOWED_ROUTES_IN_PRODUCTION = [
+  "/",
   "/proximamente",
   "/registro-profesional",
 ];
