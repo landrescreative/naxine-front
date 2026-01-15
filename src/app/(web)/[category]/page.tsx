@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { specialtiesService } from "@/services/api/specialties";
 import CategoryServicePage from "@/components/ui/CategoryServicePage";
 
@@ -79,10 +80,14 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
 
     // Pasar los datos dinámicos al componente
     return (
-      <CategoryServicePage
-        categorySlug={category}
-        specialtyData={specialty}
-      />
+      <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>}>
+        <CategoryServicePage
+          categorySlug={category}
+          specialtyData={specialty}
+        />
+      </Suspense>
     );
   } catch (error) {
     console.error("Error loading category page:", error);
