@@ -32,7 +32,9 @@ export default function WebTemplate({
     if (!isProductionMode) return;
 
     // Lista de rutas permitidas en producción
+    // La raíz "/" está permitida para mostrar el registro-profesional directamente
     const allowedRoutes = [
+      "/",
       "/proximamente",
       "/registro-profesional",
       "/terminos-condiciones",
@@ -46,6 +48,7 @@ export default function WebTemplate({
     const isAllowed = allowedRoutes.some((route) => pathname.startsWith(route));
 
     // Si no está permitida, redirigir a /registro-profesional
+    // La raíz "/" ahora está permitida y no se redirige
     if (!isAllowed) {
       console.log(
         `[WebTemplate] Redirigiendo desde ${pathname} a /registro-profesional`

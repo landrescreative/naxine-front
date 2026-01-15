@@ -1434,9 +1434,10 @@ export default function RegisterProfessionalPage() {
       .join(" ") || undefined;
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-white max-w-7xl mx-auto">
-      {/* Left Side - Registration Form */}
-      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-8 lg:py-12 overflow-y-auto">
+    <div className="min-h-screen bg-white">
+      <div className="flex flex-col lg:flex-row max-w-7xl mx-auto">
+        {/* Left Side - Registration Form */}
+        <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-8 lg:py-12 overflow-y-auto">
         <div className="w-full">
           {/* Información de NAXINE - Arriba del título */}
           <div className="text-center mb-8 lg:mb-10 space-y-6">
@@ -3595,21 +3596,33 @@ export default function RegisterProfessionalPage() {
         </div>
       </div>
 
-      {/* Right Side - Professional Image */}
-      <div className="hidden lg:flex flex-1 relative">
-        <div className="relative w-full h-full flex items-center lg:items-start justify-center p-4 lg:p-8">
-          <div className="sticky top-4 w-full max-w-2xl">
-            <div className="w-full h-[500px] lg:h-[600px] xl:h-[700px] relative rounded-3xl overflow-hidden">
-              <Image
-                src="/smk_Snapchat-Picture.webp"
-                alt="Profesional"
-                fill
-                className="object-cover"
-                priority
-                unoptimized
-              />
+        {/* Right Side - Professional Image */}
+        <div className="hidden lg:flex flex-1 relative">
+          <div className="relative w-full h-full flex items-center lg:items-start justify-center p-4 lg:p-8">
+            <div className="sticky top-4 w-full max-w-2xl">
+              <div className="w-full h-[500px] lg:h-[600px] xl:h-[700px] relative rounded-3xl overflow-hidden">
+                <Image
+                  src="/smk_Snapchat-Picture.webp"
+                  alt="Profesional"
+                  fill
+                  className="object-cover"
+                  priority
+                  unoptimized
+                />
+              </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Aviso de integración con calendarios */}
+      <div className="w-full bg-blue-50 border-t border-blue-200 py-6 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <p className="text-gray-700 text-sm md:text-base text-center leading-relaxed">
+            <span className="text-[#FF6B35] font-bold">NAXINE</span> se integra con{" "}
+            <span className="font-semibold">Google Calendar</span> y{" "}
+            <span className="font-semibold">Microsoft Outlook</span> para sincronizar tus citas y generar automáticamente enlaces de reuniones en video (Google Meet), facilitando la gestión de tu agenda profesional.
+          </p>
         </div>
       </div>
     </div>

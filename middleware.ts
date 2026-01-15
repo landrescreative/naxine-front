@@ -39,7 +39,9 @@ export function middleware(request: NextRequest) {
   // ========================================
   if (isProductionMode) {
     // Lista de rutas permitidas en producción
+    // La raíz "/" está permitida para mostrar el registro-profesional directamente
     const allowedRoutes = [
+      "/",
       "/proximamente",
       "/registro-profesional",
       "/terminos-condiciones",
@@ -62,13 +64,8 @@ export function middleware(request: NextRequest) {
       pathname.startsWith(route)
     );
 
-    // Si es la raíz (/), redirigir a /registro-profesional
-    if (pathname === "/") {
-      const registroUrl = new URL("/registro-profesional", request.url);
-      const redirect = NextResponse.redirect(registroUrl);
-      redirect.headers.set("x-redirect-reason", "root-to-registro-profesional");
-      return redirect;
-    }
+    // La raíz "/" ahora está permitida y no se redirige
+    // Se mostrará directamente el contenido de registro-profesional
 
     // Si no es ruta de sistema, no es ruta permitida, y no es dashboard, redirigir
     if (
