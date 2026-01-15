@@ -15,7 +15,7 @@ import {
 const STRIPE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
 
 // Solo inicializar Stripe si tenemos la clave
-const stripePromise = STRIPE_PUBLISHABLE_KEY 
+const stripePromise = STRIPE_PUBLISHABLE_KEY
   ? loadStripe(STRIPE_PUBLISHABLE_KEY)
   : null;
 
@@ -54,12 +54,13 @@ function PaymentForm({
         // Extraer payment_intent_id del clientSecret
         // El formato es: pi_xxx_secret_xxx
         const paymentIntentId = clientSecret.split("_secret_")[0];
-        
+
         if (paymentIntentId) {
           const paymentIntent = await stripe.retrievePaymentIntent(paymentIntentId);
-          
+
           if (paymentIntent.paymentIntent) {
-            const taxAmount = paymentIntent.paymentIntent.total_details?.amount_tax || 0;
+            const pi = paymentIntent.paymentIntent as any;
+            const taxAmount = pi.total_details?.amount_tax || 0;
             const amountTotal = paymentIntent.paymentIntent.amount; // En centavos
             const amountBase = amountTotal - taxAmount; // En centavos
 
@@ -110,17 +111,18 @@ function PaymentForm({
         onError(error.message || "Error al procesar el pago");
       } else if (paymentIntent && paymentIntent.status === "succeeded") {
         // Actualizar información de impuestos después del pago exitoso
-        const taxAmount = paymentIntent.total_details?.amount_tax || 0;
+        const pi = paymentIntent as any;
+        const taxAmount = pi.total_details?.amount_tax || 0;
         const amountTotal = paymentIntent.amount;
         const amountBase = amountTotal - taxAmount;
-        
+
         setTaxInfo({
           base: amountBase / 100,
           tax: taxAmount / 100,
           total: amountTotal / 100,
           taxExempt: taxAmount === 0,
         });
-        
+
         onSuccess();
       }
     } catch (err: any) {
@@ -244,7 +246,7 @@ export default function PagoPage() {
     const hora = searchParams.get("hora");
     const profesional = searchParams.get("profesional");
     const servicio = searchParams.get("servicio");
-    
+
     // Construir URL de confirmación con los datos
     const confirmacionUrl = new URL(`/pago/${params.id}/confirmacion`, window.location.origin);
     if (fecha) confirmacionUrl.searchParams.set("fecha", fecha);
@@ -254,7 +256,7 @@ export default function PagoPage() {
     if (servicio) confirmacionUrl.searchParams.set("servicio", servicio);
     confirmacionUrl.searchParams.set("monto", amount.toString());
     confirmacionUrl.searchParams.set("moneda", currency);
-    
+
     // Redirigir a la página de confirmación
     router.push(confirmacionUrl.toString());
   };
