@@ -12,6 +12,21 @@ import { SpecialtiesService } from "@/services/api/specialties";
 const specialtiesService = new SpecialtiesService();
 
 export default function RegisterProfessionalPage() {
+  const [showFooter, setShowFooter] = useState(false);
+
+  // Verificar si debemos mostrar el footer (producción o localhost:3001)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const hostname = window.location.hostname;
+      const appEnv = process.env.NEXT_PUBLIC_APP_ENV || "development";
+      const isProduction = appEnv === "production";
+      const isLocalhost3001 =
+        hostname === "localhost" && window.location.port === "3001";
+
+      setShowFooter(isProduction || isLocalhost3001);
+    }
+  }, []);
+
   const [formData, setFormData] = useState({
     nombreCompleto: "",
     correoElectronico: "",
@@ -1438,1818 +1453,1486 @@ export default function RegisterProfessionalPage() {
       <div className="flex flex-col lg:flex-row max-w-7xl mx-auto">
         {/* Left Side - Registration Form */}
         <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-8 lg:py-12 overflow-y-auto">
-        <div className="w-full">
-          {/* Información de NAXINE - Arriba del título */}
-          <div className="text-center mb-8 lg:mb-10 space-y-6">
-            {/* Descripción de NAXINE */}
-            <div className="space-y-4 max-w-3xl mx-auto">
-              <p className="text-gray-700 text-base md:text-lg leading-relaxed">
-                <span className="text-[#FF6B35] font-bold">NAXINE</span> es un{" "}
-                <span className="italic">marketplace digital</span> que facilita
-                la contratación de{" "}
-                <span className="italic">servicios profesionales</span> en áreas
-                como psicología, nutrición, derecho, fisioterapia, logopedia y
-                desarrollo personal.
-              </p>
-              <p className="text-gray-700 text-base md:text-lg leading-relaxed">
-                La plataforma incorpora una{" "}
-                <span className="italic">herramienta de accesibilidad digital</span>{" "}
-                que permite a personas con discapacidad visual o dificultades
-                específicas navegar, reservar y contratar de forma autónoma y
-                segura.
+          <div className="w-full">
+            {/* Información de NAXINE - Arriba del título */}
+            <div className="text-center mb-8 lg:mb-10 space-y-6">
+              {/* Descripción de NAXINE */}
+              <div className="space-y-3 max-w-3xl mx-auto">
+                <p className="text-gray-700 text-sm leading-relaxed">
+                  <span className="text-primary font-bold">NAXINE</span> es un{" "}
+                  <span className="italic">marketplace digital</span> que
+                  facilita la contratación de{" "}
+                  <span className="italic">servicios profesionales</span> en
+                  áreas como psicología, nutrición, derecho, fisioterapia,
+                  logopedia y desarrollo personal.
+                </p>
+                <p className="text-gray-700 text-sm leading-relaxed">
+                  La plataforma incorpora una{" "}
+                  <span className="italic">
+                    herramienta de accesibilidad digital
+                  </span>{" "}
+                  que permite a personas con discapacidad visual o dificultades
+                  específicas navegar, reservar y contratar de forma autónoma y
+                  segura.
+                </p>
+              </div>
+            </div>
+
+            {/* Header */}
+            <div className="text-center mb-6 lg:mb-8">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-2">
+                Regístrate como profesional
+              </h1>
+              <p className="text-gray-600 text-base sm:text-lg">
+                Completa este formulario para validar tu perfil y preparar tu
+                futura ficha pública en la plataforma.
               </p>
             </div>
 
-            {/* Próximamente */}
-            <div className="py-4">
-              <p className="text-gray-800 text-xl md:text-2xl font-semibold">
-                Próximamente disponible.
-              </p>
-            </div>
-
-            {/* Información de contacto */}
-            <div className="space-y-4 pt-4">
-              {/* Email y Teléfono */}
-              <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 text-gray-700">
-                <a
-                  href="mailto:info@naxine.com"
-                  className="flex items-center gap-2 hover:text-[#0a51f2] transition-colors"
+            {/* Form */}
+            <form
+              onSubmit={handleSubmit}
+              className="space-y-4 sm:space-y-6"
+              aria-describedby={describedByIds}
+              aria-busy={loading}
+            >
+              {/* Success Message */}
+              {successMsg && (
+                <div
+                  className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg"
+                  role="status"
+                  aria-live="polite"
+                  id={successMessageId}
                 >
-                  <Mail className="w-5 h-5 text-[#0a51f2]" />
-                  <span className="text-base md:text-lg">info@naxine.com</span>
-                </a>
-                <span className="hidden md:inline text-gray-400">|</span>
-                <a
-                  href="tel:+34919933510"
-                  className="flex items-center gap-2 hover:text-[#0a51f2] transition-colors"
-                >
-                  <Phone className="w-5 h-5 text-[#FF6B35]" />
-                  <span className="text-base md:text-lg">+34 919 933 510</span>
-                </a>
-              </div>
-
-              {/* Ubicación */}
-              <div className="flex items-center justify-center gap-2">
-                <MapPin className="w-5 h-5 text-[#FF6B35]" />
-                <a
-                  href="https://maps.app.goo.gl/DjYCs5jqRUST2t4y9"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[#0a51f2] hover:underline text-base md:text-lg"
-                >
-                  Ver ubicación en Google Maps
-                </a>
-              </div>
-            </div>
-          </div>
-
-          {/* Header */}
-          <div className="text-center mb-6 lg:mb-8">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-2">
-              Regístrate como profesional
-            </h1>
-            <p className="text-gray-600 text-base sm:text-lg">
-              Completa este formulario para validar tu perfil y preparar tu
-              futura ficha pública en la plataforma.
-            </p>
-          </div>
-
-          {/* Form */}
-          <form
-            onSubmit={handleSubmit}
-            className="space-y-4 sm:space-y-6"
-            aria-describedby={describedByIds}
-            aria-busy={loading}
-          >
-            {/* Success Message */}
-            {successMsg && (
-              <div
-                className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg"
-                role="status"
-                aria-live="polite"
-                id={successMessageId}
-              >
-                {successMsg}
-              </div>
-            )}
-
-            {/* Error Message */}
-            {!successMsg && errors.submit && (
-              <div
-                className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start gap-3"
-                role="alert"
-                aria-live="assertive"
-                id={statusMessageId}
-              >
-                <svg
-                  className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <div className="flex-1">
-                  <p className="font-medium">Error al enviar el formulario</p>
-                  <p className="text-sm mt-1">{errors.submit}</p>
+                  {successMsg}
                 </div>
-              </div>
-            )}
-
-            {/* 1. Nombre completo */}
-            <div>
-              <label
-                htmlFor="nombreCompleto"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Nombre y apellidos <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                id="nombreCompleto"
-                name="nombreCompleto"
-                value={formData.nombreCompleto}
-                onChange={handleInputChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
-                  errors.nombreCompleto ? "border-red-300" : "border-gray-300"
-                }`}
-                placeholder="Nombre y apellidos completos"
-                required
-                disabled={!!successMsg}
-                aria-invalid={Boolean(errors.nombreCompleto)}
-              />
-              {errors.nombreCompleto && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.nombreCompleto}
-                </p>
               )}
-            </div>
 
-            {/* 2. Correo electrónico */}
-            <div>
-              <label
-                htmlFor="correoElectronico"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Correo <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="email"
-                id="correoElectronico"
-                name="correoElectronico"
-                value={formData.correoElectronico}
-                onChange={handleInputChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
-                  errors.correoElectronico
-                    ? "border-red-300"
-                    : "border-gray-300"
-                }`}
-                placeholder="tu@email.com"
-                required
-                disabled={!!successMsg}
-                aria-invalid={Boolean(errors.correoElectronico)}
-              />
-              {errors.correoElectronico && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.correoElectronico}
-                </p>
+              {/* Error Message */}
+              {!successMsg && errors.submit && (
+                <div
+                  className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start gap-3"
+                  role="alert"
+                  aria-live="assertive"
+                  id={statusMessageId}
+                >
+                  <svg
+                    className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <div className="flex-1">
+                    <p className="font-medium">Error al enviar el formulario</p>
+                    <p className="text-sm mt-1">{errors.submit}</p>
+                  </div>
+                </div>
               )}
-            </div>
 
-            {/* 3. Contraseña */}
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Contraseña <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
+              {/* 1. Nombre completo */}
+              <div>
+                <label
+                  htmlFor="nombreCompleto"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Nombre y apellidos <span className="text-red-500">*</span>
+                </label>
                 <input
-                  type={showPassword ? "text" : "password"}
-                  id="password"
-                  name="password"
-                  value={formData.password}
+                  type="text"
+                  id="nombreCompleto"
+                  name="nombreCompleto"
+                  value={formData.nombreCompleto}
                   onChange={handleInputChange}
-                  onFocus={() => setPasswordFocused(true)}
-                  onBlur={() => setPasswordFocused(false)}
-                  className={`w-full px-4 py-3 pr-12 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
-                    errors.password ? "border-red-300" : "border-gray-300"
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
+                    errors.nombreCompleto ? "border-red-300" : "border-gray-300"
                   }`}
-                  placeholder="Mínimo 8 caracteres"
+                  placeholder="Nombre y apellidos completos"
                   required
                   disabled={!!successMsg}
-                  aria-invalid={Boolean(errors.password)}
+                  aria-invalid={Boolean(errors.nombreCompleto)}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                  aria-label={
-                    showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
-                  }
-                >
-                  {showPassword ? "👁️" : "👁️‍🗨️"}
-                </button>
-              </div>
-              {errors.password && (
-                <p className="mt-1 text-sm text-red-600">{errors.password}</p>
-              )}
-              {/* Requisitos de contraseña en tiempo real */}
-              {(passwordFocused || formData.password) && (
-                <div
-                  className={`mt-3 p-3 rounded-lg border transition-colors duration-200 ${
-                    validatePassword(formData.password).isValid
-                      ? "bg-green-50 border-green-200"
-                      : "bg-gray-50 border-gray-100"
-                  } space-y-2`}
-                >
-                  <p
-                    className={`text-xs font-medium mb-2 ${
-                      validatePassword(formData.password).isValid
-                        ? "text-green-700"
-                        : "text-gray-700"
-                    }`}
-                  >
-                    {validatePassword(formData.password).isValid
-                      ? "¡Contraseña segura!"
-                      : "La contraseña debe contener:"}
+                {errors.nombreCompleto && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.nombreCompleto}
                   </p>
-                  {[
-                    {
-                      label: "Mínimo 8 caracteres",
-                      valid: formData.password.length >= 8,
-                    },
-                    {
-                      label: "Al menos una letra mayúscula",
-                      valid: /[A-Z]/.test(formData.password),
-                    },
-                    {
-                      label: "Al menos una letra minúscula",
-                      valid: /[a-z]/.test(formData.password),
-                    },
-                    {
-                      label: "Al menos un número",
-                      valid: /\d/.test(formData.password),
-                    },
-                  ].map((req, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-2 text-xs transition-colors duration-200"
-                    >
-                      {req.valid ? (
-                        <Check className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
-                      ) : (
-                        <div className="w-3.5 h-3.5 rounded-full border border-gray-300 flex-shrink-0" />
-                      )}
-                      <span
-                        className={
-                          req.valid ? "text-green-700" : "text-gray-500"
-                        }
-                      >
-                        {req.label}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                )}
+              </div>
 
-            {/* 4. Confirmar contraseña */}
-            <div>
-              <label
-                htmlFor="confirmPassword"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Confirmar Contraseña <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
+              {/* 2. Correo electrónico */}
+              <div>
+                <label
+                  htmlFor="correoElectronico"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Correo <span className="text-red-500">*</span>
+                </label>
                 <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
+                  type="email"
+                  id="correoElectronico"
+                  name="correoElectronico"
+                  value={formData.correoElectronico}
                   onChange={handleInputChange}
-                  className={`w-full px-4 py-3 pr-12 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
-                    errors.confirmPassword
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
+                    errors.correoElectronico
                       ? "border-red-300"
                       : "border-gray-300"
                   }`}
-                  placeholder="Confirma tu contraseña"
+                  placeholder="tu@email.com"
                   required
                   disabled={!!successMsg}
-                  aria-invalid={Boolean(errors.confirmPassword)}
+                  aria-invalid={Boolean(errors.correoElectronico)}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                  aria-label={
-                    showConfirmPassword
-                      ? "Ocultar confirmación de contraseña"
-                      : "Mostrar confirmación de contraseña"
-                  }
-                >
-                  {showConfirmPassword ? "👁️" : "👁️‍🗨️"}
-                </button>
+                {errors.correoElectronico && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.correoElectronico}
+                  </p>
+                )}
               </div>
-              {/* Mensaje de coincidencia de contraseña en tiempo real */}
-              {formData.confirmPassword && (
-                <div className="mt-1">
-                  {formData.password === formData.confirmPassword ? (
-                    <p className="text-sm text-green-600 flex items-center gap-1">
-                      <Check className="w-3.5 h-3.5" />
-                      Las contraseñas coinciden
-                    </p>
-                  ) : (
-                    <p className="text-sm text-red-600 flex items-center gap-1">
-                      <X className="w-3.5 h-3.5" />
-                      Las contraseñas no coinciden
-                    </p>
-                  )}
-                </div>
-              )}
-              {errors.confirmPassword && !formData.confirmPassword && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.confirmPassword}
-                </p>
-              )}
-            </div>
 
-            {/* 5. Teléfono */}
-            <div>
-              <label
-                htmlFor="telefono"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Teléfono <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="tel"
-                id="telefono"
-                name="telefono"
-                value={formData.telefono}
-                onChange={handleInputChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
-                  errors.telefono ? "border-red-300" : "border-gray-300"
-                }`}
-                placeholder="+34 600 123 456"
-                required
-                disabled={!!successMsg}
-                aria-invalid={Boolean(errors.telefono)}
-              />
-              {errors.telefono && (
-                <p className="mt-1 text-sm text-red-600">{errors.telefono}</p>
-              )}
-            </div>
-
-            {/* 7. Titulación profesional */}
-            <div>
-              <label
-                htmlFor="titulacion"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Titulación profesional <span className="text-red-500">*</span>
-                <span className="text-xs text-gray-500 ml-2">
-                  (Será visible en tu futura ficha pública)
-                </span>
-              </label>
-              <input
-                type="text"
-                id="titulacion"
-                name="titulacion"
-                value={formData.titulacion}
-                onChange={handleInputChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
-                  errors.titulacion ? "border-red-300" : "border-gray-300"
-                }`}
-                placeholder="Ej: Grado en Psicología"
-                required
-                disabled={!!successMsg}
-                aria-invalid={Boolean(errors.titulacion)}
-              />
-              {errors.titulacion && (
-                <p className="mt-1 text-sm text-red-600">{errors.titulacion}</p>
-              )}
-            </div>
-
-            {/* 8. Número de colegiado/a */}
-            <div>
-              <label
-                htmlFor="numeroColegiado"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Número de colegiado/a <span className="text-red-500">*</span>
-                <span className="text-xs text-gray-500 ml-2">
-                  (Será visible en tu futura ficha pública)
-                </span>
-              </label>
-              <input
-                type="text"
-                id="numeroColegiado"
-                name="numeroColegiado"
-                value={formData.numeroColegiado}
-                onChange={handleInputChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
-                  errors.numeroColegiado ? "border-red-300" : "border-gray-300"
-                }`}
-                placeholder="Número de colegiado/a"
-                required
-                disabled={!!successMsg}
-                aria-invalid={Boolean(errors.numeroColegiado)}
-              />
-              {errors.numeroColegiado && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.numeroColegiado}
-                </p>
-              )}
-            </div>
-
-            {/* 8.1. NIF/CIF */}
-            <div>
-              <label
-                htmlFor="nifCif"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                NIF/CIF <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                id="nifCif"
-                name="nifCif"
-                value={formData.nifCif}
-                onChange={handleInputChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
-                  errors.nifCif ? "border-red-300" : "border-gray-300"
-                }`}
-                placeholder="Ej: 12345678A o B12345678"
-                required
-                disabled={!!successMsg}
-                aria-invalid={Boolean(errors.nifCif)}
-              />
-              {errors.nifCif && (
-                <p className="mt-1 text-sm text-red-600">{errors.nifCif}</p>
-              )}
-            </div>
-
-            {/* 9. Correo electrónico profesional */}
-            <div>
-              <label
-                htmlFor="correoProfesionalPublico"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Correo electrónico profesional{" "}
-                <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="email"
-                id="correoProfesionalPublico"
-                name="correoProfesionalPublico"
-                value={formData.correoProfesionalPublico}
-                onChange={handleInputChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
-                  errors.correoProfesionalPublico
-                    ? "border-red-300"
-                    : "border-gray-300"
-                }`}
-                placeholder="profesional@email.com"
-                required
-                disabled={!!successMsg}
-                aria-invalid={Boolean(errors.correoProfesionalPublico)}
-              />
-              {errors.correoProfesionalPublico && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.correoProfesionalPublico}
-                </p>
-              )}
-            </div>
-
-            {/* 10. Especialidad */}
-            <div>
-              <label
-                htmlFor="id_especialidad"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Especialidad o área profesional{" "}
-                <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <select
-                  id="id_especialidad"
-                  name="id_especialidad"
-                  value={formData.id_especialidad || ""}
-                  onChange={(e) => {
-                    const selectedId = e.target.value;
-                    if (!selectedId) {
-                      setFormData((prev) => ({
-                        ...prev,
-                        id_especialidad: undefined,
-                        especialidadSeleccionada: "",
-                        especialidad: "",
-                      }));
-                      return;
-                    }
-                    const selectedEspecialidad = especialidades.find(
-                      (esp) => String(esp.id) === selectedId
-                    );
-                    if (selectedEspecialidad) {
-                      setFormData((prev) => ({
-                        ...prev,
-                        id_especialidad: selectedEspecialidad.id,
-                        especialidadSeleccionada: selectedEspecialidad.nombre,
-                        especialidad: selectedEspecialidad.nombre,
-                      }));
-                    }
-                  }}
-                  disabled={!!successMsg || loadingEspecialidades}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all appearance-none bg-white ${
-                    errors.especialidad ? "border-red-300" : "border-gray-300"
-                  } ${loadingEspecialidades ? "opacity-50" : ""}`}
-                  required
-                  aria-invalid={Boolean(errors.especialidad)}
+              {/* 3. Contraseña */}
+              <div>
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-gray-700 mb-2"
                 >
-                  {loadingEspecialidades ? (
-                    <option value="">Cargando especialidades...</option>
-                  ) : especialidades.length === 0 ? (
-                    <option value="">No hay especialidades disponibles</option>
-                  ) : (
-                    <>
-                      <option value="">Selecciona una especialidad</option>
-                      {especialidades.map((especialidad) => (
-                        <option key={especialidad.id} value={especialidad.id}>
-                          {especialidad.nombre}
-                        </option>
-                      ))}
-                    </>
-                  )}
-                </select>
-                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                  {loadingEspecialidades ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
-                  ) : (
-                    <svg
-                      className="h-4 w-4 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
-                  )}
-                </div>
-              </div>
-              {errors.especialidad && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.especialidad}
-                </p>
-              )}
-            </div>
-
-            {/* 11. Descripción general del perfil profesional */}
-            <div>
-              <label
-                htmlFor="descripcion"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Descripción general del perfil profesional{" "}
-                <span className="text-red-500">*</span>
-                <span className="text-xs text-gray-500 ml-2">
-                  (Máximo 1.500 caracteres. Será visible en tu futura ficha
-                  pública)
-                </span>
-              </label>
-              <textarea
-                id="descripcion"
-                name="descripcion"
-                value={formData.descripcion}
-                onChange={handleInputChange}
-                required
-                maxLength={1500}
-                rows={6}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none ${
-                  errors.descripcion ? "border-red-300" : "border-gray-300"
-                }`}
-                placeholder="Describe tu perfil profesional, experiencia y especialidades..."
-                disabled={!!successMsg}
-                aria-invalid={Boolean(errors.descripcion)}
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                {caracteresRestantes} caracteres restantes
-              </p>
-              {errors.descripcion && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.descripcion}
-                </p>
-              )}
-            </div>
-
-            {/* 11.1. Servicios ofrecidos */}
-            <div>
-              <label
-                htmlFor="serviciosOfrecidos"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Servicios ofrecidos <span className="text-red-500">*</span>
-                <span className="text-xs text-gray-500 ml-2">
-                  (Lista los servicios que ofreces)
-                </span>
-              </label>
-              <textarea
-                id="serviciosOfrecidos"
-                name="serviciosOfrecidos"
-                value={formData.serviciosOfrecidos}
-                onChange={handleInputChange}
-                required
-                rows={4}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none ${
-                  errors.serviciosOfrecidos
-                    ? "border-red-300"
-                    : "border-gray-300"
-                }`}
-                placeholder=""
-                disabled={!!successMsg}
-                aria-invalid={Boolean(errors.serviciosOfrecidos)}
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Separa cada servicio con comas o en líneas diferentes
-              </p>
-              {errors.serviciosOfrecidos && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.serviciosOfrecidos}
-                </p>
-              )}
-            </div>
-
-            {/* 12. Foto del perfil profesional */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Foto del perfil profesional{" "}
-                <span className="text-red-500">*</span>
-                <span className="text-xs text-gray-500 ml-2">
-                  (Será visible en tu futura ficha pública)
-                </span>
-              </label>
-              {fotoPreview ? (
+                  Contraseña <span className="text-red-500">*</span>
+                </label>
                 <div className="relative">
-                  <div className="w-48 h-48 border-2 border-gray-300 rounded-lg overflow-hidden">
-                    <img
-                      src={fotoPreview}
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    id="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    onFocus={() => setPasswordFocused(true)}
+                    onBlur={() => setPasswordFocused(false)}
+                    className={`w-full px-4 py-3 pr-12 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
+                      errors.password ? "border-red-300" : "border-gray-300"
+                    }`}
+                    placeholder="Mínimo 8 caracteres"
+                    required
+                    disabled={!!successMsg}
+                    aria-invalid={Boolean(errors.password)}
+                  />
                   <button
                     type="button"
-                    onClick={removeFoto}
-                    className="mt-2 text-sm text-red-600 hover:text-red-800"
-                    disabled={!!successMsg}
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    aria-label={
+                      showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                    }
                   >
-                    Eliminar foto
+                    {showPassword ? "👁️" : "👁️‍🗨️"}
                   </button>
                 </div>
-              ) : (
-                <div>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFotoChange}
-                    required
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
-                      errors.foto ? "border-red-300" : "border-gray-300"
-                    }`}
-                    disabled={!!successMsg}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Formatos aceptados: JPG, PNG, GIF. Tamaño máximo: 5MB
-                  </p>
-                </div>
-              )}
-              {errors.foto && (
-                <p className="mt-1 text-sm text-red-600">{errors.foto}</p>
-              )}
-            </div>
-
-            {/* 13. Enlace al vídeo de presentación */}
-            <div>
-              <label
-                htmlFor="videoPresentacion"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Enlace al vídeo de presentación
-                <span className="text-xs text-gray-500 ml-2">
-                  (Opcional, solo YouTube o Vimeo. Será visible en tu futura
-                  ficha pública)
-                </span>
-              </label>
-              <input
-                type="url"
-                id="videoPresentacion"
-                name="videoPresentacion"
-                value={formData.videoPresentacion}
-                onChange={handleInputChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
-                  errors.videoPresentacion
-                    ? "border-red-300"
-                    : "border-gray-300"
-                }`}
-                placeholder="https://www.youtube.com/watch?v=... o https://vimeo.com/..."
-                disabled={!!successMsg}
-                aria-invalid={Boolean(errors.videoPresentacion)}
-              />
-              {errors.videoPresentacion && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.videoPresentacion}
-                </p>
-              )}
-            </div>
-
-            {/* 14. Modalidades de atención */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Modalidades de atención que ofreces{" "}
-                <span className="text-red-500">*</span>
-              </label>
-              <div className="space-y-2">
-                {["online", "presencial", "domicilio"].map((modalidad) => (
-                  <label
-                    key={modalidad}
-                    className="flex items-center gap-3 cursor-pointer"
+                {errors.password && (
+                  <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+                )}
+                {/* Requisitos de contraseña en tiempo real */}
+                {(passwordFocused || formData.password) && (
+                  <div
+                    className={`mt-3 p-3 rounded-lg border transition-colors duration-200 ${
+                      validatePassword(formData.password).isValid
+                        ? "bg-green-50 border-green-200"
+                        : "bg-gray-50 border-gray-100"
+                    } space-y-2`}
                   >
-                    <input
-                      type="checkbox"
-                      name="modalidad"
-                      value={modalidad}
-                      checked={formData.modalidades.includes(modalidad)}
-                      onChange={handleInputChange}
-                      className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
-                      disabled={!!successMsg}
-                    />
-                    <span className="text-sm text-gray-700 capitalize">
-                      {modalidad === "domicilio" ? "A domicilio" : modalidad}
-                    </span>
-                  </label>
-                ))}
+                    <p
+                      className={`text-xs font-medium mb-2 ${
+                        validatePassword(formData.password).isValid
+                          ? "text-green-700"
+                          : "text-gray-700"
+                      }`}
+                    >
+                      {validatePassword(formData.password).isValid
+                        ? "¡Contraseña segura!"
+                        : "La contraseña debe contener:"}
+                    </p>
+                    {[
+                      {
+                        label: "Mínimo 8 caracteres",
+                        valid: formData.password.length >= 8,
+                      },
+                      {
+                        label: "Al menos una letra mayúscula",
+                        valid: /[A-Z]/.test(formData.password),
+                      },
+                      {
+                        label: "Al menos una letra minúscula",
+                        valid: /[a-z]/.test(formData.password),
+                      },
+                      {
+                        label: "Al menos un número",
+                        valid: /\d/.test(formData.password),
+                      },
+                    ].map((req, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-2 text-xs transition-colors duration-200"
+                      >
+                        {req.valid ? (
+                          <Check className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                        ) : (
+                          <div className="w-3.5 h-3.5 rounded-full border border-gray-300 flex-shrink-0" />
+                        )}
+                        <span
+                          className={
+                            req.valid ? "text-green-700" : "text-gray-500"
+                          }
+                        >
+                          {req.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-              {errors.modalidades && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.modalidades}
-                </p>
-              )}
-            </div>
 
-            {/* 15. Dirección de consulta */}
-            {formData.modalidades.includes("presencial") && (
+              {/* 4. Confirmar contraseña */}
               <div>
                 <label
-                  htmlFor="direccionConsulta"
+                  htmlFor="confirmPassword"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
-                  Dirección de consulta <span className="text-red-500">*</span>
-                  <span className="text-xs text-gray-500 ml-2">
-                    (Solo si ofreces atención presencial)
-                  </span>
+                  Confirmar Contraseña <span className="text-red-500">*</span>
                 </label>
-                <textarea
-                  id="direccionConsulta"
-                  name="direccionConsulta"
-                  value={formData.direccionConsulta}
-                  onChange={handleInputChange}
-                  required={formData.modalidades.includes("presencial")}
-                  rows={3}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none ${
-                    errors.direccionConsulta
-                      ? "border-red-300"
-                      : "border-gray-300"
-                  }`}
-                  placeholder="Dirección completa de la consulta"
-                  disabled={!!successMsg}
-                  aria-invalid={Boolean(errors.direccionConsulta)}
-                />
-                {errors.direccionConsulta && (
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    className={`w-full px-4 py-3 pr-12 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
+                      errors.confirmPassword
+                        ? "border-red-300"
+                        : "border-gray-300"
+                    }`}
+                    placeholder="Confirma tu contraseña"
+                    required
+                    disabled={!!successMsg}
+                    aria-invalid={Boolean(errors.confirmPassword)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    aria-label={
+                      showConfirmPassword
+                        ? "Ocultar confirmación de contraseña"
+                        : "Mostrar confirmación de contraseña"
+                    }
+                  >
+                    {showConfirmPassword ? "👁️" : "👁️‍🗨️"}
+                  </button>
+                </div>
+                {/* Mensaje de coincidencia de contraseña en tiempo real */}
+                {formData.confirmPassword && (
+                  <div className="mt-1">
+                    {formData.password === formData.confirmPassword ? (
+                      <p className="text-sm text-green-600 flex items-center gap-1">
+                        <Check className="w-3.5 h-3.5" />
+                        Las contraseñas coinciden
+                      </p>
+                    ) : (
+                      <p className="text-sm text-red-600 flex items-center gap-1">
+                        <X className="w-3.5 h-3.5" />
+                        Las contraseñas no coinciden
+                      </p>
+                    )}
+                  </div>
+                )}
+                {errors.confirmPassword && !formData.confirmPassword && (
                   <p className="mt-1 text-sm text-red-600">
-                    {errors.direccionConsulta}
+                    {errors.confirmPassword}
                   </p>
                 )}
               </div>
-            )}
 
-            {/* 15.1. Ciudad */}
-            <div>
-              <label
-                htmlFor="ciudad"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Ciudad <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                id="ciudad"
-                name="ciudad"
-                value={formData.ciudad}
-                onChange={handleInputChange}
-                required
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
-                  errors.ciudad ? "border-red-300" : "border-gray-300"
-                }`}
-                placeholder="Ej: Madrid, Barcelona, Valencia..."
-                disabled={!!successMsg}
-                aria-invalid={Boolean(errors.ciudad)}
-              />
-              {errors.ciudad && (
-                <p className="mt-1 text-sm text-red-600">{errors.ciudad}</p>
-              )}
-            </div>
-
-            {/* 16. Zonas donde atiendes a domicilio */}
-            {formData.modalidades.includes("domicilio") && (
+              {/* 5. Teléfono */}
               <div>
                 <label
-                  htmlFor="codigosPostalesDomicilio"
+                  htmlFor="telefono"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
-                  Códigos postales donde ofreces atención a domicilio{" "}
-                  <span className="text-red-500">*</span>
+                  Teléfono <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="tel"
+                  id="telefono"
+                  name="telefono"
+                  value={formData.telefono}
+                  onChange={handleInputChange}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
+                    errors.telefono ? "border-red-300" : "border-gray-300"
+                  }`}
+                  placeholder="+34 600 123 456"
+                  required
+                  disabled={!!successMsg}
+                  aria-invalid={Boolean(errors.telefono)}
+                />
+                {errors.telefono && (
+                  <p className="mt-1 text-sm text-red-600">{errors.telefono}</p>
+                )}
+              </div>
+
+              {/* 7. Titulación profesional */}
+              <div>
+                <label
+                  htmlFor="titulacion"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Titulación profesional <span className="text-red-500">*</span>
                   <span className="text-xs text-gray-500 ml-2">
-                    (Solo si ofreces atención a domicilio)
+                    (Será visible en tu futura ficha pública)
                   </span>
                 </label>
-                <textarea
-                  id="codigosPostalesDomicilio"
-                  name="codigosPostalesDomicilio"
-                  value={formData.codigosPostalesDomicilio}
+                <input
+                  type="text"
+                  id="titulacion"
+                  name="titulacion"
+                  value={formData.titulacion}
                   onChange={handleInputChange}
-                  required={formData.modalidades.includes("domicilio")}
-                  rows={3}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none ${
-                    errors.codigosPostalesDomicilio
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
+                    errors.titulacion ? "border-red-300" : "border-gray-300"
+                  }`}
+                  placeholder="Ej: Grado en Psicología"
+                  required
+                  disabled={!!successMsg}
+                  aria-invalid={Boolean(errors.titulacion)}
+                />
+                {errors.titulacion && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.titulacion}
+                  </p>
+                )}
+              </div>
+
+              {/* 8. Número de colegiado/a */}
+              <div>
+                <label
+                  htmlFor="numeroColegiado"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Número de colegiado/a <span className="text-red-500">*</span>
+                  <span className="text-xs text-gray-500 ml-2">
+                    (Será visible en tu futura ficha pública)
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  id="numeroColegiado"
+                  name="numeroColegiado"
+                  value={formData.numeroColegiado}
+                  onChange={handleInputChange}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
+                    errors.numeroColegiado
                       ? "border-red-300"
                       : "border-gray-300"
                   }`}
-                  placeholder="Ej: 28001, 28002, 28003, 28004 (separados por comas)"
+                  placeholder="Número de colegiado/a"
+                  required
                   disabled={!!successMsg}
-                  aria-invalid={Boolean(errors.codigosPostalesDomicilio)}
+                  aria-invalid={Boolean(errors.numeroColegiado)}
+                />
+                {errors.numeroColegiado && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.numeroColegiado}
+                  </p>
+                )}
+              </div>
+
+              {/* 8.1. NIF/CIF */}
+              <div>
+                <label
+                  htmlFor="nifCif"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  NIF/CIF <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="nifCif"
+                  name="nifCif"
+                  value={formData.nifCif}
+                  onChange={handleInputChange}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
+                    errors.nifCif ? "border-red-300" : "border-gray-300"
+                  }`}
+                  placeholder="Ej: 12345678A o B12345678"
+                  required
+                  disabled={!!successMsg}
+                  aria-invalid={Boolean(errors.nifCif)}
+                />
+                {errors.nifCif && (
+                  <p className="mt-1 text-sm text-red-600">{errors.nifCif}</p>
+                )}
+              </div>
+
+              {/* 9. Correo electrónico profesional */}
+              <div>
+                <label
+                  htmlFor="correoProfesionalPublico"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Correo electrónico profesional{" "}
+                  <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  id="correoProfesionalPublico"
+                  name="correoProfesionalPublico"
+                  value={formData.correoProfesionalPublico}
+                  onChange={handleInputChange}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
+                    errors.correoProfesionalPublico
+                      ? "border-red-300"
+                      : "border-gray-300"
+                  }`}
+                  placeholder="profesional@email.com"
+                  required
+                  disabled={!!successMsg}
+                  aria-invalid={Boolean(errors.correoProfesionalPublico)}
+                />
+                {errors.correoProfesionalPublico && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.correoProfesionalPublico}
+                  </p>
+                )}
+              </div>
+
+              {/* 10. Especialidad */}
+              <div>
+                <label
+                  htmlFor="id_especialidad"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Especialidad o área profesional{" "}
+                  <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <select
+                    id="id_especialidad"
+                    name="id_especialidad"
+                    value={formData.id_especialidad || ""}
+                    onChange={(e) => {
+                      const selectedId = e.target.value;
+                      if (!selectedId) {
+                        setFormData((prev) => ({
+                          ...prev,
+                          id_especialidad: undefined,
+                          especialidadSeleccionada: "",
+                          especialidad: "",
+                        }));
+                        return;
+                      }
+                      const selectedEspecialidad = especialidades.find(
+                        (esp) => String(esp.id) === selectedId
+                      );
+                      if (selectedEspecialidad) {
+                        setFormData((prev) => ({
+                          ...prev,
+                          id_especialidad: selectedEspecialidad.id,
+                          especialidadSeleccionada: selectedEspecialidad.nombre,
+                          especialidad: selectedEspecialidad.nombre,
+                        }));
+                      }
+                    }}
+                    disabled={!!successMsg || loadingEspecialidades}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all appearance-none bg-white ${
+                      errors.especialidad ? "border-red-300" : "border-gray-300"
+                    } ${loadingEspecialidades ? "opacity-50" : ""}`}
+                    required
+                    aria-invalid={Boolean(errors.especialidad)}
+                  >
+                    {loadingEspecialidades ? (
+                      <option value="">Cargando especialidades...</option>
+                    ) : especialidades.length === 0 ? (
+                      <option value="">
+                        No hay especialidades disponibles
+                      </option>
+                    ) : (
+                      <>
+                        <option value="">Selecciona una especialidad</option>
+                        {especialidades.map((especialidad) => (
+                          <option key={especialidad.id} value={especialidad.id}>
+                            {especialidad.nombre}
+                          </option>
+                        ))}
+                      </>
+                    )}
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    {loadingEspecialidades ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
+                    ) : (
+                      <svg
+                        className="h-4 w-4 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    )}
+                  </div>
+                </div>
+                {errors.especialidad && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.especialidad}
+                  </p>
+                )}
+              </div>
+
+              {/* 11. Descripción general del perfil profesional */}
+              <div>
+                <label
+                  htmlFor="descripcion"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Descripción general del perfil profesional{" "}
+                  <span className="text-red-500">*</span>
+                  <span className="text-xs text-gray-500 ml-2">
+                    (Máximo 1.500 caracteres. Será visible en tu futura ficha
+                    pública)
+                  </span>
+                </label>
+                <textarea
+                  id="descripcion"
+                  name="descripcion"
+                  value={formData.descripcion}
+                  onChange={handleInputChange}
+                  required
+                  maxLength={1500}
+                  rows={6}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none ${
+                    errors.descripcion ? "border-red-300" : "border-gray-300"
+                  }`}
+                  placeholder="Describe tu perfil profesional, experiencia y especialidades..."
+                  disabled={!!successMsg}
+                  aria-invalid={Boolean(errors.descripcion)}
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Indica los códigos postales separados por comas. Ej: 28001,
-                  28002, 28003
+                  {caracteresRestantes} caracteres restantes
                 </p>
-                {errors.codigosPostalesDomicilio && (
+                {errors.descripcion && (
                   <p className="mt-1 text-sm text-red-600">
-                    {errors.codigosPostalesDomicilio}
+                    {errors.descripcion}
                   </p>
                 )}
               </div>
-            )}
 
-            {/* 17. Accesible para movilidad reducida */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                ¿Tu consulta es accesible para personas con movilidad reducida?
-                <span className="text-xs text-gray-500 ml-2">
-                  (Cumplimentar sólo en caso de ofrecer servicio presencial)
-                </span>
-              </label>
-              <div className="space-y-2">
-                {["Sí", "No"].map((opcion) => (
-                  <label
-                    key={opcion}
-                    className="flex items-center gap-3 cursor-pointer"
-                  >
-                    <input
-                      type="radio"
-                      name="accesibleMovilidad"
-                      value={opcion}
-                      checked={formData.accesibleMovilidad === opcion}
-                      onChange={handleInputChange}
-                      className="w-4 h-4 text-primary border-gray-300 focus:ring-primary"
-                      disabled={!!successMsg}
-                    />
-                    <span className="text-sm text-gray-700">{opcion}</span>
-                  </label>
-                ))}
-              </div>
-              {errors.accesibleMovilidad && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.accesibleMovilidad}
+              {/* 11.1. Servicios ofrecidos */}
+              <div>
+                <label
+                  htmlFor="serviciosOfrecidos"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Servicios ofrecidos <span className="text-red-500">*</span>
+                  <span className="text-xs text-gray-500 ml-2">
+                    (Lista los servicios que ofreces)
+                  </span>
+                </label>
+                <textarea
+                  id="serviciosOfrecidos"
+                  name="serviciosOfrecidos"
+                  value={formData.serviciosOfrecidos}
+                  onChange={handleInputChange}
+                  required
+                  rows={4}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none ${
+                    errors.serviciosOfrecidos
+                      ? "border-red-300"
+                      : "border-gray-300"
+                  }`}
+                  placeholder=""
+                  disabled={!!successMsg}
+                  aria-invalid={Boolean(errors.serviciosOfrecidos)}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Separa cada servicio con comas o en líneas diferentes
                 </p>
-              )}
-            </div>
-
-            {/* 18. Horarios por Modalidad */}
-            {/* Horarios En Línea */}
-            {formData.modalidades.includes("online") && (
-              <div
-                id="horariosEnLinea"
-                className="rounded-xl border border-gray-200 bg-gray-50 p-6"
-              >
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Horario En Línea <span className="text-red-500">*</span>
-                </h3>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-3">
-                      Selecciona los días disponibles
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {[
-                        "Lunes",
-                        "Martes",
-                        "Miércoles",
-                        "Jueves",
-                        "Viernes",
-                        "Sábado",
-                        "Domingo",
-                      ].map((dia) => {
-                        const diasEnLinea =
-                          formData.horariosEnLinea?.dias || [];
-                        const isSelected = diasEnLinea.some(
-                          (d) => d.dia === dia
-                        );
-                        return (
-                          <button
-                            key={dia}
-                            type="button"
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
-                              isSelected
-                                ? "bg-primary text-white border-primary shadow-sm"
-                                : "bg-white border-gray-300 text-gray-700 hover:border-primary hover:text-primary"
-                            }`}
-                            onClick={() => {
-                              if (!successMsg) toggleDiaHorario("online", dia);
-                            }}
-                          >
-                            <span>{dia}</span>
-                            {isSelected && <X className="h-4 w-4" />}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {errors.horariosEnLinea && (
-                      <p className="mt-2 text-sm text-red-600">
-                        {errors.horariosEnLinea}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Horarios individuales por día */}
-                  {formData.horariosEnLinea?.dias &&
-                    formData.horariosEnLinea.dias.length > 0 && (
-                      <div className="mt-6 space-y-4">
-                        <h4 className="text-sm font-semibold text-gray-700 mb-3">
-                          Configura las horas para cada día:
-                        </h4>
-                        {formData.horariosEnLinea.dias.map((diaHorario) => (
-                          <div
-                            key={diaHorario.dia}
-                            className="bg-white rounded-lg border border-gray-200 p-4 space-y-4"
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <h5 className="text-sm font-semibold text-gray-900">
-                                {diaHorario.dia}
-                              </h5>
-                              <div className="flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    if (!successMsg)
-                                      agregarRangoHorario(
-                                        "online",
-                                        diaHorario.dia
-                                      );
-                                  }}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
-                                >
-                                  <svg
-                                    className="w-3.5 h-3.5"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M12 4v16m8-8H4"
-                                    />
-                                  </svg>
-                                  Agregar horario
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    if (!successMsg)
-                                      toggleDiaHorario(
-                                        "online",
-                                        diaHorario.dia
-                                      );
-                                  }}
-                                  className="text-red-600 hover:text-red-800 text-xs font-medium"
-                                >
-                                  Quitar día
-                                </button>
-                              </div>
-                            </div>
-                            <div className="space-y-3">
-                              {diaHorario.rangos.map((rango, idxRango) => (
-                                <div
-                                  key={idxRango}
-                                  className="flex items-end gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
-                                >
-                                  <div className="flex-1 grid grid-cols-2 gap-3">
-                                    <div>
-                                      <label className="block text-xs text-gray-600 mb-1.5">
-                                        Hora de inicio
-                                      </label>
-                                      <input
-                                        type="time"
-                                        value={getTime24From12(
-                                          rango.desde || ""
-                                        )}
-                                        onChange={(e) =>
-                                          updateHorarioTime(
-                                            "online",
-                                            diaHorario.dia,
-                                            idxRango,
-                                            "desde",
-                                            e.target.value
-                                          )
-                                        }
-                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
-                                        disabled={!!successMsg}
-                                        required
-                                      />
-                                    </div>
-                                    <div>
-                                      <label className="block text-xs text-gray-600 mb-1.5">
-                                        Hora de fin
-                                      </label>
-                                      <input
-                                        type="time"
-                                        value={getTime24From12(
-                                          rango.hasta || ""
-                                        )}
-                                        onChange={(e) =>
-                                          updateHorarioTime(
-                                            "online",
-                                            diaHorario.dia,
-                                            idxRango,
-                                            "hasta",
-                                            e.target.value
-                                          )
-                                        }
-                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
-                                        disabled={!!successMsg}
-                                        required
-                                      />
-                                    </div>
-                                  </div>
-                                  {diaHorario.rangos.length > 1 && (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        if (!successMsg)
-                                          eliminarRangoHorario(
-                                            "online",
-                                            diaHorario.dia,
-                                            idxRango
-                                          );
-                                      }}
-                                      className="px-2 py-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
-                                      title="Eliminar este horario"
-                                    >
-                                      <X className="w-4 h-4" />
-                                    </button>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                </div>
+                {errors.serviciosOfrecidos && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.serviciosOfrecidos}
+                  </p>
+                )}
               </div>
-            )}
 
-            {/* Horarios Presencial */}
-            {formData.modalidades.includes("presencial") && (
-              <div
-                id="horariosPresencial"
-                className="rounded-xl border border-gray-200 bg-gray-50 p-6"
-              >
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Horario Presencial <span className="text-red-500">*</span>
-                </h3>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-3">
-                      Selecciona los días disponibles
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {[
-                        "Lunes",
-                        "Martes",
-                        "Miércoles",
-                        "Jueves",
-                        "Viernes",
-                        "Sábado",
-                        "Domingo",
-                      ].map((dia) => {
-                        const diasPresencial =
-                          formData.horariosPresencial?.dias || [];
-                        const isSelected = diasPresencial.some(
-                          (d) => d.dia === dia
-                        );
-                        return (
-                          <button
-                            key={dia}
-                            type="button"
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
-                              isSelected
-                                ? "bg-primary text-white border-primary shadow-sm"
-                                : "bg-white border-gray-300 text-gray-700 hover:border-primary hover:text-primary"
-                            }`}
-                            onClick={() => {
-                              if (!successMsg)
-                                toggleDiaHorario("presencial", dia);
-                            }}
-                          >
-                            <span>{dia}</span>
-                            {isSelected && <X className="h-4 w-4" />}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {errors.horariosPresencial && (
-                      <p className="mt-2 text-sm text-red-600">
-                        {errors.horariosPresencial}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Horarios individuales por día */}
-                  {formData.horariosPresencial?.dias &&
-                    formData.horariosPresencial.dias.length > 0 && (
-                      <div className="mt-6 space-y-4">
-                        <h4 className="text-sm font-semibold text-gray-700 mb-3">
-                          Configura las horas para cada día:
-                        </h4>
-                        {formData.horariosPresencial.dias.map((diaHorario) => (
-                          <div
-                            key={diaHorario.dia}
-                            className="bg-white rounded-lg border border-gray-200 p-4 space-y-4"
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <h5 className="text-sm font-semibold text-gray-900">
-                                {diaHorario.dia}
-                              </h5>
-                              <div className="flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    if (!successMsg)
-                                      agregarRangoHorario(
-                                        "presencial",
-                                        diaHorario.dia
-                                      );
-                                  }}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
-                                >
-                                  <svg
-                                    className="w-3.5 h-3.5"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M12 4v16m8-8H4"
-                                    />
-                                  </svg>
-                                  Agregar horario
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    if (!successMsg)
-                                      toggleDiaHorario(
-                                        "presencial",
-                                        diaHorario.dia
-                                      );
-                                  }}
-                                  className="text-red-600 hover:text-red-800 text-xs font-medium"
-                                >
-                                  Quitar día
-                                </button>
-                              </div>
-                            </div>
-                            <div className="space-y-3">
-                              {diaHorario.rangos.map((rango, idxRango) => (
-                                <div
-                                  key={idxRango}
-                                  className="flex items-end gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
-                                >
-                                  <div className="flex-1 grid grid-cols-2 gap-3">
-                                    <div>
-                                      <label className="block text-xs text-gray-600 mb-1.5">
-                                        Hora de inicio
-                                      </label>
-                                      <input
-                                        type="time"
-                                        value={getTime24From12(
-                                          rango.desde || ""
-                                        )}
-                                        onChange={(e) =>
-                                          updateHorarioTime(
-                                            "presencial",
-                                            diaHorario.dia,
-                                            idxRango,
-                                            "desde",
-                                            e.target.value
-                                          )
-                                        }
-                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
-                                        disabled={!!successMsg}
-                                        required
-                                      />
-                                    </div>
-                                    <div>
-                                      <label className="block text-xs text-gray-600 mb-1.5">
-                                        Hora de fin
-                                      </label>
-                                      <input
-                                        type="time"
-                                        value={getTime24From12(
-                                          rango.hasta || ""
-                                        )}
-                                        onChange={(e) =>
-                                          updateHorarioTime(
-                                            "presencial",
-                                            diaHorario.dia,
-                                            idxRango,
-                                            "hasta",
-                                            e.target.value
-                                          )
-                                        }
-                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
-                                        disabled={!!successMsg}
-                                        required
-                                      />
-                                    </div>
-                                  </div>
-                                  {diaHorario.rangos.length > 1 && (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        if (!successMsg)
-                                          eliminarRangoHorario(
-                                            "presencial",
-                                            diaHorario.dia,
-                                            idxRango
-                                          );
-                                      }}
-                                      className="px-2 py-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
-                                      title="Eliminar este horario"
-                                    >
-                                      <X className="w-4 h-4" />
-                                    </button>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                </div>
-              </div>
-            )}
-
-            {/* Horarios A Domicilio */}
-            {formData.modalidades.includes("domicilio") && (
-              <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Horario A Domicilio <span className="text-red-500">*</span>
-                </h3>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-3">
-                      Selecciona los días disponibles
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {[
-                        "Lunes",
-                        "Martes",
-                        "Miércoles",
-                        "Jueves",
-                        "Viernes",
-                        "Sábado",
-                        "Domingo",
-                      ].map((dia) => {
-                        const diasDomicilio =
-                          formData.horariosADomicilio?.dias || [];
-                        const isSelected = diasDomicilio.some(
-                          (d) => d.dia === dia
-                        );
-                        return (
-                          <button
-                            key={dia}
-                            type="button"
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
-                              isSelected
-                                ? "bg-primary text-white border-primary shadow-sm"
-                                : "bg-white border-gray-300 text-gray-700 hover:border-primary hover:text-primary"
-                            }`}
-                            onClick={() => {
-                              if (!successMsg)
-                                toggleDiaHorario("domicilio", dia);
-                            }}
-                          >
-                            <span>{dia}</span>
-                            {isSelected && <X className="h-4 w-4" />}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {errors.horariosADomicilio && (
-                      <p className="mt-2 text-sm text-red-600">
-                        {errors.horariosADomicilio}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Horarios individuales por día */}
-                  {formData.horariosADomicilio?.dias &&
-                    formData.horariosADomicilio.dias.length > 0 && (
-                      <div className="mt-6 space-y-4">
-                        <h4 className="text-sm font-semibold text-gray-700 mb-3">
-                          Configura las horas para cada día:
-                        </h4>
-                        {formData.horariosADomicilio.dias.map((diaHorario) => (
-                          <div
-                            key={diaHorario.dia}
-                            className="bg-white rounded-lg border border-gray-200 p-4 space-y-4"
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <h5 className="text-sm font-semibold text-gray-900">
-                                {diaHorario.dia}
-                              </h5>
-                              <div className="flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    if (!successMsg)
-                                      agregarRangoHorario(
-                                        "domicilio",
-                                        diaHorario.dia
-                                      );
-                                  }}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
-                                >
-                                  <svg
-                                    className="w-3.5 h-3.5"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M12 4v16m8-8H4"
-                                    />
-                                  </svg>
-                                  Agregar horario
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    if (!successMsg)
-                                      toggleDiaHorario(
-                                        "domicilio",
-                                        diaHorario.dia
-                                      );
-                                  }}
-                                  className="text-red-600 hover:text-red-800 text-xs font-medium"
-                                >
-                                  Quitar día
-                                </button>
-                              </div>
-                            </div>
-                            <div className="space-y-3">
-                              {diaHorario.rangos.map((rango, idxRango) => (
-                                <div
-                                  key={idxRango}
-                                  className="flex items-end gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
-                                >
-                                  <div className="flex-1 grid grid-cols-2 gap-3">
-                                    <div>
-                                      <label className="block text-xs text-gray-600 mb-1.5">
-                                        Hora de inicio
-                                      </label>
-                                      <input
-                                        type="time"
-                                        value={getTime24From12(
-                                          rango.desde || ""
-                                        )}
-                                        onChange={(e) =>
-                                          updateHorarioTime(
-                                            "domicilio",
-                                            diaHorario.dia,
-                                            idxRango,
-                                            "desde",
-                                            e.target.value
-                                          )
-                                        }
-                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
-                                        disabled={!!successMsg}
-                                        required
-                                      />
-                                    </div>
-                                    <div>
-                                      <label className="block text-xs text-gray-600 mb-1.5">
-                                        Hora de fin
-                                      </label>
-                                      <input
-                                        type="time"
-                                        value={getTime24From12(
-                                          rango.hasta || ""
-                                        )}
-                                        onChange={(e) =>
-                                          updateHorarioTime(
-                                            "domicilio",
-                                            diaHorario.dia,
-                                            idxRango,
-                                            "hasta",
-                                            e.target.value
-                                          )
-                                        }
-                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
-                                        disabled={!!successMsg}
-                                        required
-                                      />
-                                    </div>
-                                  </div>
-                                  {diaHorario.rangos.length > 1 && (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        if (!successMsg)
-                                          eliminarRangoHorario(
-                                            "domicilio",
-                                            diaHorario.dia,
-                                            idxRango
-                                          );
-                                      }}
-                                      className="px-2 py-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
-                                      title="Eliminar este horario"
-                                    >
-                                      <X className="w-4 h-4" />
-                                    </button>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                </div>
-              </div>
-            )}
-
-            {/* 19. Precios */}
-            <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Precios <span className="text-red-500">*</span>
-              </h3>
-              {errors.precios && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-sm text-red-600">{errors.precios}</p>
-                </div>
-              )}
-
-              <div className="space-y-4">
-                {/* Primera Sesión */}
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">
-                      Precio
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
-                        €
-                      </span>
-                      <input
-                        type="text"
-                        value={formData.precios.primeraSesion.precio}
-                        onChange={(e) =>
-                          updatePrecios(
-                            "primeraSesion",
-                            "precio",
-                            e.target.value
-                          )
-                        }
-                        placeholder="Ej: 50"
-                        className="w-full pl-6 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                        disabled={!!successMsg}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">
-                      Nombre y descripción del paquete
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.precios.primeraSesion.nombre}
-                      onChange={(e) =>
-                        updatePrecios("primeraSesion", "nombre", e.target.value)
-                      }
-                      placeholder="Ej: Primera sesión"
-                      className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
-                        errors.preciosPack3
-                          ? "border-red-300"
-                          : "border-gray-300"
-                      }`}
-                      disabled={!!successMsg}
-                    />
-                    {errors.preciosPrimeraSesion && (
-                      <p className="mt-1 text-xs text-red-600">
-                        {errors.preciosPrimeraSesion}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">
-                      Duración
-                    </label>
-                    <select
-                      value={formData.precios.primeraSesion.duracion}
-                      onChange={(e) =>
-                        updatePrecios(
-                          "primeraSesion",
-                          "duracion",
-                          e.target.value
-                        )
-                      }
-                      className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
-                        errors.preciosPrimeraSesion
-                          ? "border-red-300"
-                          : "border-gray-300"
-                      }`}
-                      disabled={!!successMsg}
-                    >
-                      <option value="">Selecciona duración</option>
-                      {durationOptions.map((opt) => (
-                        <option key={`dur-primera-${opt}`} value={opt}>
-                          {opt}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Sesión de Seguimiento */}
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">
-                      Precio
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
-                        €
-                      </span>
-                      <input
-                        type="text"
-                        value={formData.precios.seguimiento.precio}
-                        onChange={(e) =>
-                          updatePrecios("seguimiento", "precio", e.target.value)
-                        }
-                        placeholder="Ej: 40"
-                        className="w-full pl-6 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                        disabled={!!successMsg}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">
-                      Nombre y descripción del paquete
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.precios.seguimiento.nombre}
-                      onChange={(e) =>
-                        updatePrecios("seguimiento", "nombre", e.target.value)
-                      }
-                      placeholder="Ej: Sesión de seguimiento"
-                      className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary ${
-                        errors.preciosSeguimiento
-                          ? "border-red-300"
-                          : "border-gray-300"
-                      }`}
-                      disabled={!!successMsg}
-                    />
-                    {errors.preciosSeguimiento && (
-                      <p className="mt-1 text-xs text-red-600">
-                        {errors.preciosSeguimiento}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">
-                      Duración
-                    </label>
-                    <select
-                      value={formData.precios.seguimiento.duracion}
-                      onChange={(e) =>
-                        updatePrecios("seguimiento", "duracion", e.target.value)
-                      }
-                      className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
-                        errors.preciosSeguimiento
-                          ? "border-red-300"
-                          : "border-gray-300"
-                      }`}
-                      disabled={!!successMsg}
-                    >
-                      <option value="">Selecciona duración</option>
-                      {durationOptions.map((opt) => (
-                        <option key={`dur-seg-${opt}`} value={opt}>
-                          {opt}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Pack x3 */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">
-                      Precio
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
-                        €
-                      </span>
-                      <input
-                        type="text"
-                        value={formData.precios.pack3.precio}
-                        onChange={(e) =>
-                          updatePrecios("pack3", "precio", e.target.value)
-                        }
-                        placeholder="Ej: 100"
-                        className="w-full pl-6 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                        disabled={!!successMsg}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">
-                      Nombre y descripción del paquete
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.precios.pack3.nombre}
-                      onChange={(e) =>
-                        updatePrecios("pack3", "nombre", e.target.value)
-                      }
-                      placeholder="Ej: Pack 3 sesiones"
-                      className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
-                        errors.preciosPack3
-                          ? "border-red-300"
-                          : "border-gray-300"
-                      }`}
-                      disabled={!!successMsg}
-                    />
-                    {errors.preciosPack3 && (
-                      <p className="mt-1 text-xs text-red-600">
-                        {errors.preciosPack3}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 19.1. Precios para atención a domicilio */}
-            {formData.modalidades.includes("domicilio") && (
-              <div
-                id="preciosDomicilio"
-                className="rounded-xl border border-gray-200 bg-gray-50 p-6"
-              >
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Precios para atención a domicilio{" "}
+              {/* 12. Foto del perfil profesional */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Foto del perfil profesional{" "}
                   <span className="text-red-500">*</span>
-                </h3>
-                {errors.preciosDomicilio && (
-                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-sm text-red-600">
-                      {errors.preciosDomicilio}
+                  <span className="text-xs text-gray-500 ml-2">
+                    (Será visible en tu futura ficha pública)
+                  </span>
+                </label>
+                {fotoPreview ? (
+                  <div className="relative">
+                    <div className="w-48 h-48 border-2 border-gray-300 rounded-lg overflow-hidden">
+                      <img
+                        src={fotoPreview}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={removeFoto}
+                      className="mt-2 text-sm text-red-600 hover:text-red-800"
+                      disabled={!!successMsg}
+                    >
+                      Eliminar foto
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFotoChange}
+                      required
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
+                        errors.foto ? "border-red-300" : "border-gray-300"
+                      }`}
+                      disabled={!!successMsg}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Formatos aceptados: JPG, PNG, GIF. Tamaño máximo: 5MB
                     </p>
                   </div>
                 )}
+                {errors.foto && (
+                  <p className="mt-1 text-sm text-red-600">{errors.foto}</p>
+                )}
+              </div>
 
-                <div className="space-y-4">
-                  {/* Primera Sesión Domicilio */}
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">
-                        Precio
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
-                          €
-                        </span>
-                        <input
-                          type="text"
-                          value={formData.preciosDomicilio.primeraSesion.precio}
-                          onChange={(e) =>
-                            updatePreciosDomicilio(
-                              "primeraSesion",
-                              "precio",
-                              e.target.value
-                            )
-                          }
-                          placeholder="Ej: 60"
-                          className="w-full pl-6 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                          disabled={!!successMsg}
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">
-                        Nombre y descripción del paquete
-                      </label>
+              {/* 13. Enlace al vídeo de presentación */}
+              <div>
+                <label
+                  htmlFor="videoPresentacion"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Enlace al vídeo de presentación
+                  <span className="text-xs text-gray-500 ml-2">
+                    (Opcional, solo YouTube o Vimeo. Será visible en tu futura
+                    ficha pública)
+                  </span>
+                </label>
+                <input
+                  type="url"
+                  id="videoPresentacion"
+                  name="videoPresentacion"
+                  value={formData.videoPresentacion}
+                  onChange={handleInputChange}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
+                    errors.videoPresentacion
+                      ? "border-red-300"
+                      : "border-gray-300"
+                  }`}
+                  placeholder="https://www.youtube.com/watch?v=... o https://vimeo.com/..."
+                  disabled={!!successMsg}
+                  aria-invalid={Boolean(errors.videoPresentacion)}
+                />
+                {errors.videoPresentacion && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.videoPresentacion}
+                  </p>
+                )}
+              </div>
+
+              {/* 14. Modalidades de atención */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Modalidades de atención que ofreces{" "}
+                  <span className="text-red-500">*</span>
+                </label>
+                <div className="space-y-2">
+                  {["online", "presencial", "domicilio"].map((modalidad) => (
+                    <label
+                      key={modalidad}
+                      className="flex items-center gap-3 cursor-pointer"
+                    >
                       <input
-                        type="text"
-                        value={formData.preciosDomicilio.primeraSesion.nombre}
-                        onChange={(e) =>
-                          updatePreciosDomicilio(
-                            "primeraSesion",
-                            "nombre",
-                            e.target.value
-                          )
-                        }
-                        placeholder="Ej: Primera sesión a domicilio"
-                        className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary ${
-                          errors.preciosDomicilioPrimeraSesion
-                            ? "border-red-300"
-                            : "border-gray-300"
-                        }`}
+                        type="checkbox"
+                        name="modalidad"
+                        value={modalidad}
+                        checked={formData.modalidades.includes(modalidad)}
+                        onChange={handleInputChange}
+                        className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
                         disabled={!!successMsg}
                       />
-                      {errors.preciosDomicilioPrimeraSesion && (
-                        <p className="mt-1 text-xs text-red-600">
-                          {errors.preciosDomicilioPrimeraSesion}
+                      <span className="text-sm text-gray-700 capitalize">
+                        {modalidad === "domicilio" ? "A domicilio" : modalidad}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                {errors.modalidades && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.modalidades}
+                  </p>
+                )}
+              </div>
+
+              {/* 15. Dirección de consulta */}
+              {formData.modalidades.includes("presencial") && (
+                <div>
+                  <label
+                    htmlFor="direccionConsulta"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
+                    Dirección de consulta{" "}
+                    <span className="text-red-500">*</span>
+                    <span className="text-xs text-gray-500 ml-2">
+                      (Solo si ofreces atención presencial)
+                    </span>
+                  </label>
+                  <textarea
+                    id="direccionConsulta"
+                    name="direccionConsulta"
+                    value={formData.direccionConsulta}
+                    onChange={handleInputChange}
+                    required={formData.modalidades.includes("presencial")}
+                    rows={3}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none ${
+                      errors.direccionConsulta
+                        ? "border-red-300"
+                        : "border-gray-300"
+                    }`}
+                    placeholder="Dirección completa de la consulta"
+                    disabled={!!successMsg}
+                    aria-invalid={Boolean(errors.direccionConsulta)}
+                  />
+                  {errors.direccionConsulta && (
+                    <p className="mt-1 text-sm text-red-600">
+                      {errors.direccionConsulta}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* 15.1. Ciudad */}
+              <div>
+                <label
+                  htmlFor="ciudad"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Ciudad <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="ciudad"
+                  name="ciudad"
+                  value={formData.ciudad}
+                  onChange={handleInputChange}
+                  required
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all ${
+                    errors.ciudad ? "border-red-300" : "border-gray-300"
+                  }`}
+                  placeholder="Ej: Madrid, Barcelona, Valencia..."
+                  disabled={!!successMsg}
+                  aria-invalid={Boolean(errors.ciudad)}
+                />
+                {errors.ciudad && (
+                  <p className="mt-1 text-sm text-red-600">{errors.ciudad}</p>
+                )}
+              </div>
+
+              {/* 16. Zonas donde atiendes a domicilio */}
+              {formData.modalidades.includes("domicilio") && (
+                <div>
+                  <label
+                    htmlFor="codigosPostalesDomicilio"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
+                    Códigos postales donde ofreces atención a domicilio{" "}
+                    <span className="text-red-500">*</span>
+                    <span className="text-xs text-gray-500 ml-2">
+                      (Solo si ofreces atención a domicilio)
+                    </span>
+                  </label>
+                  <textarea
+                    id="codigosPostalesDomicilio"
+                    name="codigosPostalesDomicilio"
+                    value={formData.codigosPostalesDomicilio}
+                    onChange={handleInputChange}
+                    required={formData.modalidades.includes("domicilio")}
+                    rows={3}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none ${
+                      errors.codigosPostalesDomicilio
+                        ? "border-red-300"
+                        : "border-gray-300"
+                    }`}
+                    placeholder="Ej: 28001, 28002, 28003, 28004 (separados por comas)"
+                    disabled={!!successMsg}
+                    aria-invalid={Boolean(errors.codigosPostalesDomicilio)}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Indica los códigos postales separados por comas. Ej: 28001,
+                    28002, 28003
+                  </p>
+                  {errors.codigosPostalesDomicilio && (
+                    <p className="mt-1 text-sm text-red-600">
+                      {errors.codigosPostalesDomicilio}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* 17. Accesible para movilidad reducida */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  ¿Tu consulta es accesible para personas con movilidad
+                  reducida?
+                  <span className="text-xs text-gray-500 ml-2">
+                    (Cumplimentar sólo en caso de ofrecer servicio presencial)
+                  </span>
+                </label>
+                <div className="space-y-2">
+                  {["Sí", "No"].map((opcion) => (
+                    <label
+                      key={opcion}
+                      className="flex items-center gap-3 cursor-pointer"
+                    >
+                      <input
+                        type="radio"
+                        name="accesibleMovilidad"
+                        value={opcion}
+                        checked={formData.accesibleMovilidad === opcion}
+                        onChange={handleInputChange}
+                        className="w-4 h-4 text-primary border-gray-300 focus:ring-primary"
+                        disabled={!!successMsg}
+                      />
+                      <span className="text-sm text-gray-700">{opcion}</span>
+                    </label>
+                  ))}
+                </div>
+                {errors.accesibleMovilidad && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.accesibleMovilidad}
+                  </p>
+                )}
+              </div>
+
+              {/* 18. Horarios por Modalidad */}
+              {/* Horarios En Línea */}
+              {formData.modalidades.includes("online") && (
+                <div
+                  id="horariosEnLinea"
+                  className="rounded-xl border border-gray-200 bg-gray-50 p-6"
+                >
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    Horario En Línea <span className="text-red-500">*</span>
+                  </h3>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-3">
+                        Selecciona los días disponibles
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {[
+                          "Lunes",
+                          "Martes",
+                          "Miércoles",
+                          "Jueves",
+                          "Viernes",
+                          "Sábado",
+                          "Domingo",
+                        ].map((dia) => {
+                          const diasEnLinea =
+                            formData.horariosEnLinea?.dias || [];
+                          const isSelected = diasEnLinea.some(
+                            (d) => d.dia === dia
+                          );
+                          return (
+                            <button
+                              key={dia}
+                              type="button"
+                              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
+                                isSelected
+                                  ? "bg-primary text-white border-primary shadow-sm"
+                                  : "bg-white border-gray-300 text-gray-700 hover:border-primary hover:text-primary"
+                              }`}
+                              onClick={() => {
+                                if (!successMsg)
+                                  toggleDiaHorario("online", dia);
+                              }}
+                            >
+                              <span>{dia}</span>
+                              {isSelected && <X className="h-4 w-4" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {errors.horariosEnLinea && (
+                        <p className="mt-2 text-sm text-red-600">
+                          {errors.horariosEnLinea}
                         </p>
                       )}
                     </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">
-                        Duración
-                      </label>
-                      <select
-                        value={formData.preciosDomicilio.primeraSesion.duracion}
-                        onChange={(e) =>
-                          updatePreciosDomicilio(
-                            "primeraSesion",
-                            "duracion",
-                            e.target.value
-                          )
-                        }
-                        className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
-                          errors.preciosDomicilioPrimeraSesion
-                            ? "border-red-300"
-                            : "border-gray-300"
-                        }`}
-                        disabled={!!successMsg}
-                      >
-                        <option value="">Selecciona duración</option>
-                        {durationOptions.map((opt) => (
-                          <option key={`dur-dom-primera-${opt}`} value={opt}>
-                            {opt}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
 
-                  {/* Seguimiento Domicilio */}
+                    {/* Horarios individuales por día */}
+                    {formData.horariosEnLinea?.dias &&
+                      formData.horariosEnLinea.dias.length > 0 && (
+                        <div className="mt-6 space-y-4">
+                          <h4 className="text-sm font-semibold text-gray-700 mb-3">
+                            Configura las horas para cada día:
+                          </h4>
+                          {formData.horariosEnLinea.dias.map((diaHorario) => (
+                            <div
+                              key={diaHorario.dia}
+                              className="bg-white rounded-lg border border-gray-200 p-4 space-y-4"
+                            >
+                              <div className="flex items-center justify-between mb-2">
+                                <h5 className="text-sm font-semibold text-gray-900">
+                                  {diaHorario.dia}
+                                </h5>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (!successMsg)
+                                        agregarRangoHorario(
+                                          "online",
+                                          diaHorario.dia
+                                        );
+                                    }}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
+                                  >
+                                    <svg
+                                      className="w-3.5 h-3.5"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M12 4v16m8-8H4"
+                                      />
+                                    </svg>
+                                    Agregar horario
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (!successMsg)
+                                        toggleDiaHorario(
+                                          "online",
+                                          diaHorario.dia
+                                        );
+                                    }}
+                                    className="text-red-600 hover:text-red-800 text-xs font-medium"
+                                  >
+                                    Quitar día
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="space-y-3">
+                                {diaHorario.rangos.map((rango, idxRango) => (
+                                  <div
+                                    key={idxRango}
+                                    className="flex items-end gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
+                                  >
+                                    <div className="flex-1 grid grid-cols-2 gap-3">
+                                      <div>
+                                        <label className="block text-xs text-gray-600 mb-1.5">
+                                          Hora de inicio
+                                        </label>
+                                        <input
+                                          type="time"
+                                          value={getTime24From12(
+                                            rango.desde || ""
+                                          )}
+                                          onChange={(e) =>
+                                            updateHorarioTime(
+                                              "online",
+                                              diaHorario.dia,
+                                              idxRango,
+                                              "desde",
+                                              e.target.value
+                                            )
+                                          }
+                                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+                                          disabled={!!successMsg}
+                                          required
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-xs text-gray-600 mb-1.5">
+                                          Hora de fin
+                                        </label>
+                                        <input
+                                          type="time"
+                                          value={getTime24From12(
+                                            rango.hasta || ""
+                                          )}
+                                          onChange={(e) =>
+                                            updateHorarioTime(
+                                              "online",
+                                              diaHorario.dia,
+                                              idxRango,
+                                              "hasta",
+                                              e.target.value
+                                            )
+                                          }
+                                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+                                          disabled={!!successMsg}
+                                          required
+                                        />
+                                      </div>
+                                    </div>
+                                    {diaHorario.rangos.length > 1 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          if (!successMsg)
+                                            eliminarRangoHorario(
+                                              "online",
+                                              diaHorario.dia,
+                                              idxRango
+                                            );
+                                        }}
+                                        className="px-2 py-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
+                                        title="Eliminar este horario"
+                                      >
+                                        <X className="w-4 h-4" />
+                                      </button>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                  </div>
+                </div>
+              )}
+
+              {/* Horarios Presencial */}
+              {formData.modalidades.includes("presencial") && (
+                <div
+                  id="horariosPresencial"
+                  className="rounded-xl border border-gray-200 bg-gray-50 p-6"
+                >
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    Horario Presencial <span className="text-red-500">*</span>
+                  </h3>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-3">
+                        Selecciona los días disponibles
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {[
+                          "Lunes",
+                          "Martes",
+                          "Miércoles",
+                          "Jueves",
+                          "Viernes",
+                          "Sábado",
+                          "Domingo",
+                        ].map((dia) => {
+                          const diasPresencial =
+                            formData.horariosPresencial?.dias || [];
+                          const isSelected = diasPresencial.some(
+                            (d) => d.dia === dia
+                          );
+                          return (
+                            <button
+                              key={dia}
+                              type="button"
+                              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
+                                isSelected
+                                  ? "bg-primary text-white border-primary shadow-sm"
+                                  : "bg-white border-gray-300 text-gray-700 hover:border-primary hover:text-primary"
+                              }`}
+                              onClick={() => {
+                                if (!successMsg)
+                                  toggleDiaHorario("presencial", dia);
+                              }}
+                            >
+                              <span>{dia}</span>
+                              {isSelected && <X className="h-4 w-4" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {errors.horariosPresencial && (
+                        <p className="mt-2 text-sm text-red-600">
+                          {errors.horariosPresencial}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Horarios individuales por día */}
+                    {formData.horariosPresencial?.dias &&
+                      formData.horariosPresencial.dias.length > 0 && (
+                        <div className="mt-6 space-y-4">
+                          <h4 className="text-sm font-semibold text-gray-700 mb-3">
+                            Configura las horas para cada día:
+                          </h4>
+                          {formData.horariosPresencial.dias.map(
+                            (diaHorario) => (
+                              <div
+                                key={diaHorario.dia}
+                                className="bg-white rounded-lg border border-gray-200 p-4 space-y-4"
+                              >
+                                <div className="flex items-center justify-between mb-2">
+                                  <h5 className="text-sm font-semibold text-gray-900">
+                                    {diaHorario.dia}
+                                  </h5>
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (!successMsg)
+                                          agregarRangoHorario(
+                                            "presencial",
+                                            diaHorario.dia
+                                          );
+                                      }}
+                                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
+                                    >
+                                      <svg
+                                        className="w-3.5 h-3.5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth={2}
+                                          d="M12 4v16m8-8H4"
+                                        />
+                                      </svg>
+                                      Agregar horario
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (!successMsg)
+                                          toggleDiaHorario(
+                                            "presencial",
+                                            diaHorario.dia
+                                          );
+                                      }}
+                                      className="text-red-600 hover:text-red-800 text-xs font-medium"
+                                    >
+                                      Quitar día
+                                    </button>
+                                  </div>
+                                </div>
+                                <div className="space-y-3">
+                                  {diaHorario.rangos.map((rango, idxRango) => (
+                                    <div
+                                      key={idxRango}
+                                      className="flex items-end gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
+                                    >
+                                      <div className="flex-1 grid grid-cols-2 gap-3">
+                                        <div>
+                                          <label className="block text-xs text-gray-600 mb-1.5">
+                                            Hora de inicio
+                                          </label>
+                                          <input
+                                            type="time"
+                                            value={getTime24From12(
+                                              rango.desde || ""
+                                            )}
+                                            onChange={(e) =>
+                                              updateHorarioTime(
+                                                "presencial",
+                                                diaHorario.dia,
+                                                idxRango,
+                                                "desde",
+                                                e.target.value
+                                              )
+                                            }
+                                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+                                            disabled={!!successMsg}
+                                            required
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="block text-xs text-gray-600 mb-1.5">
+                                            Hora de fin
+                                          </label>
+                                          <input
+                                            type="time"
+                                            value={getTime24From12(
+                                              rango.hasta || ""
+                                            )}
+                                            onChange={(e) =>
+                                              updateHorarioTime(
+                                                "presencial",
+                                                diaHorario.dia,
+                                                idxRango,
+                                                "hasta",
+                                                e.target.value
+                                              )
+                                            }
+                                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+                                            disabled={!!successMsg}
+                                            required
+                                          />
+                                        </div>
+                                      </div>
+                                      {diaHorario.rangos.length > 1 && (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            if (!successMsg)
+                                              eliminarRangoHorario(
+                                                "presencial",
+                                                diaHorario.dia,
+                                                idxRango
+                                              );
+                                          }}
+                                          className="px-2 py-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
+                                          title="Eliminar este horario"
+                                        >
+                                          <X className="w-4 h-4" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )
+                          )}
+                        </div>
+                      )}
+                  </div>
+                </div>
+              )}
+
+              {/* Horarios A Domicilio */}
+              {formData.modalidades.includes("domicilio") && (
+                <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    Horario A Domicilio <span className="text-red-500">*</span>
+                  </h3>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-3">
+                        Selecciona los días disponibles
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {[
+                          "Lunes",
+                          "Martes",
+                          "Miércoles",
+                          "Jueves",
+                          "Viernes",
+                          "Sábado",
+                          "Domingo",
+                        ].map((dia) => {
+                          const diasDomicilio =
+                            formData.horariosADomicilio?.dias || [];
+                          const isSelected = diasDomicilio.some(
+                            (d) => d.dia === dia
+                          );
+                          return (
+                            <button
+                              key={dia}
+                              type="button"
+                              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
+                                isSelected
+                                  ? "bg-primary text-white border-primary shadow-sm"
+                                  : "bg-white border-gray-300 text-gray-700 hover:border-primary hover:text-primary"
+                              }`}
+                              onClick={() => {
+                                if (!successMsg)
+                                  toggleDiaHorario("domicilio", dia);
+                              }}
+                            >
+                              <span>{dia}</span>
+                              {isSelected && <X className="h-4 w-4" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {errors.horariosADomicilio && (
+                        <p className="mt-2 text-sm text-red-600">
+                          {errors.horariosADomicilio}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Horarios individuales por día */}
+                    {formData.horariosADomicilio?.dias &&
+                      formData.horariosADomicilio.dias.length > 0 && (
+                        <div className="mt-6 space-y-4">
+                          <h4 className="text-sm font-semibold text-gray-700 mb-3">
+                            Configura las horas para cada día:
+                          </h4>
+                          {formData.horariosADomicilio.dias.map(
+                            (diaHorario) => (
+                              <div
+                                key={diaHorario.dia}
+                                className="bg-white rounded-lg border border-gray-200 p-4 space-y-4"
+                              >
+                                <div className="flex items-center justify-between mb-2">
+                                  <h5 className="text-sm font-semibold text-gray-900">
+                                    {diaHorario.dia}
+                                  </h5>
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (!successMsg)
+                                          agregarRangoHorario(
+                                            "domicilio",
+                                            diaHorario.dia
+                                          );
+                                      }}
+                                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
+                                    >
+                                      <svg
+                                        className="w-3.5 h-3.5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth={2}
+                                          d="M12 4v16m8-8H4"
+                                        />
+                                      </svg>
+                                      Agregar horario
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (!successMsg)
+                                          toggleDiaHorario(
+                                            "domicilio",
+                                            diaHorario.dia
+                                          );
+                                      }}
+                                      className="text-red-600 hover:text-red-800 text-xs font-medium"
+                                    >
+                                      Quitar día
+                                    </button>
+                                  </div>
+                                </div>
+                                <div className="space-y-3">
+                                  {diaHorario.rangos.map((rango, idxRango) => (
+                                    <div
+                                      key={idxRango}
+                                      className="flex items-end gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
+                                    >
+                                      <div className="flex-1 grid grid-cols-2 gap-3">
+                                        <div>
+                                          <label className="block text-xs text-gray-600 mb-1.5">
+                                            Hora de inicio
+                                          </label>
+                                          <input
+                                            type="time"
+                                            value={getTime24From12(
+                                              rango.desde || ""
+                                            )}
+                                            onChange={(e) =>
+                                              updateHorarioTime(
+                                                "domicilio",
+                                                diaHorario.dia,
+                                                idxRango,
+                                                "desde",
+                                                e.target.value
+                                              )
+                                            }
+                                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+                                            disabled={!!successMsg}
+                                            required
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="block text-xs text-gray-600 mb-1.5">
+                                            Hora de fin
+                                          </label>
+                                          <input
+                                            type="time"
+                                            value={getTime24From12(
+                                              rango.hasta || ""
+                                            )}
+                                            onChange={(e) =>
+                                              updateHorarioTime(
+                                                "domicilio",
+                                                diaHorario.dia,
+                                                idxRango,
+                                                "hasta",
+                                                e.target.value
+                                              )
+                                            }
+                                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+                                            disabled={!!successMsg}
+                                            required
+                                          />
+                                        </div>
+                                      </div>
+                                      {diaHorario.rangos.length > 1 && (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            if (!successMsg)
+                                              eliminarRangoHorario(
+                                                "domicilio",
+                                                diaHorario.dia,
+                                                idxRango
+                                              );
+                                          }}
+                                          className="px-2 py-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
+                                          title="Eliminar este horario"
+                                        >
+                                          <X className="w-4 h-4" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )
+                          )}
+                        </div>
+                      )}
+                  </div>
+                </div>
+              )}
+
+              {/* 19. Precios */}
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Precios <span className="text-red-500">*</span>
+                </h3>
+                {errors.precios && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-600">{errors.precios}</p>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  {/* Primera Sesión */}
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">
@@ -3261,10 +2944,10 @@ export default function RegisterProfessionalPage() {
                         </span>
                         <input
                           type="text"
-                          value={formData.preciosDomicilio.seguimiento.precio}
+                          value={formData.precios.primeraSesion.precio}
                           onChange={(e) =>
-                            updatePreciosDomicilio(
-                              "seguimiento",
+                            updatePrecios(
+                              "primeraSesion",
                               "precio",
                               e.target.value
                             )
@@ -3281,25 +2964,25 @@ export default function RegisterProfessionalPage() {
                       </label>
                       <input
                         type="text"
-                        value={formData.preciosDomicilio.seguimiento.nombre}
+                        value={formData.precios.primeraSesion.nombre}
                         onChange={(e) =>
-                          updatePreciosDomicilio(
-                            "seguimiento",
+                          updatePrecios(
+                            "primeraSesion",
                             "nombre",
                             e.target.value
                           )
                         }
-                        placeholder="Ej: Sesión de seguimiento a domicilio"
-                        className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary ${
-                          errors.preciosDomicilioSeguimiento
+                        placeholder="Ej: Primera sesión"
+                        className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
+                          errors.preciosPack3
                             ? "border-red-300"
                             : "border-gray-300"
                         }`}
                         disabled={!!successMsg}
                       />
-                      {errors.preciosDomicilioSeguimiento && (
+                      {errors.preciosPrimeraSesion && (
                         <p className="mt-1 text-xs text-red-600">
-                          {errors.preciosDomicilioSeguimiento}
+                          {errors.preciosPrimeraSesion}
                         </p>
                       )}
                     </div>
@@ -3308,16 +2991,16 @@ export default function RegisterProfessionalPage() {
                         Duración
                       </label>
                       <select
-                        value={formData.preciosDomicilio.seguimiento.duracion}
+                        value={formData.precios.primeraSesion.duracion}
                         onChange={(e) =>
-                          updatePreciosDomicilio(
-                            "seguimiento",
+                          updatePrecios(
+                            "primeraSesion",
                             "duracion",
                             e.target.value
                           )
                         }
                         className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
-                          errors.preciosDomicilioSeguimiento
+                          errors.preciosPrimeraSesion
                             ? "border-red-300"
                             : "border-gray-300"
                         }`}
@@ -3325,7 +3008,7 @@ export default function RegisterProfessionalPage() {
                       >
                         <option value="">Selecciona duración</option>
                         {durationOptions.map((opt) => (
-                          <option key={`dur-dom-seg-${opt}`} value={opt}>
+                          <option key={`dur-primera-${opt}`} value={opt}>
                             {opt}
                           </option>
                         ))}
@@ -3333,8 +3016,8 @@ export default function RegisterProfessionalPage() {
                     </div>
                   </div>
 
-                  {/* Pack x3 Domicilio */}
-                  <div className="grid grid-cols-2 gap-4">
+                  {/* Sesión de Seguimiento */}
+                  <div className="grid grid-cols-3 gap-4">
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">
                         Precio
@@ -3345,15 +3028,15 @@ export default function RegisterProfessionalPage() {
                         </span>
                         <input
                           type="text"
-                          value={formData.preciosDomicilio.pack3.precio}
+                          value={formData.precios.seguimiento.precio}
                           onChange={(e) =>
-                            updatePreciosDomicilio(
-                              "pack3",
+                            updatePrecios(
+                              "seguimiento",
                               "precio",
                               e.target.value
                             )
                           }
-                          placeholder="Ej: 120"
+                          placeholder="Ej: 40"
                           className="w-full pl-6 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                           disabled={!!successMsg}
                         />
@@ -3365,236 +3048,529 @@ export default function RegisterProfessionalPage() {
                       </label>
                       <input
                         type="text"
-                        value={formData.preciosDomicilio.pack3.nombre}
+                        value={formData.precios.seguimiento.nombre}
                         onChange={(e) =>
-                          updatePreciosDomicilio(
-                            "pack3",
-                            "nombre",
-                            e.target.value
-                          )
+                          updatePrecios("seguimiento", "nombre", e.target.value)
                         }
-                        placeholder="Ej: Pack 3 sesiones a domicilio"
+                        placeholder="Ej: Sesión de seguimiento"
                         className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary ${
-                          errors.preciosDomicilioPack3
+                          errors.preciosSeguimiento
                             ? "border-red-300"
                             : "border-gray-300"
                         }`}
                         disabled={!!successMsg}
                       />
-                      {errors.preciosDomicilioPack3 && (
+                      {errors.preciosSeguimiento && (
                         <p className="mt-1 text-xs text-red-600">
-                          {errors.preciosDomicilioPack3}
+                          {errors.preciosSeguimiento}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        Duración
+                      </label>
+                      <select
+                        value={formData.precios.seguimiento.duracion}
+                        onChange={(e) =>
+                          updatePrecios(
+                            "seguimiento",
+                            "duracion",
+                            e.target.value
+                          )
+                        }
+                        className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
+                          errors.preciosSeguimiento
+                            ? "border-red-300"
+                            : "border-gray-300"
+                        }`}
+                        disabled={!!successMsg}
+                      >
+                        <option value="">Selecciona duración</option>
+                        {durationOptions.map((opt) => (
+                          <option key={`dur-seg-${opt}`} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Pack x3 */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        Precio
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                          €
+                        </span>
+                        <input
+                          type="text"
+                          value={formData.precios.pack3.precio}
+                          onChange={(e) =>
+                            updatePrecios("pack3", "precio", e.target.value)
+                          }
+                          placeholder="Ej: 100"
+                          className="w-full pl-6 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                          disabled={!!successMsg}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        Nombre y descripción del paquete
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.precios.pack3.nombre}
+                        onChange={(e) =>
+                          updatePrecios("pack3", "nombre", e.target.value)
+                        }
+                        placeholder="Ej: Pack 3 sesiones"
+                        className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
+                          errors.preciosPack3
+                            ? "border-red-300"
+                            : "border-gray-300"
+                        }`}
+                        disabled={!!successMsg}
+                      />
+                      {errors.preciosPack3 && (
+                        <p className="mt-1 text-xs text-red-600">
+                          {errors.preciosPack3}
                         </p>
                       )}
                     </div>
                   </div>
                 </div>
               </div>
-            )}
 
-            {/* 22. Observaciones */}
-            <div>
-              <label
-                htmlFor="observaciones"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Observaciones
-              </label>
-              <textarea
-                id="observaciones"
-                name="observaciones"
-                value={formData.observaciones}
-                onChange={handleInputChange}
-                rows={4}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none"
-                placeholder="Cualquier información adicional que consideres relevante..."
-                disabled={!!successMsg}
-              />
-            </div>
-
-            {/* Consentimiento y Términos y Condiciones */}
-            <div className="space-y-4">
-              {/* Consentimiento */}
-              <div
-                className={`bg-gray-50 p-4 rounded-lg transition-opacity duration-200 ${
-                  !isFormComplete ? "opacity-60" : "opacity-100"
-                }`}
-              >
-                <label
-                  className={`flex items-start gap-3 ${
-                    !isFormComplete ? "cursor-not-allowed" : "cursor-pointer"
-                  }`}
+              {/* 19.1. Precios para atención a domicilio */}
+              {formData.modalidades.includes("domicilio") && (
+                <div
+                  id="preciosDomicilio"
+                  className="rounded-xl border border-gray-200 bg-gray-50 p-6"
                 >
-                  <input
-                    type="checkbox"
-                    name="consentimiento"
-                    checked={formData.consentimiento}
-                    onChange={handleInputChange}
-                    required
-                    className="mt-1 w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={!!successMsg || !isFormComplete}
-                  />
-                  <span className="text-sm text-gray-700">
-                    Declaro haber leído la información anterior y consiento el
-                    tratamiento de mis datos personales para la finalidad de
-                    validación profesional y gestión de mi solicitud de alta en
-                    NAXINE. <span className="text-red-500">*</span>
-                  </span>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    Precios para atención a domicilio{" "}
+                    <span className="text-red-500">*</span>
+                  </h3>
+                  {errors.preciosDomicilio && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-sm text-red-600">
+                        {errors.preciosDomicilio}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="space-y-4">
+                    {/* Primera Sesión Domicilio */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Precio
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                            €
+                          </span>
+                          <input
+                            type="text"
+                            value={
+                              formData.preciosDomicilio.primeraSesion.precio
+                            }
+                            onChange={(e) =>
+                              updatePreciosDomicilio(
+                                "primeraSesion",
+                                "precio",
+                                e.target.value
+                              )
+                            }
+                            placeholder="Ej: 60"
+                            className="w-full pl-6 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                            disabled={!!successMsg}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Nombre y descripción del paquete
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.preciosDomicilio.primeraSesion.nombre}
+                          onChange={(e) =>
+                            updatePreciosDomicilio(
+                              "primeraSesion",
+                              "nombre",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Ej: Primera sesión a domicilio"
+                          className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary ${
+                            errors.preciosDomicilioPrimeraSesion
+                              ? "border-red-300"
+                              : "border-gray-300"
+                          }`}
+                          disabled={!!successMsg}
+                        />
+                        {errors.preciosDomicilioPrimeraSesion && (
+                          <p className="mt-1 text-xs text-red-600">
+                            {errors.preciosDomicilioPrimeraSesion}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Duración
+                        </label>
+                        <select
+                          value={
+                            formData.preciosDomicilio.primeraSesion.duracion
+                          }
+                          onChange={(e) =>
+                            updatePreciosDomicilio(
+                              "primeraSesion",
+                              "duracion",
+                              e.target.value
+                            )
+                          }
+                          className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
+                            errors.preciosDomicilioPrimeraSesion
+                              ? "border-red-300"
+                              : "border-gray-300"
+                          }`}
+                          disabled={!!successMsg}
+                        >
+                          <option value="">Selecciona duración</option>
+                          {durationOptions.map((opt) => (
+                            <option key={`dur-dom-primera-${opt}`} value={opt}>
+                              {opt}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Seguimiento Domicilio */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Precio
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                            €
+                          </span>
+                          <input
+                            type="text"
+                            value={formData.preciosDomicilio.seguimiento.precio}
+                            onChange={(e) =>
+                              updatePreciosDomicilio(
+                                "seguimiento",
+                                "precio",
+                                e.target.value
+                              )
+                            }
+                            placeholder="Ej: 50"
+                            className="w-full pl-6 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                            disabled={!!successMsg}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Nombre y descripción del paquete
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.preciosDomicilio.seguimiento.nombre}
+                          onChange={(e) =>
+                            updatePreciosDomicilio(
+                              "seguimiento",
+                              "nombre",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Ej: Sesión de seguimiento a domicilio"
+                          className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary ${
+                            errors.preciosDomicilioSeguimiento
+                              ? "border-red-300"
+                              : "border-gray-300"
+                          }`}
+                          disabled={!!successMsg}
+                        />
+                        {errors.preciosDomicilioSeguimiento && (
+                          <p className="mt-1 text-xs text-red-600">
+                            {errors.preciosDomicilioSeguimiento}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Duración
+                        </label>
+                        <select
+                          value={formData.preciosDomicilio.seguimiento.duracion}
+                          onChange={(e) =>
+                            updatePreciosDomicilio(
+                              "seguimiento",
+                              "duracion",
+                              e.target.value
+                            )
+                          }
+                          className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
+                            errors.preciosDomicilioSeguimiento
+                              ? "border-red-300"
+                              : "border-gray-300"
+                          }`}
+                          disabled={!!successMsg}
+                        >
+                          <option value="">Selecciona duración</option>
+                          {durationOptions.map((opt) => (
+                            <option key={`dur-dom-seg-${opt}`} value={opt}>
+                              {opt}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Pack x3 Domicilio */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Precio
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                            €
+                          </span>
+                          <input
+                            type="text"
+                            value={formData.preciosDomicilio.pack3.precio}
+                            onChange={(e) =>
+                              updatePreciosDomicilio(
+                                "pack3",
+                                "precio",
+                                e.target.value
+                              )
+                            }
+                            placeholder="Ej: 120"
+                            className="w-full pl-6 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                            disabled={!!successMsg}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Nombre y descripción del paquete
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.preciosDomicilio.pack3.nombre}
+                          onChange={(e) =>
+                            updatePreciosDomicilio(
+                              "pack3",
+                              "nombre",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Ej: Pack 3 sesiones a domicilio"
+                          className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary ${
+                            errors.preciosDomicilioPack3
+                              ? "border-red-300"
+                              : "border-gray-300"
+                          }`}
+                          disabled={!!successMsg}
+                        />
+                        {errors.preciosDomicilioPack3 && (
+                          <p className="mt-1 text-xs text-red-600">
+                            {errors.preciosDomicilioPack3}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 22. Observaciones */}
+              <div>
+                <label
+                  htmlFor="observaciones"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Observaciones
                 </label>
-                {errors.consentimiento && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.consentimiento}
-                  </p>
-                )}
+                <textarea
+                  id="observaciones"
+                  name="observaciones"
+                  value={formData.observaciones}
+                  onChange={handleInputChange}
+                  rows={4}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none"
+                  placeholder="Cualquier información adicional que consideres relevante..."
+                  disabled={!!successMsg}
+                />
               </div>
 
-              {/* Términos y Condiciones para Profesionales */}
-              <div
-                className={`bg-gray-50 p-4 rounded-lg transition-opacity duration-200 ${
-                  !isFormComplete ? "opacity-60" : "opacity-100"
-                }`}
-                onClick={
-                  !isFormComplete ? handleDisabledCheckboxClick : undefined
-                }
-              >
-                <label
-                  className={`flex items-start gap-3 ${
-                    !isFormComplete ? "cursor-not-allowed" : "cursor-pointer"
+              {/* Consentimiento y Términos y Condiciones */}
+              <div className="space-y-4">
+                {/* Consentimiento */}
+                <div
+                  className={`bg-gray-50 p-4 rounded-lg transition-opacity duration-200 ${
+                    !isFormComplete ? "opacity-60" : "opacity-100"
                   }`}
                 >
-                  <input
-                    type="checkbox"
-                    name="aceptaTerminos"
-                    checked={formData.aceptaTerminos}
-                    onChange={handleInputChange}
-                    required
-                    className="mt-1 w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={!!successMsg || !isFormComplete}
-                  />
-                  <span className="text-sm text-gray-700 flex items-start gap-2">
-                    <span>
-                      He leído y acepto los{" "}
-                      <Link
-                        href="/terminos-condiciones-profesionales"
-                        className="text-primary hover:underline"
-                        target="_blank"
-                      >
-                        términos y condiciones para profesionales
-                      </Link>
-                      . <span className="text-red-500">*</span>
+                  <label
+                    className={`flex items-start gap-3 ${
+                      !isFormComplete ? "cursor-not-allowed" : "cursor-pointer"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      name="consentimiento"
+                      checked={formData.consentimiento}
+                      onChange={handleInputChange}
+                      required
+                      className="mt-1 w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={!!successMsg || !isFormComplete}
+                    />
+                    <span className="text-sm text-gray-700">
+                      Declaro haber leído la información anterior y consiento el
+                      tratamiento de mis datos personales para la finalidad de
+                      validación profesional y gestión de mi solicitud de alta
+                      en NAXINE. <span className="text-red-500">*</span>
                     </span>
-                    <span className="relative group cursor-help inline-flex items-center">
-                      <HelpCircle className="h-4 w-4 text-gray-400 hover:text-primary transition-colors flex-shrink-0 mt-0.5" />
-                      <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-in-out transform group-hover:translate-y-0 translate-y-1 pointer-events-none z-10">
-                        Podrás consultar los términos y condiciones dentro de tu
-                        panel
-                        <span className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></span>
+                  </label>
+                  {errors.consentimiento && (
+                    <p className="mt-1 text-sm text-red-600">
+                      {errors.consentimiento}
+                    </p>
+                  )}
+                </div>
+
+                {/* Términos y Condiciones para Profesionales */}
+                <div
+                  className={`bg-gray-50 p-4 rounded-lg transition-opacity duration-200 ${
+                    !isFormComplete ? "opacity-60" : "opacity-100"
+                  }`}
+                  onClick={
+                    !isFormComplete ? handleDisabledCheckboxClick : undefined
+                  }
+                >
+                  <label
+                    className={`flex items-start gap-3 ${
+                      !isFormComplete ? "cursor-not-allowed" : "cursor-pointer"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      name="aceptaTerminos"
+                      checked={formData.aceptaTerminos}
+                      onChange={handleInputChange}
+                      required
+                      className="mt-1 w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={!!successMsg || !isFormComplete}
+                    />
+                    <span className="text-sm text-gray-700 flex items-start gap-2">
+                      <span>
+                        He leído y acepto los{" "}
+                        <Link
+                          href="/terminos-condiciones-profesionales"
+                          className="text-primary hover:underline"
+                          target="_blank"
+                        >
+                          términos y condiciones para profesionales
+                        </Link>
+                        . <span className="text-red-500">*</span>
+                      </span>
+                      <span className="relative group cursor-help inline-flex items-center">
+                        <HelpCircle className="h-4 w-4 text-gray-400 hover:text-primary transition-colors flex-shrink-0 mt-0.5" />
+                        <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-in-out transform group-hover:translate-y-0 translate-y-1 pointer-events-none z-10">
+                          Podrás consultar los términos y condiciones dentro de
+                          tu panel
+                          <span className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></span>
+                        </span>
                       </span>
                     </span>
-                  </span>
-                </label>
-                {errors.aceptaTerminos && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.aceptaTerminos}
-                  </p>
-                )}
+                  </label>
+                  {errors.aceptaTerminos && (
+                    <p className="mt-1 text-sm text-red-600">
+                      {errors.aceptaTerminos}
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading || !!successMsg}
-              className="w-full bg-primary hover:bg-primary/90 disabled:bg-primary/50 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <svg
-                    className="animate-spin h-5 w-5 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  <span>Enviando solicitud...</span>
-                </>
-              ) : successMsg ? (
-                <>
-                  <svg
-                    className="h-5 w-5 text-white"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  <span>Enviado</span>
-                </>
-              ) : (
-                "Enviar solicitud"
-              )}
-            </button>
-
-            {/* Login Link */}
-            <div className="text-center mt-4">
-              <span className="text-gray-700">¿Ya tienes una cuenta? </span>
-              <Link
-                href="/iniciar-sesion"
-                className="text-primary hover:text-primary/80 font-medium"
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={loading || !!successMsg}
+                className="w-full bg-primary hover:bg-primary/90 disabled:bg-primary/50 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
               >
-                Iniciar sesión
-              </Link>
-            </div>
+                {loading ? (
+                  <>
+                    <svg
+                      className="animate-spin h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    <span>Enviando solicitud...</span>
+                  </>
+                ) : successMsg ? (
+                  <>
+                    <svg
+                      className="h-5 w-5 text-white"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                    <span>Enviado</span>
+                  </>
+                ) : (
+                  "Enviar solicitud"
+                )}
+              </button>
 
-            {/* Links a términos y políticas */}
-            <div className="text-center mt-6 pt-6 border-t border-gray-200">
-              <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-gray-600">
+              {/* Login Link */}
+              <div className="text-center mt-4">
+                <span className="text-gray-700">¿Ya tienes una cuenta? </span>
                 <Link
-                  href="/terminos-condiciones"
-                  className="text-primary hover:text-primary/80 hover:underline transition-colors"
-                  target="_blank"
+                  href="/iniciar-sesion"
+                  className="text-primary hover:text-primary/80 font-medium"
                 >
-                  Términos y Condiciones
-                </Link>
-                <span className="text-gray-400">•</span>
-                <Link
-                  href="/politica-de-privacidad"
-                  className="text-primary hover:text-primary/80 hover:underline transition-colors"
-                  target="_blank"
-                >
-                  Política de Privacidad
-                </Link>
-                <span className="text-gray-400">•</span>
-                <Link
-                  href="/politica-cookies"
-                  className="text-primary hover:text-primary/80 hover:underline transition-colors"
-                  target="_blank"
-                >
-                  Política de Cookies
+                  Iniciar sesión
                 </Link>
               </div>
-            </div>
+
           </form>
+          </div>
         </div>
-      </div>
 
         {/* Right Side - Professional Image */}
         <div className="hidden lg:flex flex-1 relative">
@@ -3615,16 +3591,90 @@ export default function RegisterProfessionalPage() {
         </div>
       </div>
 
-      {/* Aviso de integración con calendarios */}
-      <div className="w-full bg-blue-50 border-t border-blue-200 py-6 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <p className="text-gray-700 text-sm md:text-base text-center leading-relaxed">
-            <span className="text-[#FF6B35] font-bold">NAXINE</span> se integra con{" "}
-            <span className="font-semibold">Google Calendar</span> y{" "}
-            <span className="font-semibold">Microsoft Outlook</span> para sincronizar tus citas y generar automáticamente enlaces de reuniones en video (Google Meet), facilitando la gestión de tu agenda profesional.
-          </p>
-        </div>
-      </div>
+      {/* Footer provisional - Solo visible en producción o localhost:3001 */}
+      {showFooter && (
+        <footer className="w-full bg-gray-50 border-t border-gray-200 py-8 px-4 sm:px-6 lg:px-8 mt-12">
+          <div className="max-w-7xl mx-auto">
+            <div className="space-y-6">
+              {/* Información de contacto */}
+              <div className="space-y-4">
+                {/* Email y Teléfono */}
+                <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 text-gray-700">
+                  <a
+                    href="mailto:info@naxine.com"
+                    className="flex items-center gap-2 hover:text-primary transition-colors"
+                  >
+                    <Mail className="w-5 h-5 text-primary" />
+                    <span className="text-base md:text-lg">
+                      info@naxine.com
+                    </span>
+                  </a>
+                  <span className="hidden md:inline text-gray-400">|</span>
+                  <a
+                    href="tel:+34919933510"
+                    className="flex items-center gap-2 hover:text-primary transition-colors"
+                  >
+                    <Phone className="w-5 h-5 text-primary" />
+                    <span className="text-base md:text-lg">
+                      +34 919 933 510
+                    </span>
+                  </a>
+                </div>
+
+                {/* Ubicación */}
+                <div className="flex items-center justify-center gap-2">
+                  <MapPin className="w-5 h-5 text-primary" />
+                  <a
+                    href="https://maps.app.goo.gl/DjYCs5jqRUST2t4y9"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline text-base md:text-lg"
+                  >
+                    Ver ubicación en Google Maps
+                  </a>
+                </div>
+              </div>
+
+              {/* Enlaces legales */}
+              <div className="pt-4 border-t border-gray-300">
+                <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-gray-600">
+                  <Link
+                    href="/terminos-condiciones"
+                    className="text-primary hover:text-primary/80 hover:underline transition-colors"
+                    target="_blank"
+                  >
+                    Términos y Condiciones
+                  </Link>
+                  <span className="text-gray-400">•</span>
+                  <Link
+                    href="/politica-de-privacidad"
+                    className="text-primary hover:text-primary/80 hover:underline transition-colors"
+                    target="_blank"
+                  >
+                    Política de Privacidad
+                  </Link>
+                  <span className="text-gray-400">•</span>
+                  <Link
+                    href="/politica-cookies"
+                    className="text-primary hover:text-primary/80 hover:underline transition-colors"
+                    target="_blank"
+                  >
+                    Política de Cookies
+                  </Link>
+                </div>
+              </div>
+
+              {/* Copyright */}
+              <div className="pt-4 text-center">
+                <p className="text-gray-500 text-sm">
+                  © {new Date().getFullYear()} NAXINE. Todos los derechos
+                  reservados.
+                </p>
+              </div>
+            </div>
+          </div>
+        </footer>
+      )}
     </div>
   );
 }
