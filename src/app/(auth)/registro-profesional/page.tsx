@@ -3568,34 +3568,34 @@ export default function RegisterProfessionalPage() {
 
       {/* Footer provisional - Solo visible en producción o localhost:3001 */}
       {showFooter && (
-        <footer className="w-full bg-gray-50 border-t border-gray-200 py-8 px-4 sm:px-6 lg:px-8 mt-12">
+        <footer className="w-full bg-purple-100 border-t border-black py-8 px-4 sm:px-6 lg:px-8 mt-12">
           <div className="max-w-7xl mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-6">
               {/* Columna 1: Información de contacto */}
               <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">Contacto</h3>
+                <h3 className="text-black font-bold text-base mb-3">Contacto</h3>
                 <div className="space-y-3">
                   <a
                     href="mailto:info@naxine.com"
-                    className="flex items-center gap-2 text-gray-500 text-sm hover:text-primary transition-colors"
+                    className="flex items-center gap-2 text-black text-sm hover:text-purple-600 transition-colors"
                   >
-                    <Mail className="w-4 h-4 text-primary" />
+                    <Mail className="w-4 h-4 text-purple-600" />
                     <span>info@naxine.com</span>
                   </a>
                   <a
                     href="tel:+34919933510"
-                    className="flex items-center gap-2 text-gray-500 text-sm hover:text-primary transition-colors"
+                    className="flex items-center gap-2 text-black text-sm hover:text-purple-600 transition-colors"
                   >
-                    <Phone className="w-4 h-4 text-primary" />
+                    <Phone className="w-4 h-4 text-purple-600" />
                     <span>+34 919 933 510</span>
                   </a>
                   <a
                     href="https://maps.app.goo.gl/DjYCs5jqRUST2t4y9"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-start gap-2 text-gray-500 text-sm hover:text-primary transition-colors"
+                    className="flex items-start gap-2 text-black text-sm hover:text-purple-600 transition-colors"
                   >
-                    <MapPin className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                    <MapPin className="w-4 h-4 text-purple-600 mt-0.5 flex-shrink-0" />
                     <span>Calle Hermosilla 48, 1º Dcha., Madrid, 28001, Madrid, España</span>
                   </a>
                 </div>
@@ -3603,25 +3603,25 @@ export default function RegisterProfessionalPage() {
 
               {/* Columna 2: Enlaces legales */}
               <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">Legal</h3>
+                <h3 className="text-black font-bold text-base mb-3">Legal</h3>
                 <nav className="space-y-2">
                   <Link
                     href="/terminos-condiciones"
-                    className="block text-gray-500 text-sm hover:text-primary transition-colors"
+                    className="block text-black text-sm hover:text-purple-600 transition-colors"
                     target="_blank"
                   >
                     Términos y Condiciones
                   </Link>
                   <Link
                     href="/politica-de-privacidad"
-                    className="block text-gray-500 text-sm hover:text-primary transition-colors"
+                    className="block text-black text-sm hover:text-purple-600 transition-colors"
                     target="_blank"
                   >
                     Política de Privacidad
                   </Link>
                   <Link
                     href="/politica-cookies"
-                    className="block text-gray-500 text-sm hover:text-primary transition-colors"
+                    className="block text-black text-sm hover:text-purple-600 transition-colors"
                     target="_blank"
                   >
                     Política de Cookies
@@ -3631,14 +3631,14 @@ export default function RegisterProfessionalPage() {
 
               {/* Columna 3: Descripción de la plataforma */}
               <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">Sobre NAXINE</h3>
+                <h3 className="text-black font-bold text-base mb-3">Sobre NAXINE</h3>
                 <div className="space-y-2">
-                  <p className="text-gray-500 text-sm leading-relaxed">
-                    <span className="text-primary font-bold">NAXINE</span> es un{" "}
+                  <p className="text-black text-sm leading-relaxed">
+                    <span className="text-purple-600 font-bold">NAXINE</span> es un{" "}
                     <span className="italic">marketplace digital</span> que facilita la contratación de{" "}
                     <span className="italic">servicios profesionales</span> en áreas como psicología, nutrición, derecho, fisioterapia, logopedia y desarrollo personal.
                   </p>
-                  <p className="text-gray-500 text-sm leading-relaxed">
+                  <p className="text-black text-sm leading-relaxed">
                     La plataforma incorpora una{" "}
                     <span className="italic">herramienta de accesibilidad digital</span>{" "}
                     que permite a personas con discapacidad visual o dificultades específicas navegar, reservar y contratar de forma autónoma y segura.
@@ -3648,8 +3648,8 @@ export default function RegisterProfessionalPage() {
             </div>
 
             {/* Copyright */}
-            <div className="pt-6 border-t border-gray-300 text-center">
-              <p className="text-gray-500 text-sm">
+            <div className="pt-6 border-t border-black/20 text-center">
+              <p className="text-black text-sm">
                 © {new Date().getFullYear()} NAXINE. Todos los derechos reservados.
               </p>
             </div>
