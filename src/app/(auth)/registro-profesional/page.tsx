@@ -1454,30 +1454,6 @@ export default function RegisterProfessionalPage() {
         {/* Left Side - Registration Form */}
         <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-8 lg:py-12 overflow-y-auto">
           <div className="w-full">
-            {/* Información de NAXINE - Arriba del título */}
-            <div className="text-center mb-8 lg:mb-10 space-y-6">
-              {/* Descripción de NAXINE */}
-              <div className="space-y-3 max-w-3xl mx-auto">
-                <p className="text-gray-700 text-sm leading-relaxed">
-                  <span className="text-primary font-bold">NAXINE</span> es un{" "}
-                  <span className="italic">marketplace digital</span> que
-                  facilita la contratación de{" "}
-                  <span className="italic">servicios profesionales</span> en
-                  áreas como psicología, nutrición, derecho, fisioterapia,
-                  logopedia y desarrollo personal.
-                </p>
-                <p className="text-gray-700 text-sm leading-relaxed">
-                  La plataforma incorpora una{" "}
-                  <span className="italic">
-                    herramienta de accesibilidad digital
-                  </span>{" "}
-                  que permite a personas con discapacidad visual o dificultades
-                  específicas navegar, reservar y contratar de forma autónoma y
-                  segura.
-                </p>
-              </div>
-            </div>
-
             {/* Header */}
             <div className="text-center mb-6 lg:mb-8">
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-2">
@@ -3567,8 +3543,7 @@ export default function RegisterProfessionalPage() {
                   Iniciar sesión
                 </Link>
               </div>
-
-          </form>
+            </form>
           </div>
         </div>
 
@@ -3595,82 +3570,88 @@ export default function RegisterProfessionalPage() {
       {showFooter && (
         <footer className="w-full bg-gray-50 border-t border-gray-200 py-8 px-4 sm:px-6 lg:px-8 mt-12">
           <div className="max-w-7xl mx-auto">
-            <div className="space-y-6">
-              {/* Información de contacto */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-6">
+              {/* Columna 1: Información de contacto */}
               <div className="space-y-4">
-                {/* Email y Teléfono */}
-                <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 text-gray-700">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Contacto</h3>
+                <div className="space-y-3">
                   <a
                     href="mailto:info@naxine.com"
-                    className="flex items-center gap-2 hover:text-primary transition-colors"
+                    className="flex items-center gap-2 text-gray-500 text-sm hover:text-primary transition-colors"
                   >
-                    <Mail className="w-5 h-5 text-primary" />
-                    <span className="text-base md:text-lg">
-                      info@naxine.com
-                    </span>
+                    <Mail className="w-4 h-4 text-primary" />
+                    <span>info@naxine.com</span>
                   </a>
-                  <span className="hidden md:inline text-gray-400">|</span>
                   <a
                     href="tel:+34919933510"
-                    className="flex items-center gap-2 hover:text-primary transition-colors"
+                    className="flex items-center gap-2 text-gray-500 text-sm hover:text-primary transition-colors"
                   >
-                    <Phone className="w-5 h-5 text-primary" />
-                    <span className="text-base md:text-lg">
-                      +34 919 933 510
-                    </span>
+                    <Phone className="w-4 h-4 text-primary" />
+                    <span>+34 919 933 510</span>
                   </a>
-                </div>
-
-                {/* Ubicación */}
-                <div className="flex items-center justify-center gap-2">
-                  <MapPin className="w-5 h-5 text-primary" />
                   <a
                     href="https://maps.app.goo.gl/DjYCs5jqRUST2t4y9"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-primary hover:underline text-base md:text-lg"
+                    className="flex items-start gap-2 text-gray-500 text-sm hover:text-primary transition-colors"
                   >
-                    Ver ubicación en Google Maps
+                    <MapPin className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                    <span>Calle Hermosilla 48, 1º Dcha., Madrid, 28001, Madrid, España</span>
                   </a>
                 </div>
               </div>
 
-              {/* Enlaces legales */}
-              <div className="pt-4 border-t border-gray-300">
-                <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-gray-600">
+              {/* Columna 2: Enlaces legales */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Legal</h3>
+                <nav className="space-y-2">
                   <Link
                     href="/terminos-condiciones"
-                    className="text-primary hover:text-primary/80 hover:underline transition-colors"
+                    className="block text-gray-500 text-sm hover:text-primary transition-colors"
                     target="_blank"
                   >
                     Términos y Condiciones
                   </Link>
-                  <span className="text-gray-400">•</span>
                   <Link
                     href="/politica-de-privacidad"
-                    className="text-primary hover:text-primary/80 hover:underline transition-colors"
+                    className="block text-gray-500 text-sm hover:text-primary transition-colors"
                     target="_blank"
                   >
                     Política de Privacidad
                   </Link>
-                  <span className="text-gray-400">•</span>
                   <Link
                     href="/politica-cookies"
-                    className="text-primary hover:text-primary/80 hover:underline transition-colors"
+                    className="block text-gray-500 text-sm hover:text-primary transition-colors"
                     target="_blank"
                   >
                     Política de Cookies
                   </Link>
-                </div>
+                </nav>
               </div>
 
-              {/* Copyright */}
-              <div className="pt-4 text-center">
-                <p className="text-gray-500 text-sm">
-                  © {new Date().getFullYear()} NAXINE. Todos los derechos
-                  reservados.
-                </p>
+              {/* Columna 3: Descripción de la plataforma */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Sobre NAXINE</h3>
+                <div className="space-y-2">
+                  <p className="text-gray-500 text-sm leading-relaxed">
+                    <span className="text-primary font-bold">NAXINE</span> es un{" "}
+                    <span className="italic">marketplace digital</span> que facilita la contratación de{" "}
+                    <span className="italic">servicios profesionales</span> en áreas como psicología, nutrición, derecho, fisioterapia, logopedia y desarrollo personal.
+                  </p>
+                  <p className="text-gray-500 text-sm leading-relaxed">
+                    La plataforma incorpora una{" "}
+                    <span className="italic">herramienta de accesibilidad digital</span>{" "}
+                    que permite a personas con discapacidad visual o dificultades específicas navegar, reservar y contratar de forma autónoma y segura.
+                  </p>
+                </div>
               </div>
+            </div>
+
+            {/* Copyright */}
+            <div className="pt-6 border-t border-gray-300 text-center">
+              <p className="text-gray-500 text-sm">
+                © {new Date().getFullYear()} NAXINE. Todos los derechos reservados.
+              </p>
             </div>
           </div>
         </footer>
