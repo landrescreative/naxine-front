@@ -294,10 +294,11 @@ function ConfirmarCitaAuthPageContent() {
       logToBackend("info", "Respuesta RAW completa de crearCita", response);
 
       // El apiClient devuelve { success: true, data: <respuesta_del_backend> }
-      // El backend devuelve CreateCitaResponse directamente en response.data
-      // Entonces response.data es el CreateCitaResponse con cita, pago, redirectToPayment
+      // El backend devuelve { success: true, message: "...", data: { cita, pago, redirectToPayment } }
+      // Entonces response.data es { success: true, message: "...", data: {...} }
+      // Y response.data.data contiene { cita, pago, redirectToPayment }
       const backendResponse = response.data;
-      const citaData = backendResponse;
+      const citaData = backendResponse?.data || backendResponse; // Acceder a data.data si existe, sino usar data directamente
 
       if (response.success && citaData) {
         // Guardar logs en localStorage para que persistan después de la redirección
@@ -462,9 +463,9 @@ function ConfirmarCitaAuthPageContent() {
           // Enviar log al backend (consola de Node)
           logToBackend("info", `URL de pago encontrada: ${paymentUrl}`, {
             paymentUrl,
-            hasRedirectToPayment: !!response.data.redirectToPayment,
-            hasPaymentIntent: !!response.data.paymentIntent,
-            pagoId: response.data.pago?.id_pago,
+            hasRedirectToPayment: !!citaData.redirectToPayment,
+            hasPaymentIntent: !!citaData.paymentIntent,
+            pagoId: citaData.pago?.id_pago,
           });
           
           // Guardar URL en localStorage para debugging
@@ -485,10 +486,12 @@ function ConfirmarCitaAuthPageContent() {
           console.warn(
             "[ConfirmarCita] ⚠️ No se encontró URL de pago en la respuesta",
             {
-              redirectToPayment: response.data.redirectToPayment,
-              paymentIntent: response.data.paymentIntent,
-              pago: response.data.pago,
-              cita: response.data.cita,
+              redirectToPayment: citaData.redirectToPayment,
+              paymentIntent: citaData.paymentIntent,
+              pago: citaData.pago,
+              cita: citaData.cita,
+              backendResponseKeys: backendResponse ? Object.keys(backendResponse) : [],
+              citaDataKeys: citaData ? Object.keys(citaData) : [],
             }
           );
           
