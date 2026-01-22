@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { citasService, pagosService } from "@/services";
 import Image from "next/image";
@@ -206,14 +207,14 @@ export default function PagoPage() {
             return;
           }
 
+          // Obtener información del pago desde el backend
+          const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+          const token = localStorage.getItem("token");
+
           console.log("[PagoPage] 🔍 Obteniendo información de pago desde backend");
           console.log("[PagoPage] id_pago:", pagoId);
           console.log("[PagoPage] API URL:", apiBaseUrl);
           console.log("[PagoPage] Token disponible:", !!token);
-
-          // Obtener información del pago desde el backend
-          const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
-          const token = localStorage.getItem("token");
           
           if (!token) {
             throw new Error("No se encontró el token de autenticación");
@@ -290,8 +291,8 @@ export default function PagoPage() {
           // Obtener el pago para obtener el id_cita
           const pagoResponse = await pagosService.getPagoPorId(pagoId);
           
-          if (pagoResponse.success && pagoResponse.data?.pago?.id_cita) {
-            const idCita = pagoResponse.data.pago.id_cita;
+          if (pagoResponse.success && pagoResponse.data?.id_cita) {
+            const idCita = pagoResponse.data.id_cita;
             
             // Obtener la cita completa para obtener el link de Google Meet
             const citaResponse = await citasService.getCitaPorId(idCita);
@@ -611,15 +612,15 @@ export default function PagoPage() {
 
             {/* Enlaces de políticas */}
             <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-              <a href="/politica-cancelacion" className="hover:text-primary hover:underline">
+              <Link href="/politica-cancelacion" className="hover:text-primary hover:underline">
                 Política de cancelación
-              </a>
-              <a href="/terminos-condiciones" className="hover:text-primary hover:underline">
+              </Link>
+              <Link href="/terminos-condiciones" className="hover:text-primary hover:underline">
                 Términos y condiciones de uso
-              </a>
-              <a href="/politica-cookies" className="hover:text-primary hover:underline">
+              </Link>
+              <Link href="/politica-cookies" className="hover:text-primary hover:underline">
                 Política de Cookies
-              </a>
+              </Link>
             </div>
 
           </section>

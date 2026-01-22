@@ -897,7 +897,8 @@ export default function ProfessionalPageClient({
       // Formato: "2026-01-30 14:00:00" -> interpretar como 14:00 España y convertir a UTC
       const [datePart, timePart] = dateStr.split(" ");
       const [year, month, day] = datePart.split("-").map(Number);
-      const [hours, minutes, seconds = "0"] = timePart.split(":").map(Number);
+      const timeParts = timePart.split(":").map(Number);
+      const [hours, minutes, seconds = 0] = timeParts;
       
       // Crear fecha interpretando la hora como hora local de España
       // Usar el mismo método que crearFechaEspanaUTC pero en reversa

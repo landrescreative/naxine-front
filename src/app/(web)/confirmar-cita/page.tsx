@@ -262,7 +262,7 @@ function ConfirmarCitaAuthPageContent() {
           throw new Error("No se pudo obtener la información del profesional");
         }
         
-        professionalId = Number(professionalResponse.data.id || professionalResponse.data.id_profesional);
+        professionalId = Number(professionalResponse.data.id);
       }
 
       if (!professionalId) {
@@ -294,11 +294,10 @@ function ConfirmarCitaAuthPageContent() {
       logToBackend("info", "Respuesta RAW completa de crearCita", response);
 
       // El apiClient devuelve { success: true, data: <respuesta_del_backend> }
-      // El backend devuelve { success: true, data: { cita, pago, redirectToPayment } }
-      // Entonces response.data es la respuesta del backend completa
-      // Y response.data.data es el objeto con cita, pago, redirectToPayment
+      // El backend devuelve CreateCitaResponse directamente en response.data
+      // Entonces response.data es el CreateCitaResponse con cita, pago, redirectToPayment
       const backendResponse = response.data;
-      const citaData = backendResponse?.data || backendResponse;
+      const citaData = backendResponse;
 
       if (response.success && citaData) {
         // Guardar logs en localStorage para que persistan después de la redirección
@@ -306,8 +305,9 @@ function ConfirmarCitaAuthPageContent() {
           timestamp: new Date().toISOString(),
           success: response.success,
           backendResponseStructure: {
-            hasData: !!backendResponse?.data,
-            hasSuccess: !!backendResponse?.success,
+            hasCita: !!backendResponse?.cita,
+            hasPago: !!backendResponse?.pago,
+            hasRedirectToPayment: !!backendResponse?.redirectToPayment,
             keys: backendResponse ? Object.keys(backendResponse) : [],
           },
           hasRedirectToPayment: !!citaData.redirectToPayment,
@@ -383,11 +383,11 @@ function ConfirmarCitaAuthPageContent() {
               urlObj.searchParams.set("tipoAtencion", citaInfo.tipoAtencion);
             }
             // La dirección del consultorio y link de videollamada vienen de la respuesta del backend
-            if (citaData.direccion_consultorio) {
-              urlObj.searchParams.set("direccionConsultorio", citaData.direccion_consultorio);
+            if ((citaData as any).direccion_consultorio) {
+              urlObj.searchParams.set("direccionConsultorio", (citaData as any).direccion_consultorio);
             }
-            if (citaData.link_videollamada) {
-              urlObj.searchParams.set("linkVideollamada", citaData.link_videollamada);
+            if ((citaData as any).link_videollamada) {
+              urlObj.searchParams.set("linkVideollamada", (citaData as any).link_videollamada);
             }
             if (citaInfo.direccionDomicilioParam) {
               urlObj.searchParams.set("direccionDomicilio", citaInfo.direccionDomicilioParam);
@@ -440,11 +440,11 @@ function ConfirmarCitaAuthPageContent() {
             urlObj.searchParams.set("tipoAtencion", citaInfo.tipoAtencion);
           }
           // La dirección del consultorio y link de videollamada vienen de la respuesta del backend
-          if (citaData.direccion_consultorio) {
-            urlObj.searchParams.set("direccionConsultorio", citaData.direccion_consultorio);
+          if ((citaData as any).direccion_consultorio) {
+            urlObj.searchParams.set("direccionConsultorio", (citaData as any).direccion_consultorio);
           }
-          if (citaData.link_videollamada) {
-            urlObj.searchParams.set("linkVideollamada", citaData.link_videollamada);
+          if ((citaData as any).link_videollamada) {
+            urlObj.searchParams.set("linkVideollamada", (citaData as any).link_videollamada);
           }
           if (citaInfo.direccionDomicilioParam) {
             urlObj.searchParams.set("direccionDomicilio", citaInfo.direccionDomicilioParam);
