@@ -293,22 +293,22 @@ function ConfirmarCitaAuthPageContent() {
       console.log("[ConfirmarCita] 🔍 Respuesta RAW completa:", JSON.stringify(response, null, 2));
       logToBackend("info", "Respuesta RAW completa de crearCita", response);
 
-      // El apiClient devuelve { success: true, data: <respuesta_del_backend> }
-      // El backend devuelve { success: true, message: "...", data: { cita, pago, redirectToPayment } }
-      // Entonces response.data es { success: true, message: "...", data: {...} }
-      const backendResponse = response.data;
-      const citaData = backendResponse?.data;
+      // El apiClient devuelve { success: true, data: <backendResponse> }
+      // El backend devuelve { success, message, data: CreateCitaResponse }
+      // Por compatibilidad, desestructuramos así:
+      const backendRaw: any = response.data;
+      const citaData: any = backendRaw?.data ?? backendRaw;
 
-      if (response.success && citaData) {
+      if (response.success && citaData && (citaData.cita || citaData.pago || citaData.redirectToPayment)) {
         // Guardar logs en localStorage para que persistan después de la redirección
         const logData = {
           timestamp: new Date().toISOString(),
           success: response.success,
           backendResponseStructure: {
-            hasCita: !!backendResponse?.data?.cita,
-            hasPago: !!backendResponse?.data?.pago,
-            hasRedirectToPayment: !!backendResponse?.data?.redirectToPayment,
-            keys: backendResponse ? Object.keys(backendResponse) : [],
+            hasCita: !!citaData?.cita,
+            hasPago: !!citaData?.pago,
+            hasRedirectToPayment: !!citaData?.redirectToPayment,
+            keys: citaData ? Object.keys(citaData) : [],
           },
           hasRedirectToPayment: !!citaData.redirectToPayment,
           redirectToPayment: citaData.redirectToPayment,
@@ -333,7 +333,7 @@ function ConfirmarCitaAuthPageContent() {
         }
 
         // Intentar obtener la URL de redirección de diferentes formas
-        // Usar citaData que ya tiene la estructura correcta
+        // Usar citaData que ya tiene la estructura correcta: { cita, pago, paymentIntent, redirectToPayment, ... }
         let paymentUrl: string | null = null;
 
         // Opción 1: Desde redirectToPayment.url (puede incluir query params)
@@ -382,12 +382,12 @@ function ConfirmarCitaAuthPageContent() {
             if (citaInfo.tipoAtencion) {
               urlObj.searchParams.set("tipoAtencion", citaInfo.tipoAtencion);
             }
-            // La dirección del consultorio y link de videollamada vienen de la respuesta del backend
-            if ((citaData as any).direccion_consultorio) {
-              urlObj.searchParams.set("direccionConsultorio", (citaData as any).direccion_consultorio);
+            // La dirección del consultorio y link de videollamada vienen de la respuesta del backend (dentro de citaData.cita)
+            if (citaData.cita?.direccion_consultorio) {
+              urlObj.searchParams.set("direccionConsultorio", citaData.cita.direccion_consultorio);
             }
-            if ((citaData as any).link_videollamada) {
-              urlObj.searchParams.set("linkVideollamada", (citaData as any).link_videollamada);
+            if (citaData.cita?.link_videollamada) {
+              urlObj.searchParams.set("linkVideollamada", citaData.cita.link_videollamada);
             }
             if (citaInfo.direccionDomicilioParam) {
               urlObj.searchParams.set("direccionDomicilio", citaInfo.direccionDomicilioParam);
@@ -462,9 +462,9 @@ function ConfirmarCitaAuthPageContent() {
           // Enviar log al backend (consola de Node)
           logToBackend("info", `URL de pago encontrada: ${paymentUrl}`, {
             paymentUrl,
-            hasRedirectToPayment: !!citaData.redirectToPayment,
-            hasPaymentIntent: !!citaData.paymentIntent,
-            pagoId: citaData.pago?.id_pago,
+            hasRedirectToPayment: !!response.data.redirectToPayment,
+            hasPaymentIntent: !!response.data.paymentIntent,
+            pagoId: response.data.pago?.id_pago,
           });
           
           // Guardar URL en localStorage para debugging
@@ -485,12 +485,10 @@ function ConfirmarCitaAuthPageContent() {
           console.warn(
             "[ConfirmarCita] ⚠️ No se encontró URL de pago en la respuesta",
             {
-              redirectToPayment: citaData.redirectToPayment,
-              paymentIntent: citaData.paymentIntent,
-              pago: citaData.pago,
-              cita: citaData.cita,
-              backendResponseKeys: backendResponse ? Object.keys(backendResponse) : [],
-              citaDataKeys: citaData ? Object.keys(citaData) : [],
+              redirectToPayment: response.data.redirectToPayment,
+              paymentIntent: response.data.paymentIntent,
+              pago: response.data.pago,
+              cita: response.data.cita,
             }
           );
           
@@ -531,7 +529,7 @@ function ConfirmarCitaAuthPageContent() {
               citaId: citaData.cita?.id_cita,
               hasRedirectToPayment: !!citaData.redirectToPayment,
               hasPaymentIntent: !!citaData.paymentIntent,
-              backendResponseKeys: backendResponse ? Object.keys(backendResponse) : [],
+              backendResponseKeys: backendRaw ? Object.keys(backendRaw) : [],
               citaDataKeys: citaData ? Object.keys(citaData) : [],
             };
             

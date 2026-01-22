@@ -27,25 +27,16 @@ export interface CreateCitaResponse {
     estado: string;
     id_precio: number;
   };
-  paymentIntent?: {
+  paymentIntent: {
     paymentIntentId: string;
     clientSecret: string;
     estado: string;
   };
-  redirectToPayment?: {
+  redirectToPayment: {
     clientSecret: string;
     paymentIntentId: string;
     url: string;
   };
-  // Otros campos que el backend puede incluir (no siempre presentes)
-  transaccion?: any;
-}
-
-// El backend devuelve un envelope: { success, message, data: {cita, pago, ...} }
-export interface CreateCitaBackendResponse {
-  success: boolean;
-  message?: string;
-  data: CreateCitaResponse;
 }
 
 export interface Cita {
@@ -131,8 +122,8 @@ export class CitasService {
    */
   async createCita(
     data: CreateCitaRequest
-  ): Promise<ApiResponse<CreateCitaBackendResponse>> {
-    return apiClient.post<CreateCitaBackendResponse>("/citas", data);
+  ): Promise<ApiResponse<CreateCitaResponse>> {
+    return apiClient.post<CreateCitaResponse>("/citas", data);
   }
 
   /**
