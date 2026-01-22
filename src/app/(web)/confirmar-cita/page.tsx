@@ -1,14 +1,54 @@
 "use client";
 
-import { useMemo, useState, Suspense } from "react";
+import { useMemo, useState, Suspense, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { useAuth } from "@/hooks/useAuth";
+import { citasService, professionalsService } from "@/services";
+
+// Función helper para enviar logs al backend (consola de Node)
+const logToBackend = async (level: "info" | "warn" | "error" | "debug", message: string, data?: any) => {
+  try {
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+    await fetch(`${apiBaseUrl}/debug/log`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        level,
+        message,
+        data,
+        component: "ConfirmarCita",
+      }),
+    });
+  } catch (err) {
+    // Silenciar errores de logging para no interrumpir el flujo
+    console.warn("[ConfirmarCita] No se pudo enviar log al backend:", err);
+  }
+};
 
 function ConfirmarCitaAuthPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { user, isAuthenticated } = useAuth();
   const [notas, setNotas] = useState("");
+  const [direccionDomicilio, setDireccionDomicilio] = useState("");
+  const [isCreatingAppointment, setIsCreatingAppointment] = useState(false);
+  const [error, setError] = useState("");
+
+  // Leer notas y dirección de domicilio de los searchParams si vienen del redirect
+  useEffect(() => {
+    const notesFromUrl = searchParams.get("notes");
+    if (notesFromUrl) {
+      setNotas(decodeURIComponent(notesFromUrl));
+    }
+    const direccionFromUrl = searchParams.get("direccionDomicilio");
+    if (direccionFromUrl) {
+      setDireccionDomicilio(decodeURIComponent(direccionFromUrl));
+    }
+  }, [searchParams]);
 
   const citaInfo = useMemo(() => {
     const dateISO = searchParams.get("dateISO") || "";
@@ -101,6 +141,14 @@ function ConfirmarCitaAuthPageContent() {
         }
         : null;
 
+    // Parámetros adicionales necesarios para crear la cita
+    const professionalSlug = searchParams.get("professionalSlug") || "";
+    const category = searchParams.get("category") || "";
+    const service = searchParams.get("service") || "";
+    const precioId = searchParams.get("precioId") || "";
+    const tipoAtencion = searchParams.get("tipoAtencion") || "presencial";
+    const direccionDomicilioParam = searchParams.get("direccionDomicilio") || "";
+
     return {
       professionalName: searchParams.get("professionalName") || "Profesional",
       professionalCity:
@@ -116,6 +164,15 @@ function ConfirmarCitaAuthPageContent() {
       returnUrl,
       professionalImage,
       taxInfo,
+      // Parámetros adicionales
+      dateISO,
+      time,
+      professionalSlug,
+      category,
+      service,
+      precioId,
+      tipoAtencion,
+      direccionDomicilioParam,
     };
   }, [searchParams]);
 
@@ -144,6 +201,394 @@ function ConfirmarCitaAuthPageContent() {
     params.set("redirect", targetWithNotes);
     return `${base}?${params.toString()}`;
   }, [citaInfo.returnUrl, notas]);
+
+  // Función para crear la cita y proceder al pago
+  const handleConfirmAndPay = async () => {
+    if (!isAuthenticated || !user) {
+      setError("Debes iniciar sesión para continuar");
+      return;
+    }
+
+    if (!citaInfo.dateISO || !citaInfo.time || !citaInfo.precioId) {
+      setError("Faltan datos necesarios para crear la cita");
+      return;
+    }
+
+    // Validar dirección de domicilio si es necesario
+    if (citaInfo.tipoAtencion === "a_domicilio" && !direccionDomicilio.trim()) {
+      setError("Por favor, proporciona tu dirección para la atención a domicilio.");
+      return;
+    }
+
+    setIsCreatingAppointment(true);
+    setError("");
+
+    try {
+      // Calcular fecha de inicio y fin
+      const date = new Date(citaInfo.dateISO);
+      const [hours, minutes] = citaInfo.time.split(":").map(Number);
+      const durationMinutes = parseInt(citaInfo.duration.replace(/\D/g, "")) || 60;
+
+      // Crear fecha UTC para España
+      const fechaInicio = new Date(
+        Date.UTC(
+          date.getFullYear(),
+          date.getMonth(),
+          date.getDate(),
+          hours,
+          minutes,
+          0,
+          0
+        )
+      );
+      const fechaFin = new Date(
+        fechaInicio.getTime() + durationMinutes * 60000
+      );
+
+      // Obtener el ID del profesional
+      // Primero intentar desde los queryParams, si no está, obtenerlo desde el slug
+      let professionalId: number | null = null;
+      
+      const professionalIdParam = searchParams.get("professionalId");
+      if (professionalIdParam) {
+        professionalId = Number(professionalIdParam);
+      } else if (citaInfo.professionalSlug) {
+        // Si no hay ID en los params, obtenerlo desde el slug usando el servicio
+        const professionalResponse = await professionalsService.getPublicProfessionalById(
+          citaInfo.professionalSlug
+        );
+        
+        if (!professionalResponse.success || !professionalResponse.data) {
+          throw new Error("No se pudo obtener la información del profesional");
+        }
+        
+        professionalId = Number(professionalResponse.data.id || professionalResponse.data.id_profesional);
+      }
+
+      if (!professionalId) {
+        throw new Error("No se pudo obtener el ID del profesional");
+      }
+
+      // Crear la cita
+      const response = await citasService.createCita({
+        id_cliente: Number(user.id || 0),
+        id_profesional: Number(professionalId),
+        id_precio: Number(citaInfo.precioId),
+        fecha_inicio: fechaInicio.toISOString(),
+        fecha_fin: fechaFin.toISOString(),
+        crear_payment_intent: true,
+        moneda: citaInfo.currency || "EUR",
+        tipo_atencion: (citaInfo.tipoAtencion || "presencial") as
+          | "presencial"
+          | "en_linea"
+          | "a_domicilio",
+        direccion_domicilio:
+          citaInfo.tipoAtencion === "a_domicilio"
+            ? direccionDomicilio.trim() || undefined
+            : undefined,
+        notas: notas.trim() || undefined,
+      });
+
+      // Log completo de la respuesta RAW antes de procesar
+      console.log("[ConfirmarCita] 🔍 Respuesta RAW completa:", JSON.stringify(response, null, 2));
+      logToBackend("info", "Respuesta RAW completa de crearCita", response);
+
+      // El apiClient devuelve { success: true, data: <respuesta_del_backend> }
+      // El backend devuelve { success: true, data: { cita, pago, redirectToPayment } }
+      // Entonces response.data es la respuesta del backend completa
+      // Y response.data.data es el objeto con cita, pago, redirectToPayment
+      const backendResponse = response.data;
+      const citaData = backendResponse?.data || backendResponse;
+
+      if (response.success && citaData) {
+        // Guardar logs en localStorage para que persistan después de la redirección
+        const logData = {
+          timestamp: new Date().toISOString(),
+          success: response.success,
+          backendResponseStructure: {
+            hasData: !!backendResponse?.data,
+            hasSuccess: !!backendResponse?.success,
+            keys: backendResponse ? Object.keys(backendResponse) : [],
+          },
+          hasRedirectToPayment: !!citaData.redirectToPayment,
+          redirectToPayment: citaData.redirectToPayment,
+          hasPaymentIntent: !!citaData.paymentIntent,
+          paymentIntent: citaData.paymentIntent,
+          cita: citaData.cita,
+          pago: citaData.pago,
+          // Agregar toda la estructura para debugging
+          fullCitaData: citaData,
+        };
+        
+        console.log("[ConfirmarCita] Respuesta completa de crearCita:", logData);
+        
+        // Enviar log al backend (consola de Node) - NO bloquea la ejecución
+        logToBackend("info", "Respuesta completa de crearCita", logData);
+        
+        // Guardar en localStorage para debugging
+        try {
+          localStorage.setItem("lastCitaResponse", JSON.stringify(logData));
+        } catch (e) {
+          console.warn("[ConfirmarCita] No se pudo guardar en localStorage:", e);
+        }
+
+        // Intentar obtener la URL de redirección de diferentes formas
+        // Usar citaData que ya tiene la estructura correcta
+        let paymentUrl: string | null = null;
+
+        // Opción 1: Desde redirectToPayment.url (puede incluir query params)
+        if (citaData.redirectToPayment?.url) {
+          paymentUrl = citaData.redirectToPayment.url;
+          
+          // Si tenemos clientSecret y paymentIntentId, agregarlos como query params
+          if (citaData.redirectToPayment.clientSecret && citaData.redirectToPayment.paymentIntentId) {
+            const urlObj = new URL(paymentUrl, window.location.origin);
+            urlObj.searchParams.set("clientSecret", citaData.redirectToPayment.clientSecret);
+            urlObj.searchParams.set("paymentIntentId", citaData.redirectToPayment.paymentIntentId);
+            if (citaData.pago?.monto) {
+              urlObj.searchParams.set("amount", String(citaData.pago.monto));
+            }
+            if (citaInfo.currency) {
+              urlObj.searchParams.set("currency", citaInfo.currency);
+            }
+            // Agregar información adicional de la cita
+            if (citaInfo.fechaFormateada) {
+              urlObj.searchParams.set("fecha", citaInfo.fechaFormateada);
+            }
+            if (citaInfo.dateISO) {
+              urlObj.searchParams.set("fechaISO", citaInfo.dateISO);
+            }
+            if (citaInfo.horaFormateada) {
+              urlObj.searchParams.set("hora", citaInfo.horaFormateada);
+            }
+            if (citaInfo.professionalName) {
+              urlObj.searchParams.set("profesional", citaInfo.professionalName);
+            }
+            if (citaInfo.serviceName) {
+              urlObj.searchParams.set("servicio", citaInfo.serviceName);
+            }
+            if (citaInfo.professionalImage) {
+              urlObj.searchParams.set("professionalImage", citaInfo.professionalImage);
+            }
+            if (citaInfo.professionalCity) {
+              urlObj.searchParams.set("professionalCity", citaInfo.professionalCity);
+            }
+            if (citaInfo.duration) {
+              urlObj.searchParams.set("duration", citaInfo.duration);
+            }
+            if (citaInfo.price) {
+              urlObj.searchParams.set("price", String(citaInfo.price));
+            }
+            if (citaInfo.tipoAtencion) {
+              urlObj.searchParams.set("tipoAtencion", citaInfo.tipoAtencion);
+            }
+            // La dirección del consultorio y link de videollamada vienen de la respuesta del backend
+            if (citaData.direccion_consultorio) {
+              urlObj.searchParams.set("direccionConsultorio", citaData.direccion_consultorio);
+            }
+            if (citaData.link_videollamada) {
+              urlObj.searchParams.set("linkVideollamada", citaData.link_videollamada);
+            }
+            if (citaInfo.direccionDomicilioParam) {
+              urlObj.searchParams.set("direccionDomicilio", citaInfo.direccionDomicilioParam);
+            }
+            paymentUrl = urlObj.pathname + urlObj.search;
+          }
+        }
+        // Opción 2: Construir desde paymentIntent y pago
+        else if (citaData.paymentIntent?.clientSecret && citaData.pago?.id_pago) {
+          const urlObj = new URL(`/pago/${citaData.pago.id_pago}`, window.location.origin);
+          urlObj.searchParams.set("clientSecret", citaData.paymentIntent.clientSecret);
+          if (citaData.paymentIntent.paymentIntentId) {
+            urlObj.searchParams.set("paymentIntentId", citaData.paymentIntent.paymentIntentId);
+          }
+          if (citaData.pago.monto) {
+            urlObj.searchParams.set("amount", String(citaData.pago.monto));
+          }
+          if (citaInfo.currency) {
+            urlObj.searchParams.set("currency", citaInfo.currency);
+          }
+          // Agregar información adicional de la cita
+          if (citaInfo.fechaFormateada) {
+            urlObj.searchParams.set("fecha", citaInfo.fechaFormateada);
+          }
+          if (citaInfo.dateISO) {
+            urlObj.searchParams.set("fechaISO", citaInfo.dateISO);
+          }
+          if (citaInfo.horaFormateada) {
+            urlObj.searchParams.set("hora", citaInfo.horaFormateada);
+          }
+          if (citaInfo.professionalName) {
+            urlObj.searchParams.set("profesional", citaInfo.professionalName);
+          }
+          if (citaInfo.serviceName) {
+            urlObj.searchParams.set("servicio", citaInfo.serviceName);
+          }
+          if (citaInfo.professionalImage) {
+            urlObj.searchParams.set("professionalImage", citaInfo.professionalImage);
+          }
+          if (citaInfo.professionalCity) {
+            urlObj.searchParams.set("professionalCity", citaInfo.professionalCity);
+          }
+          if (citaInfo.duration) {
+            urlObj.searchParams.set("duration", citaInfo.duration);
+          }
+          if (citaInfo.price) {
+            urlObj.searchParams.set("price", String(citaInfo.price));
+          }
+          if (citaInfo.tipoAtencion) {
+            urlObj.searchParams.set("tipoAtencion", citaInfo.tipoAtencion);
+          }
+          // La dirección del consultorio y link de videollamada vienen de la respuesta del backend
+          if (citaData.direccion_consultorio) {
+            urlObj.searchParams.set("direccionConsultorio", citaData.direccion_consultorio);
+          }
+          if (citaData.link_videollamada) {
+            urlObj.searchParams.set("linkVideollamada", citaData.link_videollamada);
+          }
+          if (citaInfo.direccionDomicilioParam) {
+            urlObj.searchParams.set("direccionDomicilio", citaInfo.direccionDomicilioParam);
+          }
+          paymentUrl = urlObj.pathname + urlObj.search;
+        }
+        // Opción 3: Construir desde id_pago (sin clientSecret, la página lo obtendrá del backend)
+        else if (citaData.pago?.id_pago) {
+          paymentUrl = `/pago/${citaData.pago.id_pago}`;
+        }
+
+        if (paymentUrl) {
+          console.log("[ConfirmarCita] ✅ URL de pago encontrada:", paymentUrl);
+          
+          // Enviar log al backend (consola de Node)
+          logToBackend("info", `URL de pago encontrada: ${paymentUrl}`, {
+            paymentUrl,
+            hasRedirectToPayment: !!response.data.redirectToPayment,
+            hasPaymentIntent: !!response.data.paymentIntent,
+            pagoId: response.data.pago?.id_pago,
+          });
+          
+          // Guardar URL en localStorage para debugging
+          try {
+            localStorage.setItem("lastPaymentUrl", paymentUrl);
+            localStorage.setItem("lastPaymentUrlTimestamp", new Date().toISOString());
+          } catch (e) {
+            console.warn("[ConfirmarCita] No se pudo guardar URL en localStorage:", e);
+          }
+          
+          console.log("[ConfirmarCita] Intentando redirigir a:", paymentUrl);
+          
+          // Usar window.location.href directamente para asegurar la redirección
+          // Esto evita problemas con router que pueden no funcionar en algunos casos
+          window.location.href = paymentUrl;
+        } else {
+          // Si no hay URL de pago, intentar construirla desde id_pago
+          console.warn(
+            "[ConfirmarCita] ⚠️ No se encontró URL de pago en la respuesta",
+            {
+              redirectToPayment: response.data.redirectToPayment,
+              paymentIntent: response.data.paymentIntent,
+              pago: response.data.pago,
+              cita: response.data.cita,
+            }
+          );
+          
+          // Último intento: construir URL desde id_pago
+          if (citaData.pago?.id_pago) {
+            const fallbackUrl = `/pago/${citaData.pago.id_pago}`;
+            console.log("[ConfirmarCita] ⚠️ Usando URL de fallback:", fallbackUrl);
+            
+            // Enviar log al backend (consola de Node)
+            logToBackend("warn", `Usando URL de fallback: ${fallbackUrl}`, {
+              fallbackUrl,
+              pagoId: citaData.pago.id_pago,
+              hasRedirectToPayment: !!citaData.redirectToPayment,
+              hasPaymentIntent: !!citaData.paymentIntent,
+            });
+            
+            // Guardar en localStorage para debugging
+            try {
+              localStorage.setItem("lastPaymentUrl", fallbackUrl);
+              localStorage.setItem("lastPaymentUrlTimestamp", new Date().toISOString());
+              localStorage.setItem("lastCitaResponse", JSON.stringify({
+                timestamp: new Date().toISOString(),
+                usedFallback: true,
+                pagoId: citaData.pago.id_pago,
+              }));
+            } catch (e) {
+              console.warn("[ConfirmarCita] No se pudo guardar en localStorage:", e);
+            }
+            
+            // Usar window.location.href para asegurar la redirección
+            window.location.href = fallbackUrl;
+          } else {
+            // Si no hay id_pago, redirigir a las citas del cliente
+            const errorData = {
+              hasPago: !!citaData.pago,
+              pagoId: citaData.pago?.id_pago,
+              hasCita: !!citaData.cita,
+              citaId: citaData.cita?.id_cita,
+              hasRedirectToPayment: !!citaData.redirectToPayment,
+              hasPaymentIntent: !!citaData.paymentIntent,
+              backendResponseKeys: backendResponse ? Object.keys(backendResponse) : [],
+              citaDataKeys: citaData ? Object.keys(citaData) : [],
+            };
+            
+            console.error("[ConfirmarCita] ❌ No se pudo determinar URL de pago ni id_pago");
+            console.error("[ConfirmarCita] Datos disponibles:", errorData);
+            
+            // Enviar error al backend (consola de Node)
+            logToBackend("error", "No se pudo determinar URL de pago ni id_pago", errorData);
+            
+            // Guardar error en localStorage
+            try {
+              localStorage.setItem("lastCitaError", JSON.stringify({
+                timestamp: new Date().toISOString(),
+                error: "No se pudo determinar URL de pago",
+                data: errorData,
+              }));
+            } catch (e) {
+              console.warn("[ConfirmarCita] No se pudo guardar error en localStorage:", e);
+            }
+            
+            const citasUrl = `/dashboard/cliente/citas/${citaData.cita?.id_cita || ""}`;
+            window.location.href = citasUrl;
+          }
+        }
+      } else {
+        // Manejar errores específicos
+        const errorMessage = response.error || "";
+        
+        // Error de Stripe Tax (configuración faltante)
+        if (
+          errorMessage.includes("stripe") ||
+          errorMessage.includes("tax") ||
+          errorMessage.includes("head office address") ||
+          errorMessage.includes("automatic tax calculation")
+        ) {
+          setError(
+            "Error en la configuración de impuestos. Por favor, contacta al soporte o intenta más tarde."
+          );
+        } else {
+          setError(errorMessage || "Error al crear la cita");
+        }
+      }
+    } catch (err: any) {
+      console.error("Error creating appointment:", err);
+      
+      // Enviar error al backend (consola de Node)
+      logToBackend("error", "Error al crear la cita", {
+        error: err?.message,
+        stack: err?.stack,
+        name: err?.name,
+      });
+      
+      setError(
+        err?.message || "Ocurrió un error al crear la cita. Intenta de nuevo."
+      );
+    } finally {
+      setIsCreatingAppointment(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -190,26 +635,75 @@ function ConfirmarCitaAuthPageContent() {
               placeholder="Escribe aquí cualquier información que quieras compartir..."
             />
 
-            <div className="space-y-4 max-w-md">
-              <Link
-                href={registroHref}
-                className="block w-full flex items-center justify-center text-center bg-[#4C1DFF] hover:bg-[#3b15cc] text-white font-semibold py-3 rounded-full transition-colors"
-              >
-                Regístrate para continuar
-              </Link>
+            {/* Campo de dirección para citas a domicilio */}
+            {citaInfo.tipoAtencion === "a_domicilio" && (
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Dirección para atención a domicilio{" "}
+                  <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={direccionDomicilio}
+                  onChange={(e) => setDireccionDomicilio(e.target.value)}
+                  placeholder="Ingresa tu dirección completa (calle, número, ciudad, código postal)"
+                  rows={2}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  required
+                />
+              </div>
+            )}
 
+            {error && (
+              <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+                {error}
+              </div>
+            )}
 
-
-              <p className="text-center text-sm text-gray-500 mt-4">
-                ¿Ya tienes una cuenta?{" "}
-                <Link
-                  href={loginHref}
-                  className="text-purple-700 font-medium hover:underline"
+            {isAuthenticated ? (
+              // Si el usuario está autenticado, mostrar botón para crear cita y proceder al pago
+              <div className="space-y-4 max-w-md">
+                <button
+                  onClick={handleConfirmAndPay}
+                  disabled={
+                    isCreatingAppointment ||
+                    (citaInfo.tipoAtencion === "a_domicilio" &&
+                      !direccionDomicilio.trim())
+                  }
+                  className="w-full flex items-center justify-center bg-[#4C1DFF] hover:bg-[#3b15cc] text-white font-semibold py-3 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Inicia Sesión
+                  {isCreatingAppointment
+                    ? "Procesando..."
+                    : "Confirmar y proceder al pago"}
+                </button>
+                {citaInfo.tipoAtencion === "a_domicilio" &&
+                  !direccionDomicilio.trim() && (
+                    <p className="text-sm text-red-600 mt-2">
+                      Por favor, proporciona tu dirección para la atención a
+                      domicilio.
+                    </p>
+                  )}
+              </div>
+            ) : (
+              // Si el usuario NO está autenticado, mostrar botones de login/registro
+              <div className="space-y-4 max-w-md">
+                <Link
+                  href={registroHref}
+                  className="w-full flex items-center justify-center bg-[#4C1DFF] hover:bg-[#3b15cc] text-white font-semibold py-3 rounded-full transition-colors"
+                >
+                  Regístrate para continuar
                 </Link>
-              </p>
-            </div>
+
+                <p className="text-center text-sm text-gray-500 mt-4">
+                  ¿Ya tienes una cuenta?{" "}
+                  <Link
+                    href={loginHref}
+                    className="text-purple-700 font-medium hover:underline"
+                  >
+                    Inicia Sesión
+                  </Link>
+                </p>
+              </div>
+            )}
           </section>
 
           {/* Columna derecha: resumen de cita (copiada de SelectTimePageClient) */}
@@ -243,9 +737,16 @@ function ConfirmarCitaAuthPageContent() {
                     <p className="font-semibold text-gray-900">
                       {citaInfo.professionalName}
                     </p>
-                    <p className="text-sm text-gray-500">
-                      {citaInfo.professionalCity}
-                    </p>
+                    {citaInfo.tipoAtencion !== "en_linea" && (
+                      <p className="text-sm text-gray-500">
+                        {citaInfo.professionalCity}
+                      </p>
+                    )}
+                    {citaInfo.tipoAtencion === "en_linea" && (
+                      <p className="text-sm text-green-600 font-medium">
+                        Videollamada en línea
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -285,6 +786,26 @@ function ConfirmarCitaAuthPageContent() {
                         {citaInfo.horaFormateada}
                       </span>
                     </div>
+                    {citaInfo.tipoAtencion && (
+                      <div className="flex justify-between items-center mt-1">
+                        <span className="text-sm text-gray-600">Tipo de atención</span>
+                        <span className="text-sm font-medium text-gray-900 capitalize">
+                          {citaInfo.tipoAtencion === "presencial"
+                            ? "Presencial"
+                            : citaInfo.tipoAtencion === "en_linea"
+                            ? "En Línea"
+                            : "A Domicilio"}
+                        </span>
+                      </div>
+                    )}
+                    {citaInfo.tipoAtencion === "en_linea" && (
+                      <div className="flex justify-between items-center mt-1">
+                        <span className="text-sm text-gray-600">Plataforma</span>
+                        <span className="text-sm font-medium text-green-600">
+                          Google Meet
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Desglose de impuestos */}

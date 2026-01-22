@@ -867,6 +867,8 @@ export default function ProfessionalPageClient({
   };
 
   // Función helper para normalizar fechas a UTC para comparación precisa
+  // IMPORTANTE: Las fechas MySQL DATETIME vienen como hora local de España, no UTC
+  // Necesitamos convertirlas correctamente a UTC
   const normalizeDateToUTC = (dateInput: string | Date): Date => {
     if (dateInput instanceof Date) {
       // Si ya es un Date, crear uno nuevo en UTC para evitar problemas de zona horaria
@@ -882,30 +884,56 @@ export default function ProfessionalPageClient({
       );
     }
 
-    const dateStr = String(dateInput);
+    const dateStr = String(dateInput).trim();
 
     // Si ya tiene 'Z' o '+', es ISO con zona horaria, parsear directamente
-    if (
-      dateStr.includes("Z") ||
-      dateStr.includes("+") ||
-      dateStr.includes("-", 10)
-    ) {
+    if (dateStr.includes("Z") || dateStr.includes("+")) {
       return new Date(dateStr);
     }
 
-    // Si es formato MySQL DATETIME (YYYY-MM-DD HH:MM:SS), tratarlo como UTC
+    // Si es formato MySQL DATETIME (YYYY-MM-DD HH:MM:SS), interpretarlo como hora local de España
+    // y convertirlo a UTC
     if (dateStr.includes(" ") && !dateStr.includes("T")) {
-      // Formato: "2024-01-15 10:00:00" -> "2024-01-15T10:00:00Z"
-      return new Date(dateStr.replace(" ", "T") + "Z");
+      // Formato: "2026-01-30 14:00:00" -> interpretar como 14:00 España y convertir a UTC
+      const [datePart, timePart] = dateStr.split(" ");
+      const [year, month, day] = datePart.split("-").map(Number);
+      const [hours, minutes, seconds = "0"] = timePart.split(":").map(Number);
+      
+      // Crear fecha interpretando la hora como hora local de España
+      // Usar el mismo método que crearFechaEspanaUTC pero en reversa
+      const fechaReferenciaUTC = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+      const horaReferenciaEspana = fechaReferenciaUTC.toLocaleString("en-US", {
+        timeZone: "Europe/Madrid",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+      const [horaRefEspanaStr] = horaReferenciaEspana.split(":");
+      const horaRefEspana = parseInt(horaRefEspanaStr);
+      const offsetHoras = horaRefEspana - 12;
+      
+      // Convertir hora España a UTC
+      const horaUTC = hours - offsetHoras;
+      let horaUTCFinal = horaUTC;
+      let diaFinal = day;
+      if (horaUTC < 0) {
+        horaUTCFinal = 24 + horaUTC;
+        diaFinal = day - 1;
+      } else if (horaUTC >= 24) {
+        horaUTCFinal = horaUTC - 24;
+        diaFinal = day + 1;
+      }
+      
+      return new Date(Date.UTC(year, month - 1, diaFinal, horaUTCFinal, minutes, seconds || 0));
     }
 
-    // Si tiene 'T' pero no 'Z', agregar 'Z' para indicar UTC
+    // Si tiene 'T' pero no 'Z' ni offset, tratar como UTC (ya viene del frontend en UTC)
     if (
       dateStr.includes("T") &&
       !dateStr.includes("Z") &&
       !dateStr.includes("+")
     ) {
-      return new Date(dateStr + "Z");
+      return new Date(dateStr + (dateStr.includes(".") ? "Z" : ".000Z"));
     }
 
     // Fallback: parsear como está
@@ -1177,6 +1205,30 @@ export default function ProfessionalPageClient({
             slotDateTimeUTC.getTime() + duracionMinutos * 60000
           );
 
+          // Log para TODOS los slots para debugging (especialmente el de 2:00 PM)
+          if (slotTime === "14:00" || slotTime === "02:00 PM" || currentTime === 840) {
+            console.log(
+              `[ProfessionalPageClient] 🔍 Evaluando slot ${slotTime} (${currentTime} minutos):`,
+              {
+                slotTime,
+                currentTime,
+                slotStart: slotDateTimeUTC.toISOString(),
+                slotEnd: slotEndUTC.toISOString(),
+                slotStartEspana: slotDateTimeUTC.toLocaleString("es-ES", {
+                  timeZone: "Europe/Madrid",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }),
+                slotEndEspana: slotEndUTC.toLocaleString("es-ES", {
+                  timeZone: "Europe/Madrid",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }),
+                existingAppointmentsCount: existingAppointments.length,
+              }
+            );
+          }
+
           // Validación: Si es hoy, filtrar horas que ya pasaron
           let isPastTime = false;
           if (isToday) {
@@ -1203,21 +1255,114 @@ export default function ProfessionalPageClient({
           }
 
           const isOccupied = existingAppointments.some((apt) => {
-            // Usar dateTimeUTC si está disponible, sino normalizar dateTime
+            // Asegurarse de que aptStart sea un objeto Date válido
             const aptStart =
-              apt.dateTimeUTC || normalizeDateToUTC(apt.dateTime);
-            const aptEnd = new Date(
-              aptStart.getTime() + (apt.duration || duracionMinutos) * 60000
-            );
+              apt.dateTimeUTC instanceof Date
+                ? apt.dateTimeUTC
+                : normalizeDateToUTC(apt.dateTime || apt.dateTimeUTC);
+            
+            // Si la cita tiene fecha_fin, usarla directamente en lugar de calcular desde duration
+            // Esto es más preciso porque la duración puede tener problemas de redondeo
+            let aptEnd: Date;
+            if (apt.dateTimeEndUTC instanceof Date) {
+              aptEnd = apt.dateTimeEndUTC;
+            } else if (apt.dateTimeEnd) {
+              aptEnd = normalizeDateToUTC(apt.dateTimeEnd);
+            } else {
+              // Fallback: calcular desde duration
+              aptEnd = new Date(
+                aptStart.getTime() + (apt.duration || duracionMinutos) * 60000
+              );
+            }
 
             // Verificar solapamiento: dos intervalos se solapan si:
-            // - El inicio del slot está dentro del intervalo de la cita, O
-            // - El fin del slot está dentro del intervalo de la cita, O
-            // - El slot contiene completamente la cita
-            const hasOverlap =
-              (slotDateTimeUTC >= aptStart && slotDateTimeUTC < aptEnd) ||
-              (slotEndUTC > aptStart && slotEndUTC <= aptEnd) ||
-              (slotDateTimeUTC <= aptStart && slotEndUTC >= aptEnd);
+            // - El inicio del slot está dentro del intervalo de la cita (>= inicio y < fin)
+            // - El fin del slot está dentro del intervalo de la cita (> inicio y <= fin)
+            // - El slot contiene completamente la cita (slot inicio <= cita inicio y slot fin >= cita fin)
+            // - El slot empieza exactamente cuando termina la cita (debe bloquearse porque no hay tiempo entre ellos)
+            const condition1 = slotDateTimeUTC >= aptStart && slotDateTimeUTC < aptEnd;
+            const condition2 = slotEndUTC > aptStart && slotEndUTC <= aptEnd;
+            const condition3 = slotDateTimeUTC <= aptStart && slotEndUTC >= aptEnd;
+            const condition4 = slotDateTimeUTC.getTime() === aptEnd.getTime(); // Slot empieza cuando termina la cita
+            const hasOverlap = condition1 || condition2 || condition3 || condition4;
+            
+            // Log específico para el slot de 3:30 PM cuando está bloqueado incorrectamente
+            if (slotTime === "15:30" || slotTime === "03:30 PM" || currentTime === 930) {
+              const slotStartEspana = slotDateTimeUTC.toLocaleString("es-ES", {
+                timeZone: "Europe/Madrid",
+                hour: "2-digit",
+                minute: "2-digit",
+              });
+              const slotEndEspana = slotEndUTC.toLocaleString("es-ES", {
+                timeZone: "Europe/Madrid",
+                hour: "2-digit",
+                minute: "2-digit",
+              });
+              const aptStartEspana = aptStart.toLocaleString("es-ES", {
+                timeZone: "Europe/Madrid",
+                hour: "2-digit",
+                minute: "2-digit",
+              });
+              const aptEndEspana = aptEnd.toLocaleString("es-ES", {
+                timeZone: "Europe/Madrid",
+                hour: "2-digit",
+                minute: "2-digit",
+              });
+              
+              console.log(`[ProfessionalPageClient] 🔍 Slot 3:30 PM evaluación:`, {
+                slotTime,
+                slotStart: slotDateTimeUTC.toISOString(),
+                slotEnd: slotEndUTC.toISOString(),
+                slotStartEspana,
+                slotEndEspana,
+                aptId: apt.id,
+                aptStart: aptStart.toISOString(),
+                aptEnd: aptEnd.toISOString(),
+                aptStartEspana,
+                aptEndEspana,
+                condition1,
+                condition2,
+                condition3,
+                condition4,
+                hasOverlap,
+                fuente: apt.fuente,
+              });
+            }
+
+            // Log detallado para el slot de 2:00 PM cuando NO se detecta solapamiento
+            if ((slotTime === "14:00" || slotTime === "02:00 PM" || currentTime === 840) && !hasOverlap) {
+              console.log(
+                `[ProfessionalPageClient] ⚠️ Slot ${slotTime} NO está ocupado, pero debería estarlo:`,
+                {
+                  slotTime,
+                  slotStart: slotDateTimeUTC.toISOString(),
+                  slotEnd: slotEndUTC.toISOString(),
+                  slotStartEspana: slotDateTimeUTC.toLocaleString("es-ES", {
+                    timeZone: "Europe/Madrid",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  }),
+                  aptId: apt.id,
+                  aptStart: aptStart.toISOString(),
+                  aptEnd: aptEnd.toISOString(),
+                  aptStartEspana: aptStart.toLocaleString("es-ES", {
+                    timeZone: "Europe/Madrid",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  }),
+                  aptEndEspana: aptEnd.toLocaleString("es-ES", {
+                    timeZone: "Europe/Madrid",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  }),
+                  condition1,
+                  condition2,
+                  condition3,
+                  condition4: slotDateTimeUTC.getTime() === aptEnd.getTime(),
+                  timeDiff: slotDateTimeUTC.getTime() - aptStart.getTime(),
+                }
+              );
+            }
 
             if (hasOverlap) {
               console.log(
@@ -1228,16 +1373,40 @@ export default function ProfessionalPageClient({
               console.log(
                 `[ProfessionalPageClient] Detalles del solapamiento:`,
                 {
+                  slotTime,
                   slotStart: slotDateTimeUTC.toISOString(),
                   slotEnd: slotEndUTC.toISOString(),
+                  slotStartEspana: slotDateTimeUTC.toLocaleString("es-ES", {
+                    timeZone: "Europe/Madrid",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  }),
+                  slotEndEspana: slotEndUTC.toLocaleString("es-ES", {
+                    timeZone: "Europe/Madrid",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  }),
+                  aptId: apt.id,
                   aptStart: aptStart.toISOString(),
                   aptEnd: aptEnd.toISOString(),
+                  aptStartEspana: aptStart.toLocaleString("es-ES", {
+                    timeZone: "Europe/Madrid",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  }),
+                  aptEndEspana: aptEnd.toLocaleString("es-ES", {
+                    timeZone: "Europe/Madrid",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  }),
                   aptDuration: apt.duration || duracionMinutos,
+                  aptEstado: apt.estado,
                   condition1:
                     slotDateTimeUTC >= aptStart && slotDateTimeUTC < aptEnd,
                   condition2: slotEndUTC > aptStart && slotEndUTC <= aptEnd,
                   condition3:
                     slotDateTimeUTC <= aptStart && slotEndUTC >= aptEnd,
+                  timeDiff: slotDateTimeUTC.getTime() - aptStart.getTime(),
                 }
               );
             }
@@ -1316,17 +1485,32 @@ export default function ProfessionalPageClient({
           }
 
           const isOccupied = existingAppointments.some((apt) => {
-            // Usar dateTimeUTC si está disponible, sino normalizar dateTime
+            // Asegurarse de que aptStart sea un objeto Date válido
             const aptStart =
-              apt.dateTimeUTC || normalizeDateToUTC(apt.dateTime);
-            const aptEnd = new Date(
-              aptStart.getTime() + (apt.duration || duracionMinutos) * 60000
-            );
+              apt.dateTimeUTC instanceof Date
+                ? apt.dateTimeUTC
+                : normalizeDateToUTC(apt.dateTime || apt.dateTimeUTC);
+            
+            // Si la cita tiene fecha_fin, usarla directamente en lugar de calcular desde duration
+            // Esto es más preciso porque la duración puede tener problemas de redondeo
+            let aptEnd: Date;
+            if (apt.dateTimeEndUTC instanceof Date) {
+              aptEnd = apt.dateTimeEndUTC;
+            } else if (apt.dateTimeEnd) {
+              aptEnd = normalizeDateToUTC(apt.dateTimeEnd);
+            } else {
+              // Fallback: calcular desde duration
+              aptEnd = new Date(
+                aptStart.getTime() + (apt.duration || duracionMinutos) * 60000
+              );
+            }
 
             // Verificar solapamiento: dos intervalos se solapan si:
-            // - El inicio del slot está dentro del intervalo de la cita, O
-            // - El fin del slot está dentro del intervalo de la cita, O
-            // - El slot contiene completamente la cita
+            // - El inicio del slot está dentro del intervalo de la cita (>= inicio y < fin)
+            // - El fin del slot está dentro del intervalo de la cita (> inicio y <= fin)
+            // - El slot contiene completamente la cita (slot inicio <= cita inicio y slot fin >= cita fin)
+            // NOTA: NO incluimos el caso donde el slot empieza exactamente cuando termina la cita
+            // porque eso NO es un solapamiento (ej: cita 2:00-2:45, slot 2:45-3:30 NO se solapan)
             const hasOverlap =
               (slotDateTimeUTC >= aptStart && slotDateTimeUTC < aptEnd) ||
               (slotEndUTC > aptStart && slotEndUTC <= aptEnd) ||
@@ -1341,16 +1525,40 @@ export default function ProfessionalPageClient({
               console.log(
                 `[ProfessionalPageClient] Detalles del solapamiento:`,
                 {
+                  slotTime,
                   slotStart: slotDateTimeUTC.toISOString(),
                   slotEnd: slotEndUTC.toISOString(),
+                  slotStartEspana: slotDateTimeUTC.toLocaleString("es-ES", {
+                    timeZone: "Europe/Madrid",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  }),
+                  slotEndEspana: slotEndUTC.toLocaleString("es-ES", {
+                    timeZone: "Europe/Madrid",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  }),
+                  aptId: apt.id,
                   aptStart: aptStart.toISOString(),
                   aptEnd: aptEnd.toISOString(),
+                  aptStartEspana: aptStart.toLocaleString("es-ES", {
+                    timeZone: "Europe/Madrid",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  }),
+                  aptEndEspana: aptEnd.toLocaleString("es-ES", {
+                    timeZone: "Europe/Madrid",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  }),
                   aptDuration: apt.duration || duracionMinutos,
+                  aptEstado: apt.estado,
                   condition1:
                     slotDateTimeUTC >= aptStart && slotDateTimeUTC < aptEnd,
                   condition2: slotEndUTC > aptStart && slotEndUTC <= aptEnd,
                   condition3:
                     slotDateTimeUTC <= aptStart && slotEndUTC >= aptEnd,
+                  timeDiff: slotDateTimeUTC.getTime() - aptStart.getTime(),
                 }
               );
             }
@@ -1430,11 +1638,79 @@ export default function ProfessionalPageClient({
             // Convertir citas ocupadas al formato esperado por el componente
             // Normalizar fechas a UTC para comparación precisa
             // Incluye tanto citas de la plataforma como eventos de Google Calendar
+            console.log(
+              `[ProfessionalPageClient] Procesando ${citasData.length} citas del API:`,
+              citasData.slice(0, 3).map((c: any) => ({
+                id_cita: c.id_cita,
+                fecha_inicio: c.fecha_inicio,
+                fecha_fin: c.fecha_fin,
+                estado: c.estado,
+                tipo_atencion: c.tipo_atencion,
+                fuente: c.fuente,
+              }))
+            );
+            
             const appointments = citasData.map((cita: any) => {
-              const fechaInicioUTC = normalizeDateToUTC(cita.fecha_inicio);
-              const fechaFinUTC = normalizeDateToUTC(cita.fecha_fin);
+              console.log(
+                `[ProfessionalPageClient] Normalizando cita ${cita.id_cita}:`,
+                {
+                  fecha_inicio_original: cita.fecha_inicio,
+                  fecha_fin_original: cita.fecha_fin,
+                  tipo_fecha_inicio: typeof cita.fecha_inicio,
+                  fuente: cita.fuente,
+                }
+              );
+              
+              // Los eventos de Google Calendar y Outlook ya vienen en formato ISO UTC desde el backend
+              // Solo las citas de la plataforma (MySQL DATETIME) necesitan conversión
+              let fechaInicioUTC: Date;
+              let fechaFinUTC: Date;
+              
+              if (cita.fuente === "google_calendar" || cita.fuente === "outlook_calendar") {
+                // Eventos externos ya vienen en formato ISO UTC desde el backend
+                // El backend ya convirtió correctamente de la zona horaria original (México, etc.) a UTC
+                // Solo necesitamos parsear directamente
+                fechaInicioUTC = new Date(cita.fecha_inicio);
+                fechaFinUTC = new Date(cita.fecha_fin);
+                
+                // Verificar que la conversión sea correcta
+                const fechaInicioEspana = fechaInicioUTC.toLocaleString("es-ES", {
+                  timeZone: "Europe/Madrid",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                });
+                console.log(
+                  `[ProfessionalPageClient] Evento ${cita.fuente} ${cita.id_cita}:`,
+                  {
+                    fecha_inicio_original: cita.fecha_inicio,
+                    fechaInicioUTC: fechaInicioUTC.toISOString(),
+                    fechaInicioEspana,
+                  }
+                );
+              } else {
+                // Citas de la plataforma vienen en formato MySQL DATETIME, necesitan conversión
+                fechaInicioUTC = normalizeDateToUTC(cita.fecha_inicio);
+                fechaFinUTC = normalizeDateToUTC(cita.fecha_fin);
+              }
               const duration = Math.round(
                 (fechaFinUTC.getTime() - fechaInicioUTC.getTime()) / 60000
+              );
+              
+              console.log(
+                `[ProfessionalPageClient] Cita ${cita.id_cita} normalizada:`,
+                {
+                  fechaInicioUTC: fechaInicioUTC.toISOString(),
+                  fechaFinUTC: fechaFinUTC.toISOString(),
+                  duration,
+                  fechaEspana: fechaInicioUTC.toLocaleString("es-ES", {
+                    timeZone: "Europe/Madrid",
+                    year: "numeric",
+                    month: "2-digit",
+                    day: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  }),
+                }
               );
 
               // Generar ID único: usar id_cita si existe, sino usar id_evento_google o id_evento_outlook
@@ -1458,6 +1734,8 @@ export default function ProfessionalPageClient({
                 id: uniqueId,
                 dateTime: fechaInicioUTC.toISOString(), // Guardar en formato ISO UTC
                 dateTimeUTC: fechaInicioUTC, // Guardar objeto Date UTC para comparación rápida
+                dateTimeEnd: fechaFinUTC.toISOString(), // Guardar fecha fin en formato ISO UTC
+                dateTimeEndUTC: fechaFinUTC, // Guardar objeto Date UTC para fecha fin
                 duration,
                 estado: cita.estado || "confirmada", // Los eventos de Google Calendar no tienen estado, usar 'confirmada' por defecto
                 fuente: cita.fuente || "plataforma", // Identificar si viene de Google Calendar, Outlook o plataforma
@@ -2761,35 +3039,43 @@ export default function ProfessionalPageClient({
                               </div>
                             </div>
                           </div>
-                          {timeSlots.map((slot, idx) => (
-                            <button
-                              key={idx}
-                              onClick={() => {
-                                if (
-                                  slot.available &&
-                                  selectedDate &&
-                                  selectedPrice
-                                ) {
-                                  // Navegar a la página de selección de horario
-                                  const fechaISO = selectedDate.toISOString();
-                                  const precioId =
-                                    selectedPrice.id_precio?.toString() || "";
-                                  const tipoAtencionParam = tipoAtencion || "presencial";
+                          {timeSlots.map((slot, idx) => {
+                            const handleSlotClick = () => {
+                              if (!slot.available) {
+                                alert(
+                                  "Este horario no está disponible. El profesional ya tiene una cita en este horario."
+                                );
+                                return;
+                              }
+                              
+                              if (!selectedDate || !selectedPrice) {
+                                return;
+                              }
 
-                                  router.push(
-                                    `/${params.category}/${params.service}/${
-                                      params.professional
-                                    }/seleccionar-horario?fecha=${encodeURIComponent(
-                                      fechaISO
-                                    )}&precioId=${encodeURIComponent(
-                                      precioId
-                                    )}&tipoAtencion=${encodeURIComponent(
-                                      tipoAtencionParam
-                                    )}&horario=${encodeURIComponent(slot.time)}`
-                                  );
-                                }
-                              }}
-                              disabled={!slot.available}
+                              // Navegar a la página de selección de horario
+                              const fechaISO = selectedDate.toISOString();
+                              const precioId =
+                                selectedPrice.id_precio?.toString() || "";
+                              const tipoAtencionParam = tipoAtencion || "presencial";
+
+                              router.push(
+                                `/${params.category}/${params.service}/${
+                                  params.professional
+                                }/seleccionar-horario?fecha=${encodeURIComponent(
+                                  fechaISO
+                                )}&precioId=${encodeURIComponent(
+                                  precioId
+                                )}&tipoAtencion=${encodeURIComponent(
+                                  tipoAtencionParam
+                                )}&horario=${encodeURIComponent(slot.time)}`
+                              );
+                            };
+
+                            return (
+                              <button
+                                key={idx}
+                                onClick={handleSlotClick}
+                                disabled={!slot.available}
                               className={`w-full text-left px-3 md:px-4 py-3 md:py-4 rounded-xl border flex items-center justify-between transition-all ${
                                 selectedTimeSlot === slot.time
                                   ? "bg-purple-100 border-purple-300 text-purple-800 shadow-md"
@@ -2839,10 +3125,11 @@ export default function ProfessionalPageClient({
                                   viewBox="0 0 24 24"
                                 >
                                   <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
-                                </svg>
-                              )}
-                            </button>
-                          ))}
+                                  </svg>
+                                )}
+                              </button>
+                            );
+                          })}
                         </div>
                       ) : (
                         <div className="text-center py-8 text-gray-500">
