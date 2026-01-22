@@ -296,9 +296,8 @@ function ConfirmarCitaAuthPageContent() {
       // El apiClient devuelve { success: true, data: <respuesta_del_backend> }
       // El backend devuelve { success: true, message: "...", data: { cita, pago, redirectToPayment } }
       // Entonces response.data es { success: true, message: "...", data: {...} }
-      // Y response.data.data contiene { cita, pago, redirectToPayment }
       const backendResponse = response.data;
-      const citaData = backendResponse?.data || backendResponse; // Acceder a data.data si existe, sino usar data directamente
+      const citaData = backendResponse?.data;
 
       if (response.success && citaData) {
         // Guardar logs en localStorage para que persistan después de la redirección
@@ -306,9 +305,9 @@ function ConfirmarCitaAuthPageContent() {
           timestamp: new Date().toISOString(),
           success: response.success,
           backendResponseStructure: {
-            hasCita: !!backendResponse?.cita,
-            hasPago: !!backendResponse?.pago,
-            hasRedirectToPayment: !!backendResponse?.redirectToPayment,
+            hasCita: !!backendResponse?.data?.cita,
+            hasPago: !!backendResponse?.data?.pago,
+            hasRedirectToPayment: !!backendResponse?.data?.redirectToPayment,
             keys: backendResponse ? Object.keys(backendResponse) : [],
           },
           hasRedirectToPayment: !!citaData.redirectToPayment,
