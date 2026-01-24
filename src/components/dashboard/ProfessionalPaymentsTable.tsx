@@ -10,7 +10,7 @@ interface PaymentRow {
     name: string; // e.g., "Carmen Leandra"
   };
   date: string; // e.g., "Dic 23, 2024"
-  amount: string; // e.g., "12.00€" or "Sube factura fiscal para ver monto"
+  amount: string; // e.g., "12.00€" (el monto siempre está disponible)
   type: string; // e.g., "Primera consulta"
   status: "pending" | "confirmed" | "cancelled";
   url_comprobante_pago?: string | null;
@@ -80,7 +80,8 @@ export default function ProfessionalPaymentsTable({
         setUploadingPagoId(pagoId);
         await onUploadInvoice(pagoId, file);
         // Mostrar mensaje de éxito
-        setToastMessage('Factura subida exitosamente');
+        // NUEVO MODELO: La factura solo se guarda, no activa nada en el backend
+        setToastMessage('Factura guardada exitosamente');
         setShowSuccessToast(true);
         setTimeout(() => {
           setShowSuccessToast(false);
@@ -270,7 +271,7 @@ export default function ProfessionalPaymentsTable({
                           ? 'bg-amber-500 hover:bg-amber-600 text-white cursor-pointer animate-pulse'
                           : 'bg-primary hover:bg-primary/90 text-white cursor-pointer'
                       } flex items-center gap-1 sm:gap-2`}
-                      title={row.necesitaFacturaFiscal ? 'Sube la factura fiscal para ver el monto de este pago' : ''}
+                      title={row.necesitaFacturaFiscal ? 'Sube la factura fiscal para guardarla en el sistema' : 'Actualizar o subir factura fiscal'}
                     >
                       {uploadingPagoId === row.id ? (
                         <>

@@ -7,6 +7,7 @@ import PricingCard from "@/components/ui/PricingCard";
 import { ApiProfessional, ProfessionalPrice } from "@/services/types/api";
 import { appointmentsService, citasService } from "@/services";
 import { useAuth } from "@/hooks/useAuth";
+import { createSpainLocalDateUTC, parseMySQLDateAsSpainLocal } from "@/services/utils/api-helpers";
 
 interface ProfessionalPageClientProps {
   professional: ApiProfessional;
@@ -819,127 +820,9 @@ export default function ProfessionalPageClient({
     return horarios;
   }, [horariosCargados, professional, tipoAtencion]);
 
-  // Función helper para crear fecha UTC que representa la hora seleccionada en España
-  // IMPORTANTE: El usuario selecciona la hora pensando que es hora de España
-  // Necesitamos crear una fecha UTC que cuando MySQL la guarde y se muestre, sea la hora correcta
-  const crearFechaEspanaUTC = (
-    year: number,
-    month: number,
-    day: number,
-    hour: number,
-    minute: number
-  ): Date => {
-    // Crear una fecha de referencia en UTC y ver qué hora muestra en España
-    // Luego calcular qué hora UTC necesitamos para que en España sea la hora seleccionada
-    const fechaReferenciaUTC = new Date(Date.UTC(year, month, day, 12, 0, 0)); // Mediodía UTC
-
-    // Obtener la hora en España para esta fecha de referencia
-    const horaReferenciaEspana = fechaReferenciaUTC.toLocaleString("en-US", {
-      timeZone: "Europe/Madrid",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-    const [horaRefEspanaStr] = horaReferenciaEspana.split(":");
-    const horaRefEspana = parseInt(horaRefEspanaStr);
-
-    // Calcular el offset: diferencia entre hora UTC de referencia (12:00) y hora en España
-    // Si España muestra 13:00 cuando UTC es 12:00, offset es +1 hora
-    const offsetHoras = horaRefEspana - 12;
-
-    // Calcular la hora UTC que necesitamos para que en España sea la hora seleccionada
-    // Si seleccionas 9:00 AM España y offset es +1, necesitamos 9 - 1 = 8:00 AM UTC
-    const horaUTC = hour - offsetHoras;
-
-    // Manejar casos donde la hora UTC podría ser negativa o mayor a 23
-    let horaUTCFinal = horaUTC;
-    let diaFinal = day;
-    if (horaUTC < 0) {
-      horaUTCFinal = 24 + horaUTC;
-      diaFinal = day - 1;
-    } else if (horaUTC >= 24) {
-      horaUTCFinal = horaUTC - 24;
-      diaFinal = day + 1;
-    }
-
-    // Crear la fecha UTC final
-    return new Date(Date.UTC(year, month, diaFinal, horaUTCFinal, minute, 0));
-  };
-
-  // Función helper para normalizar fechas a UTC para comparación precisa
-  // IMPORTANTE: Las fechas MySQL DATETIME vienen como hora local de España, no UTC
-  // Necesitamos convertirlas correctamente a UTC
-  const normalizeDateToUTC = (dateInput: string | Date): Date => {
-    if (dateInput instanceof Date) {
-      // Si ya es un Date, crear uno nuevo en UTC para evitar problemas de zona horaria
-      return new Date(
-        Date.UTC(
-          dateInput.getUTCFullYear(),
-          dateInput.getUTCMonth(),
-          dateInput.getUTCDate(),
-          dateInput.getUTCHours(),
-          dateInput.getUTCMinutes(),
-          dateInput.getUTCSeconds()
-        )
-      );
-    }
-
-    const dateStr = String(dateInput).trim();
-
-    // Si ya tiene 'Z' o '+', es ISO con zona horaria, parsear directamente
-    if (dateStr.includes("Z") || dateStr.includes("+")) {
-      return new Date(dateStr);
-    }
-
-    // Si es formato MySQL DATETIME (YYYY-MM-DD HH:MM:SS), interpretarlo como hora local de España
-    // y convertirlo a UTC
-    if (dateStr.includes(" ") && !dateStr.includes("T")) {
-      // Formato: "2026-01-30 14:00:00" -> interpretar como 14:00 España y convertir a UTC
-      const [datePart, timePart] = dateStr.split(" ");
-      const [year, month, day] = datePart.split("-").map(Number);
-      const timeParts = timePart.split(":").map(Number);
-      const [hours, minutes, seconds = 0] = timeParts;
-      
-      // Crear fecha interpretando la hora como hora local de España
-      // Usar el mismo método que crearFechaEspanaUTC pero en reversa
-      const fechaReferenciaUTC = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
-      const horaReferenciaEspana = fechaReferenciaUTC.toLocaleString("en-US", {
-        timeZone: "Europe/Madrid",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      });
-      const [horaRefEspanaStr] = horaReferenciaEspana.split(":");
-      const horaRefEspana = parseInt(horaRefEspanaStr);
-      const offsetHoras = horaRefEspana - 12;
-      
-      // Convertir hora España a UTC
-      const horaUTC = hours - offsetHoras;
-      let horaUTCFinal = horaUTC;
-      let diaFinal = day;
-      if (horaUTC < 0) {
-        horaUTCFinal = 24 + horaUTC;
-        diaFinal = day - 1;
-      } else if (horaUTC >= 24) {
-        horaUTCFinal = horaUTC - 24;
-        diaFinal = day + 1;
-      }
-      
-      return new Date(Date.UTC(year, month - 1, diaFinal, horaUTCFinal, minutes, seconds || 0));
-    }
-
-    // Si tiene 'T' pero no 'Z' ni offset, tratar como UTC (ya viene del frontend en UTC)
-    if (
-      dateStr.includes("T") &&
-      !dateStr.includes("Z") &&
-      !dateStr.includes("+")
-    ) {
-      return new Date(dateStr + (dateStr.includes(".") ? "Z" : ".000Z"));
-    }
-
-    // Fallback: parsear como está
-    return new Date(dateStr);
-  };
+  // Usar funciones helper centralizadas de api-helpers.ts para consistencia
+  const crearFechaEspanaUTC = createSpainLocalDateUTC;
+  const normalizeDateToUTC = parseMySQLDateAsSpainLocal;
 
   // Convertir hora a minutos desde medianoche
   function timeToMinutes(timeStr: string): number {
@@ -1042,33 +925,78 @@ export default function ProfessionalPageClient({
                   const year = date.getFullYear();
                   const month = date.getMonth();
                   const day = date.getDate();
-                  const slotDateTimeUTC = crearFechaEspanaUTC(
+                  const slotDateTimeUTC = createSpainLocalDateUTC(
                     year,
                     month,
                     day,
                     hour,
-                    minute
+                    minute,
+                    0
                   );
                   const slotEndUTC = new Date(
                     slotDateTimeUTC.getTime() + duracionMinutos * 60000
                   );
 
                   const isOccupied = existingAppointments.some((apt) => {
-                    // Usar dateTimeUTC si está disponible, sino normalizar dateTime
+                    // Asegurarse de que aptStart sea un objeto Date válido
                     const aptStart =
-                      apt.dateTimeUTC || normalizeDateToUTC(apt.dateTime);
-                    const aptEnd = new Date(
-                      aptStart.getTime() +
-                        (apt.duration || duracionMinutos) * 60000
-                    );
+                      apt.dateTimeUTC instanceof Date
+                        ? apt.dateTimeUTC
+                        : normalizeDateToUTC(apt.dateTime || apt.dateTimeUTC);
+                    
+                    // Si la cita tiene fecha_fin, usarla directamente en lugar de calcular desde duration
+                    // Esto es más preciso porque la duración puede tener problemas de redondeo
+                    let aptEnd: Date;
+                    if (apt.dateTimeEndUTC instanceof Date) {
+                      aptEnd = apt.dateTimeEndUTC;
+                    } else if (apt.dateTimeEnd) {
+                      aptEnd = normalizeDateToUTC(apt.dateTimeEnd);
+                    } else {
+                      // Fallback: calcular desde duration
+                      aptEnd = new Date(
+                        aptStart.getTime() + (apt.duration || duracionMinutos) * 60000
+                      );
+                    }
 
-                    // Verificar solapamiento
-                    return (
+                    // DEBUG: Calcular diferencia de tiempo para debugging
+                    const timeDiffMs = slotDateTimeUTC.getTime() - aptEnd.getTime();
+                    const timeDiffMinutes = Math.round(timeDiffMs / 60000);
+                    
+                    // Verificar solapamiento:
+                    // Dos intervalos se solapan si:
+                    // 1. El inicio del slot está dentro del intervalo de la cita (>= inicio y < fin)
+                    // 2. El fin del slot está dentro del intervalo de la cita (> inicio y <= fin)
+                    // 3. El slot contiene completamente la cita (slot inicio <= cita inicio y slot fin >= cita fin)
+                    // NOTA: NO bloqueamos si el slot empieza exactamente cuando termina la cita (permite slots consecutivos)
+                    const hasOverlap = (
                       (slotDateTimeUTC >= aptStart &&
                         slotDateTimeUTC < aptEnd) ||
                       (slotEndUTC > aptStart && slotEndUTC <= aptEnd) ||
                       (slotDateTimeUTC <= aptStart && slotEndUTC >= aptEnd)
                     );
+                    
+                    // Log si está cerca pero no solapado (para debugging)
+                    if (!hasOverlap && Math.abs(timeDiffMinutes) < 10) {
+                      console.log(
+                        `[ProfessionalPageClient] ⚠️ Slot cerca de cita (pero no solapado):`,
+                        {
+                          slotTime: `${hour}:${minute.toString().padStart(2, "0")}`,
+                          slotStartEspana: slotDateTimeUTC.toLocaleString("es-ES", {
+                            timeZone: "Europe/Madrid",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          }),
+                          aptEndEspana: aptEnd.toLocaleString("es-ES", {
+                            timeZone: "Europe/Madrid",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          }),
+                          timeDiffMinutes: timeDiffMinutes,
+                        }
+                      );
+                    }
+                    
+                    return hasOverlap;
                   });
 
                   if (!isOccupied) {
@@ -1179,6 +1107,10 @@ export default function ProfessionalPageClient({
       ? parseInt(selectedPrice.duracion.replace(/\D/g, "")) || 60
       : 60;
 
+    // Intervalo fijo para generar slots (cada 15 minutos)
+    // Esto permite mostrar slots más frecuentes y verificar disponibilidad dinámicamente
+    const slotIntervalMinutes = 15;
+
     // Si hay horarios específicos del día, generar slots para cada rango
     if (horariosDelDia.length > 0) {
       horariosDelDia.forEach((horarioDelDia) => {
@@ -1186,6 +1118,8 @@ export default function ProfessionalPageClient({
         const hasta = timeToMinutes(horarioDelDia.hora_fin.substring(0, 5));
         let currentTime = desde;
 
+        // Generar slots cada slotIntervalMinutes minutos, verificando si hay tiempo suficiente
+        // para la duración seleccionada desde cada slot
         while (currentTime + duracionMinutos <= hasta) {
           const slotTime = minutesToTime(currentTime);
           const hour = Math.floor(currentTime / 60);
@@ -1195,13 +1129,14 @@ export default function ProfessionalPageClient({
           const year = date.getFullYear();
           const month = date.getMonth();
           const day = date.getDate();
-          const slotDateTimeUTC = crearFechaEspanaUTC(
-            year,
-            month,
-            day,
-            hour,
-            minute
-          );
+                  const slotDateTimeUTC = createSpainLocalDateUTC(
+                    year,
+                    month,
+                    day,
+                    hour,
+                    minute,
+                    0
+                  );
           const slotEndUTC = new Date(
             slotDateTimeUTC.getTime() + duracionMinutos * 60000
           );
@@ -1280,11 +1215,12 @@ export default function ProfessionalPageClient({
             // - El inicio del slot está dentro del intervalo de la cita (>= inicio y < fin)
             // - El fin del slot está dentro del intervalo de la cita (> inicio y <= fin)
             // - El slot contiene completamente la cita (slot inicio <= cita inicio y slot fin >= cita fin)
-            // - El slot empieza exactamente cuando termina la cita (debe bloquearse porque no hay tiempo entre ellos)
+            // - El slot empieza exactamente cuando termina la cita (necesitamos buffer de 15 minutos entre citas)
+            // NOTA: condition5 se eliminó porque condition2 ya cubre el caso donde el slot termina dentro de la cita
             const condition1 = slotDateTimeUTC >= aptStart && slotDateTimeUTC < aptEnd;
             const condition2 = slotEndUTC > aptStart && slotEndUTC <= aptEnd;
             const condition3 = slotDateTimeUTC <= aptStart && slotEndUTC >= aptEnd;
-            const condition4 = slotDateTimeUTC.getTime() === aptEnd.getTime(); // Slot empieza cuando termina la cita
+            const condition4 = slotDateTimeUTC.getTime() === aptEnd.getTime(); // Slot empieza cuando termina la cita (buffer necesario)
             const hasOverlap = condition1 || condition2 || condition3 || condition4;
             
             // Log específico para el slot de 3:30 PM cuando está bloqueado incorrectamente
@@ -1430,16 +1366,22 @@ export default function ProfessionalPageClient({
             });
           }
 
-          currentTime += duracionMinutos;
+          // Incrementar por intervalo fijo (15 minutos) en lugar de por duración completa
+          // Esto permite mostrar slots más frecuentes y verificar disponibilidad dinámicamente
+          currentTime += slotIntervalMinutes;
         }
       });
     } else if (rangosDelDia && rangosDelDia.length > 0) {
       // Fallback: usar rangos de horariosDisponibles si no hay horarios específicos del día
+      // Intervalo fijo para generar slots (cada 15 minutos)
+      const slotIntervalMinutes = 15;
+      
       rangosDelDia.forEach((horario) => {
         const desde = timeToMinutes(horario.desde);
         const hasta = timeToMinutes(horario.hasta);
         let currentTime = desde;
 
+        // Generar slots cada slotIntervalMinutes minutos, verificando si hay tiempo suficiente
         while (currentTime + duracionMinutos <= hasta) {
           const slotTime = minutesToTime(currentTime);
           const hour = Math.floor(currentTime / 60);
@@ -1449,13 +1391,14 @@ export default function ProfessionalPageClient({
           const year = date.getFullYear();
           const month = date.getMonth();
           const day = date.getDate();
-          const slotDateTimeUTC = crearFechaEspanaUTC(
-            year,
-            month,
-            day,
-            hour,
-            minute
-          );
+                  const slotDateTimeUTC = createSpainLocalDateUTC(
+                    year,
+                    month,
+                    day,
+                    hour,
+                    minute,
+                    0
+                  );
           const slotEndUTC = new Date(
             slotDateTimeUTC.getTime() + duracionMinutos * 60000
           );
@@ -1580,7 +1523,9 @@ export default function ProfessionalPageClient({
             });
           }
 
-          currentTime += duracionMinutos;
+          // Incrementar por intervalo fijo (15 minutos) en lugar de por duración completa
+          // Esto permite mostrar slots más frecuentes y verificar disponibilidad dinámicamente
+          currentTime += slotIntervalMinutes;
         }
       });
     }
@@ -1756,22 +1701,26 @@ export default function ProfessionalPageClient({
               (apt) => apt.fuente === "outlook_calendar"
             ).length;
 
-            console.log(
-              `[ProfessionalPageClient] ✅ Citas ocupadas cargadas: ${appointments.length} total`,
-              {
-                total: appointments.length,
-                de_plataforma: citasPlataforma,
-                de_google_calendar: eventosGoogle,
-                de_outlook_calendar: eventosOutlook,
-                detalles: appointments.map((apt) => ({
+            // Log mejorado con advertencia si hay eventos externos bloqueando
+            if (eventosGoogle > 0 || eventosOutlook > 0) {
+              console.warn(
+                `⚠️ [ProfessionalPageClient] HORARIOS BLOQUEADOS POR CALENDARIOS EXTERNOS:`,
+                {
+                  total_citas: appointments.length,
+                  de_plataforma: citasPlataforma,
+                  de_google_calendar: eventosGoogle,
+                  de_outlook_calendar: eventosOutlook,
+                  mensaje: eventosGoogle > 0 
+                    ? `${eventosGoogle} evento(s) de Google Calendar están bloqueando horarios`
+                    : `${eventosOutlook} evento(s) de Outlook Calendar están bloqueando horarios`,
+                }
+              );
+              console.log(
+                `📋 [ProfessionalPageClient] Detalles de citas ocupadas:`,
+                appointments.map((apt) => ({
                   id: apt.id,
-                  dateTime: apt.dateTime,
-                  dateTimeUTC: apt.dateTimeUTC?.toISOString(),
-                  duration: apt.duration,
-                  estado: apt.estado,
                   fuente: apt.fuente,
-                  titulo: apt.titulo,
-                  // Mostrar también en hora de España para referencia
+                  titulo: apt.titulo || "Sin título",
                   fechaEspana: apt.dateTimeUTC
                     ? new Date(apt.dateTimeUTC).toLocaleString("es-ES", {
                         timeZone: "Europe/Madrid",
@@ -1782,9 +1731,21 @@ export default function ProfessionalPageClient({
                         minute: "2-digit",
                       })
                     : null,
-                })),
-              }
-            );
+                  duracion_minutos: apt.duration,
+                  estado: apt.estado,
+                }))
+              );
+            } else {
+              console.log(
+                `✅ [ProfessionalPageClient] Citas ocupadas cargadas: ${appointments.length} total (todas de la plataforma)`,
+                {
+                  total: appointments.length,
+                  de_plataforma: citasPlataforma,
+                  de_google_calendar: eventosGoogle,
+                  de_outlook_calendar: eventosOutlook,
+                }
+              );
+            }
           } else {
             console.warn(
               "[ProfessionalPageClient] No se encontraron citas ocupadas o la estructura de respuesta es incorrecta:",
@@ -2097,95 +2058,8 @@ export default function ProfessionalPageClient({
       const month = selectedDate.getMonth();
       const day = selectedDate.getDate();
 
-      // Función helper para crear fecha UTC que representa la hora seleccionada en España
-      // IMPORTANTE: El usuario selecciona la hora pensando que es hora de España
-      // Necesitamos crear una fecha UTC que cuando MySQL la guarde y se muestre, sea la hora correcta
-      // Método más directo: usar una fecha de prueba para calcular el offset exacto
-      const crearFechaEspana = (
-        year: number,
-        month: number,
-        day: number,
-        hour: number,
-        minute: number
-      ) => {
-        // Crear una fecha que represente la hora seleccionada en España (Europe/Madrid)
-        // España está en UTC+1 (o UTC+2 en verano), así que necesitamos calcular el offset correcto
-
-        // Método: crear una fecha de referencia en UTC y ver qué hora muestra en España
-        // Luego calcular qué hora UTC necesitamos para que en España sea la hora seleccionada
-        const fechaReferenciaUTC = new Date(
-          Date.UTC(year, month, day, 12, 0, 0)
-        ); // Mediodía UTC
-
-        // Obtener la hora en España para esta fecha de referencia
-        const horaReferenciaEspana = fechaReferenciaUTC.toLocaleString(
-          "en-US",
-          {
-            timeZone: "Europe/Madrid",
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: false,
-          }
-        );
-        const [horaRefEspanaStr] = horaReferenciaEspana.split(":");
-        const horaRefEspana = parseInt(horaRefEspanaStr);
-
-        // Calcular el offset: diferencia entre hora UTC de referencia (12:00) y hora en España
-        // Si España muestra 13:00 cuando UTC es 12:00, offset es +1 hora
-        const offsetHoras = horaRefEspana - 12;
-
-        // Calcular la hora UTC que necesitamos para que en España sea la hora seleccionada
-        // Si seleccionas 9:00 AM España y offset es +1, necesitamos 9 - 1 = 8:00 AM UTC
-        const horaUTC = hour - offsetHoras;
-
-        // Manejar casos donde la hora UTC podría ser negativa o mayor a 23
-        let horaUTCFinal = horaUTC;
-        let diaFinal = day;
-        if (horaUTC < 0) {
-          horaUTCFinal = 24 + horaUTC;
-          diaFinal = day - 1;
-        } else if (horaUTC >= 24) {
-          horaUTCFinal = horaUTC - 24;
-          diaFinal = day + 1;
-        }
-
-        // Crear la fecha UTC final
-        const fechaInicioUTC = new Date(
-          Date.UTC(year, month, diaFinal, horaUTCFinal, minute, 0)
-        );
-
-        // Verificar que la conversión sea correcta
-        const horaVerificacion = fechaInicioUTC.toLocaleString("en-US", {
-          timeZone: "Europe/Madrid",
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: false,
-        });
-
-        console.log("[crearFechaEspana] Conversión:", {
-          horaSeleccionada: `${hour}:${String(minute).padStart(
-            2,
-            "0"
-          )} (España)`,
-          fechaReferenciaUTC: fechaReferenciaUTC.toISOString(),
-          horaReferenciaEspana: horaReferenciaEspana,
-          offsetHoras: offsetHoras,
-          horaUTC: horaUTC,
-          horaUTCFinal: horaUTCFinal,
-          fechaInicioUTC: fechaInicioUTC.toISOString(),
-          horaVerificacionEspana: horaVerificacion,
-          coincide:
-            horaVerificacion ===
-            `${String(hour).padStart(2, "0")}:${String(minute).padStart(
-              2,
-              "0"
-            )}`,
-        });
-
-        return fechaInicioUTC;
-      };
-
-      const fechaInicio = crearFechaEspana(year, month, day, hours, minutes);
+      // Usar función helper centralizada para crear fecha UTC que representa hora España
+      const fechaInicio = createSpainLocalDateUTC(year, month, day, hours, minutes, 0);
 
       // Calcular fecha de fin según la duración del paquete
       const duracionMinutos = selectedPrice.duracion
@@ -3057,18 +2931,36 @@ export default function ProfessionalPageClient({
                               const fechaISO = selectedDate.toISOString();
                               const precioId =
                                 selectedPrice.id_precio?.toString() || "";
-                              const tipoAtencionParam = tipoAtencion || "presencial";
+                              const tipoAtencionParam =
+                                tipoAtencion || "presencial";
+
+                              // Construir query params para preservar información adicional
+                              const queryParams = new URLSearchParams();
+                              queryParams.set("fecha", fechaISO);
+                              queryParams.set("precioId", precioId);
+                              queryParams.set("tipoAtencion", tipoAtencionParam);
+                              queryParams.set("horario", slot.time);
+
+                              // Si es atención a domicilio, pasar también dirección y código postal
+                              if (tipoAtencionParam === "a_domicilio") {
+                                if (direccionDomicilio?.trim()) {
+                                  queryParams.set(
+                                    "direccionDomicilio",
+                                    direccionDomicilio.trim()
+                                  );
+                                }
+                                if (codigoPostal?.trim()) {
+                                  queryParams.set(
+                                    "codigoPostal",
+                                    codigoPostal.trim()
+                                  );
+                                }
+                              }
 
                               router.push(
                                 `/${params.category}/${params.service}/${
                                   params.professional
-                                }/seleccionar-horario?fecha=${encodeURIComponent(
-                                  fechaISO
-                                )}&precioId=${encodeURIComponent(
-                                  precioId
-                                )}&tipoAtencion=${encodeURIComponent(
-                                  tipoAtencionParam
-                                )}&horario=${encodeURIComponent(slot.time)}`
+                                }/seleccionar-horario?${queryParams.toString()}`
                               );
                             };
 
@@ -3077,19 +2969,19 @@ export default function ProfessionalPageClient({
                                 key={idx}
                                 onClick={handleSlotClick}
                                 disabled={!slot.available}
-                              className={`w-full text-left px-3 md:px-4 py-3 md:py-4 rounded-xl border flex items-center justify-between transition-all ${
-                                selectedTimeSlot === slot.time
-                                  ? "bg-purple-100 border-purple-300 text-purple-800 shadow-md"
-                                  : !slot.available
-                                  ? "bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed opacity-60"
-                                  : "bg-white border-gray-200 hover:bg-green-50 hover:border-green-300 hover:shadow-sm"
-                              }`}
-                              title={
-                                !slot.available
-                                  ? "Este horario está ocupado"
-                                  : "Click para seleccionar"
-                              }
-                            >
+                                className={`w-full text-left px-3 md:px-4 py-3 md:py-4 rounded-xl border flex items-center justify-between transition-all ${
+                                  selectedTimeSlot === slot.time
+                                    ? "bg-purple-100 border-purple-300 text-purple-800 shadow-md"
+                                    : !slot.available
+                                    ? "bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed opacity-60"
+                                    : "bg-white border-gray-200 hover:bg-green-50 hover:border-green-300 hover:shadow-sm"
+                                }`}
+                                title={
+                                  !slot.available
+                                    ? "Este horario está ocupado"
+                                    : "Click para seleccionar"
+                                }
+                              >
                               <div className="flex items-center gap-3">
                                 <div
                                   className={`w-2 h-2 rounded-full ${

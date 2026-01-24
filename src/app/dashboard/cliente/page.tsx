@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo, Suspense } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { citasService, pagosService } from "@/services";
+import { parseMySQLDateAsSpainLocal } from "@/services/utils/api-helpers";
 import { ApiAppointment } from "@/services/types/api";
 import { Pago } from "@/services/api/pagos";
 import UpcomingSessions from "@/components/dashboard/UpcomingSessions";
@@ -158,26 +159,9 @@ export default function ClienteDashboard() {
             (cita: any) => {
               const monto = cita.pago_monto ? parseFloat(cita.pago_monto) : 0;
 
-              let fechaInicioISO = cita.fecha_inicio;
-              if (typeof fechaInicioISO === "string") {
-                const fechaStr = fechaInicioISO.toString();
-                if (
-                  fechaStr.includes(" ") &&
-                  !fechaStr.includes("T") &&
-                  !fechaStr.includes("Z")
-                ) {
-                  fechaInicioISO = fechaStr
-                    .replace(" ", "T")
-                    .replace(/(:\d{2})$/, "$1.000Z");
-                } else if (
-                  fechaStr.includes("T") &&
-                  !fechaStr.includes("Z") &&
-                  !fechaStr.includes("+")
-                ) {
-                  fechaInicioISO =
-                    fechaStr + (fechaStr.includes(".") ? "Z" : ".000Z");
-                }
-              }
+              // Convertir fecha_inicio de MySQL interpretándola como hora local de España
+              const fechaInicioDate = parseMySQLDateAsSpainLocal(cita.fecha_inicio);
+              const fechaInicioISO = fechaInicioDate.toISOString();
 
               return {
                 id: String(cita.id_cita),
@@ -294,19 +278,8 @@ export default function ClienteDashboard() {
       })
       .slice(0, 5)
       .map((appointment) => {
-        let appointmentDate: Date;
-        const fechaStr = appointment.dateTime?.toString() || "";
-        if (
-          fechaStr.includes("T") ||
-          fechaStr.includes("Z") ||
-          fechaStr.includes("+")
-        ) {
-          appointmentDate = new Date(appointment.dateTime);
-        } else if (fechaStr.includes(" ") && !fechaStr.includes("T")) {
-          appointmentDate = new Date(fechaStr + "Z");
-        } else {
-          appointmentDate = new Date(appointment.dateTime);
-        }
+        // appointment.dateTime ya viene como ISO string correctamente convertido desde MySQL
+        const appointmentDate = new Date(appointment.dateTime);
 
         const fechaEspana = appointmentDate.toLocaleDateString("es-ES", {
           timeZone: "Europe/Madrid",
@@ -400,19 +373,8 @@ export default function ClienteDashboard() {
           appointment.status === "confirmed" || appointment.status === "pending"
       )
       .map((appointment) => {
-        let appointmentDate: Date;
-        const fechaStr = appointment.dateTime?.toString() || "";
-        if (
-          fechaStr.includes("T") ||
-          fechaStr.includes("Z") ||
-          fechaStr.includes("+")
-        ) {
-          appointmentDate = new Date(appointment.dateTime);
-        } else if (fechaStr.includes(" ") && !fechaStr.includes("T")) {
-          appointmentDate = new Date(fechaStr + "Z");
-        } else {
-          appointmentDate = new Date(appointment.dateTime);
-        }
+        // appointment.dateTime ya viene como ISO string correctamente convertido desde MySQL
+        const appointmentDate = new Date(appointment.dateTime);
 
         const fechaEspana = appointmentDate.toLocaleDateString("es-ES", {
           timeZone: "Europe/Madrid",

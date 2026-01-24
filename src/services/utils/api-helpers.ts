@@ -79,6 +79,160 @@ export const parseApiDate = (dateString: string): Date => {
   return new Date(dateString);
 };
 
+/**
+ * Crea un objeto Date en UTC que representa una hora específica en España (Europe/Madrid).
+ * 
+ * IMPORTANTE: Esta función convierte correctamente una hora de España a UTC.
+ * 
+ * @param year - Año
+ * @param month - Mes (0-11, donde 0 = enero)
+ * @param day - Día del mes
+ * @param hours - Hora en España (0-23)
+ * @param minutes - Minutos (0-59)
+ * @param seconds - Segundos (0-59, opcional, default 0)
+ * @returns Date object en UTC que cuando se muestra con timeZone: "Europe/Madrid" muestra la hora especificada
+ * 
+ * @example
+ * // Crear fecha para 12:00 PM del 27 de enero de 2026 en España
+ * // Resultado: Date que cuando se muestra con timeZone: "Europe/Madrid" muestra 12:00
+ * const date = createSpainLocalDateUTC(2026, 0, 27, 12, 0);
+ */
+export const createSpainLocalDateUTC = (
+  year: number,
+  month: number,
+  day: number,
+  hours: number,
+  minutes: number,
+  seconds: number = 0
+): Date => {
+  // Crear una fecha de referencia en UTC para calcular el offset de España
+  const fechaRefUTC = new Date(Date.UTC(year, month, day, 12, 0, 0));
+  
+  // Obtener qué hora es en España para esa fecha UTC de referencia
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/Madrid',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  const parts = formatter.formatToParts(fechaRefUTC);
+  const horaEspanaRef = parseInt(parts.find(p => p.type === 'hour')?.value || '12', 10);
+  
+  // Calcular offset: si España muestra 13:00 cuando UTC es 12:00, entonces offset = +1
+  const offsetHoras = horaEspanaRef - 12;
+  
+  // Convertir hora España a UTC: restar el offset
+  let horaUTC = hours - offsetHoras;
+  let diaFinal = day;
+  let mesFinal = month;
+  let añoFinal = year;
+  
+  // Manejar desbordamientos de día
+  if (horaUTC < 0) {
+    horaUTC = 24 + horaUTC;
+    diaFinal = day - 1;
+    if (diaFinal < 1) {
+      mesFinal = month - 1;
+      if (mesFinal < 0) {
+        mesFinal = 11;
+        añoFinal = year - 1;
+      }
+      // Calcular días del mes anterior (simplificado)
+      diaFinal = new Date(year, month, 0).getDate();
+    }
+  } else if (horaUTC >= 24) {
+    horaUTC = horaUTC - 24;
+    diaFinal = day + 1;
+    const diasEnMes = new Date(year, month + 1, 0).getDate();
+    if (diaFinal > diasEnMes) {
+      diaFinal = 1;
+      mesFinal = month + 1;
+      if (mesFinal > 11) {
+        mesFinal = 0;
+        añoFinal = year + 1;
+      }
+    }
+  }
+  
+  // Crear fecha UTC final
+  return new Date(Date.UTC(añoFinal, mesFinal, diaFinal, horaUTC, minutes, seconds));
+};
+
+/**
+ * Convierte una fecha MySQL DATETIME (sin zona horaria) a un objeto Date
+ * interpretándola como hora local de España (Europe/Madrid).
+ * 
+ * IMPORTANTE: Las fechas MySQL DATETIME vienen como hora local de España, NO como UTC.
+ * Esta función las convierte correctamente a UTC considerando el offset de España.
+ * 
+ * @param mysqlDateTime - Fecha en formato MySQL: "2026-01-26 09:00:00" o ISO string
+ * @returns Date object que representa correctamente la hora en España convertida a UTC
+ * 
+ * @example
+ * // MySQL: "2026-01-26 09:00:00" (09:00 hora España)
+ * // Resultado: Date que cuando se muestra con timeZone: "Europe/Madrid" muestra 09:00
+ * const date = parseMySQLDateAsSpainLocal("2026-01-26 09:00:00");
+ */
+export const parseMySQLDateAsSpainLocal = (mysqlDateTime: string | Date): Date => {
+  // Si ya es un Date, devolverlo tal cual (asumiendo que ya está correctamente convertido)
+  if (mysqlDateTime instanceof Date) {
+    return mysqlDateTime;
+  }
+
+  const dateStr = String(mysqlDateTime).trim();
+
+  // Si ya tiene 'Z' o '+', es ISO con zona horaria, parsear directamente
+  if (dateStr.includes("Z") || dateStr.includes("+") || dateStr.includes("-", 10)) {
+    return new Date(dateStr);
+  }
+
+  // Si es formato MySQL DATETIME (YYYY-MM-DD HH:MM:SS), interpretarlo como hora local de España
+  if (dateStr.includes(" ") && !dateStr.includes("T")) {
+    // Formato: "2026-01-26 09:00:00" -> interpretar como 09:00 España y convertir a UTC
+    const [datePart, timePart] = dateStr.split(" ");
+    const [year, month, day] = datePart.split("-").map(Number);
+    const timeParts = timePart.split(":").map(Number);
+    const [hours, minutes, seconds = 0] = timeParts;
+    
+    // Crear una fecha de referencia en UTC para calcular el offset de España en esa fecha específica
+    // Usamos mediodía (12:00) como referencia para evitar problemas con cambios de día
+    const fechaReferenciaUTC = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+    const horaReferenciaEspana = fechaReferenciaUTC.toLocaleString("en-US", {
+      timeZone: "Europe/Madrid",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    const [horaRefEspanaStr] = horaReferenciaEspana.split(":");
+    const horaRefEspana = parseInt(horaRefEspanaStr);
+    const offsetHoras = horaRefEspana - 12; // Offset en horas (ej: si España es UTC+1, offsetHoras = 1)
+    
+    // Convertir hora España a UTC restando el offset
+    let horaUTC = hours - offsetHoras;
+    let diaFinal = day;
+    
+    // Manejar desbordamientos de día
+    if (horaUTC < 0) {
+      horaUTC = 24 + horaUTC;
+      diaFinal = day - 1;
+    } else if (horaUTC >= 24) {
+      horaUTC = horaUTC - 24;
+      diaFinal = day + 1;
+    }
+    
+    return new Date(Date.UTC(year, month - 1, diaFinal, horaUTC, minutes, seconds));
+  }
+
+  // Si tiene 'T' pero no 'Z' ni offset, podría ser ISO sin zona horaria
+  // En este caso, asumimos que ya viene en UTC desde el backend
+  if (dateStr.includes("T") && !dateStr.includes("Z") && !dateStr.includes("+")) {
+    return new Date(dateStr + (dateStr.includes(".") ? "Z" : ".000Z"));
+  }
+
+  // Por defecto, intentar parsear como ISO
+  return new Date(dateStr);
+};
+
 // Utilidades para paginación
 export const createPaginationParams = (
   page: number = 1,

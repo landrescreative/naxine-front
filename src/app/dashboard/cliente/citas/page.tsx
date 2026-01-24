@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { appointmentsService, citasService } from "@/services";
+import { parseMySQLDateAsSpainLocal } from "@/services/utils/api-helpers";
 import { ApiAppointment } from "@/services/types/api";
 import UpcomingSessions from "@/components/dashboard/UpcomingSessions";
 import SessionCalendar from "@/components/dashboard/SessionCalendar";
@@ -228,31 +229,11 @@ export default function CitasPage() {
               const monto = cita.pago_monto ? parseFloat(cita.pago_monto) : 0;
 
               // Convertir fecha_inicio de MySQL a formato ISO UTC
-              // MySQL devuelve fechas como "2025-11-18 05:00:00" (sin zona horaria)
-              // Necesitamos interpretarlas como UTC agregando '.000Z'
-              let fechaInicioISO = cita.fecha_inicio;
-              if (typeof fechaInicioISO === "string") {
-                const fechaStr = fechaInicioISO.toString();
-                if (
-                  fechaStr.includes(" ") &&
-                  !fechaStr.includes("T") &&
-                  !fechaStr.includes("Z")
-                ) {
-                  // Formato MySQL DATETIME: convertir a ISO UTC
-                  // '2025-11-14 04:00:00' -> '2025-11-14T04:00:00.000Z'
-                  fechaInicioISO = fechaStr
-                    .replace(" ", "T")
-                    .replace(/(:\d{2})$/, "$1.000Z");
-                } else if (
-                  fechaStr.includes("T") &&
-                  !fechaStr.includes("Z") &&
-                  !fechaStr.includes("+")
-                ) {
-                  // Si ya tiene 'T' pero no tiene 'Z' ni offset, agregar '.000Z'
-                  fechaInicioISO =
-                    fechaStr + (fechaStr.includes(".") ? "Z" : ".000Z");
-                }
-              }
+              // MySQL devuelve fechas como "2026-01-26 09:00:00" (sin zona horaria)
+              // Estas fechas representan hora local de España, NO UTC
+              // Usamos parseMySQLDateAsSpainLocal para convertirlas correctamente
+              const fechaInicioDate = parseMySQLDateAsSpainLocal(cita.fecha_inicio);
+              const fechaInicioISO = fechaInicioDate.toISOString();
 
               return {
                 id: String(cita.id_cita),
@@ -562,26 +543,9 @@ export default function CitasPage() {
           const mappedAppointments: ApiAppointment[] = filteredCitas.map(
             (cita: any) => {
               const monto = cita.pago_monto ? parseFloat(cita.pago_monto) : 0;
-              let fechaInicioISO = cita.fecha_inicio;
-              if (typeof fechaInicioISO === "string") {
-                const fechaStr = fechaInicioISO.toString();
-                if (
-                  fechaStr.includes(" ") &&
-                  !fechaStr.includes("T") &&
-                  !fechaStr.includes("Z")
-                ) {
-                  fechaInicioISO = fechaStr
-                    .replace(" ", "T")
-                    .replace(/(:\d{2})$/, "$1.000Z");
-                } else if (
-                  fechaStr.includes("T") &&
-                  !fechaStr.includes("Z") &&
-                  !fechaStr.includes("+")
-                ) {
-                  fechaInicioISO =
-                    fechaStr + (fechaStr.includes(".") ? "Z" : ".000Z");
-                }
-              }
+              // Convertir fecha_inicio de MySQL interpretándola como hora local de España
+              const fechaInicioDate = parseMySQLDateAsSpainLocal(cita.fecha_inicio);
+              const fechaInicioISO = fechaInicioDate.toISOString();
 
               return {
                 id: String(cita.id_cita),
@@ -674,21 +638,9 @@ export default function CitasPage() {
       })
       .slice(0, 5)
       .map((appointment) => {
-        // Interpretar fecha como UTC si viene de MySQL sin zona horaria
-        let appointmentDate: Date;
-        const fechaStr = appointment.dateTime?.toString() || "";
-        if (
-          fechaStr.includes("T") ||
-          fechaStr.includes("Z") ||
-          fechaStr.includes("+")
-        ) {
-          appointmentDate = new Date(appointment.dateTime);
-        } else if (fechaStr.includes(" ") && !fechaStr.includes("T")) {
-          // Formato MySQL DATETIME: agregar 'Z' para indicar UTC
-          appointmentDate = new Date(fechaStr + "Z");
-        } else {
-          appointmentDate = new Date(appointment.dateTime);
-        }
+        // appointment.dateTime ya viene como ISO string correctamente convertido desde MySQL
+        // Solo necesitamos parsearlo como Date
+        const appointmentDate = new Date(appointment.dateTime);
 
         // Crear fecha solo con día/mes/año en zona horaria de España para comparaciones
         const fechaEspana = appointmentDate.toLocaleDateString("es-ES", {
@@ -787,21 +739,9 @@ export default function CitasPage() {
           appointment.status === "confirmed" || appointment.status === "pending"
       )
       .map((appointment) => {
-        // Interpretar fecha como UTC si viene de MySQL sin zona horaria
-        let appointmentDate: Date;
-        const fechaStr = appointment.dateTime?.toString() || "";
-        if (
-          fechaStr.includes("T") ||
-          fechaStr.includes("Z") ||
-          fechaStr.includes("+")
-        ) {
-          appointmentDate = new Date(appointment.dateTime);
-        } else if (fechaStr.includes(" ") && !fechaStr.includes("T")) {
-          // Formato MySQL DATETIME: agregar 'Z' para indicar UTC
-          appointmentDate = new Date(fechaStr + "Z");
-        } else {
-          appointmentDate = new Date(appointment.dateTime);
-        }
+        // appointment.dateTime ya viene como ISO string correctamente convertido desde MySQL
+        // Solo necesitamos parsearlo como Date
+        const appointmentDate = new Date(appointment.dateTime);
 
         // Obtener día/mes/año en zona horaria de España
         const fechaEspana = appointmentDate.toLocaleDateString("es-ES", {

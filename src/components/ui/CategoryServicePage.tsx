@@ -1,7 +1,7 @@
 "use client";
 
 import { notFound, useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import PurpleSection from "@/components/ui/PurpleSection";
 import ProfessionalCard from "@/components/ui/ProfessionalCard";
 import { categoriesData, ServiceData } from "@/data/categories";
@@ -324,6 +324,98 @@ export default function CategoryServicePage({
   // Guardar IDs de profesionales ya intentados para enriquecimiento (evita spam de peticiones)
   const enrichmentAttemptedIdsRef = useRef<Set<string>>(new Set());
 
+  // Función helper para calcular el precio mínimo de un profesional según la modalidad
+  const calculateMinPrice = (
+    professional: ApiProfessional,
+    modalidad: string
+  ): number => {
+    const prices = Array.isArray(professional.precios)
+      ? professional.precios
+      : [];
+
+    if (prices.length > 0) {
+      // Filtrar precios según la modalidad seleccionada
+      let preciosFiltrados = prices;
+      const modalidadLower = modalidad.toLowerCase();
+
+      if (modalidadLower === "presencial" || modalidadLower === "en_linea") {
+        // Para presencial/en_linea: incluir presencial, virtual, ambas, y sin modalidad
+        preciosFiltrados = prices.filter((p: any) => {
+          const precioModalidad = (p.modalidad || "").toLowerCase().trim();
+          return (
+            !precioModalidad ||
+            precioModalidad === "presencial" ||
+            precioModalidad === "virtual" ||
+            precioModalidad === "en_linea" ||
+            precioModalidad === "online" ||
+            precioModalidad === "ambas"
+          );
+        });
+      } else if (modalidadLower === "a_domicilio") {
+        // Para domicilio: solo incluir precios de domicilio
+        preciosFiltrados = prices.filter((p: any) => {
+          const precioModalidad = (p.modalidad || "").toLowerCase().trim();
+          return (
+            precioModalidad === "a_domicilio" ||
+            precioModalidad === "domicilio"
+          );
+        });
+      }
+
+      // Calcular el mínimo de los precios filtrados
+      if (preciosFiltrados.length > 0) {
+        const values = preciosFiltrados
+          .map((p: any) => {
+            // Extraer precio desde diferentes ubicaciones posibles
+            let precioValor = 0;
+
+            // Intentar desde p.precio primero
+            if (typeof p.precio === "number") {
+              precioValor = p.precio;
+            } else if (
+              p.precio !== undefined &&
+              p.precio !== null &&
+              p.precio !== ""
+            ) {
+              const parsed = Number(p.precio);
+              if (!isNaN(parsed)) {
+                precioValor = parsed;
+              }
+            }
+
+            // Si no hay precio, intentar desde raw
+            if (precioValor === 0 && p.raw) {
+              if (typeof p.raw.precio === "number") {
+                precioValor = p.raw.precio;
+              } else if (
+                p.raw.precio !== undefined &&
+                p.raw.precio !== null &&
+                p.raw.precio !== ""
+              ) {
+                const parsed = Number(p.raw.precio);
+                if (!isNaN(parsed)) {
+                  precioValor = parsed;
+                }
+              }
+            }
+
+            return precioValor;
+          })
+          .filter((v) => v > 0);
+        if (values.length > 0) {
+          return Number(Math.min(...values).toFixed(2));
+        }
+      }
+    }
+
+    // Fallback a tarifa por hora si no hay precios
+    if (professional.tarifaPorHora) {
+      return Number(Number(professional.tarifaPorHora).toFixed(2));
+    }
+
+    return 0;
+  };
+
   // Aplicar filtros en cliente
   const currentProfessionals = professionals.filter((prof) => {
     // Modalidad: filtrar según la modalidad seleccionada
@@ -477,6 +569,40 @@ export default function CategoryServicePage({
     totalProfessionalsFiltrados / professionalsPerPage
   );
 
+  // Calcular profesionales mapeados con precios mínimos de forma reactiva
+  const mappedProfessionals = useMemo(() => {
+    return currentProfessionalsPaginated.map((professional) => {
+      const minPrice = calculateMinPrice(professional, filterModalidad);
+
+      const cardImage =
+        professional.profileImage &&
+        professional.profileImage.trim().length > 0
+          ? professional.profileImage
+          : "/placeholder-professional.jpg";
+
+      return {
+        id: professional.id || "",
+        name:
+          professional.fullName || professional.name || "Profesional",
+        title: professional.specialty || "Especialista",
+        description: professional.bio || "",
+        rating: professional.rating || 0,
+        reviewCount: professional.totalSessions || 0,
+        price: minPrice,
+        image: cardImage,
+        isPopular:
+          professional.status === "activo" &&
+          (professional.rating || 0) >= 4.5,
+        specialties: professional.specialty
+          ? [professional.specialty]
+          : [],
+        slug: createProfessionalSlug(
+          professional.fullName || professional.name || "Profesional"
+        ),
+      };
+    });
+  }, [currentProfessionalsPaginated, filterModalidad]);
+
   // Debug: Log para verificar el filtrado
   useEffect(() => {
     console.log(`[CategoryServicePage] Filtro de modalidad: "${filterModalidad}"`, {
@@ -604,157 +730,9 @@ export default function CategoryServicePage({
               role="list"
               aria-label="Profesionales disponibles"
             >
-              {currentProfessionalsPaginated.map((professional) => {
+              {mappedProfessionals.map((mappedProfessional) => {
                 // Usar el serviceSlug si existe, sino usar el slug de la especialidad
                 const effectiveServiceSlug = serviceSlug || categorySlug;
-
-                // Mapear ApiProfessional al formato que espera ProfessionalCard
-                // Los datos ya vienen mapeados del servicio, solo necesitamos adaptarlos al formato del card
-                // Calcular precio mínimo filtrando por la modalidad seleccionada
-                const minPrice = (() => {
-                  const prices = Array.isArray(professional.precios)
-                    ? professional.precios
-                    : [];
-                  
-                  if (prices.length > 0) {
-                    // Filtrar precios según la modalidad seleccionada
-                    let preciosFiltrados = prices;
-                    const modalidadLower = filterModalidad.toLowerCase();
-                    
-                    if (modalidadLower === "presencial" || modalidadLower === "en_linea") {
-                      // Para presencial/en_linea: incluir presencial, virtual, ambas, y sin modalidad
-                      preciosFiltrados = prices.filter((p: any) => {
-                        const precioModalidad = (p.modalidad || "").toLowerCase().trim();
-                        return (
-                          !precioModalidad ||
-                          precioModalidad === "presencial" ||
-                          precioModalidad === "virtual" ||
-                          precioModalidad === "en_linea" ||
-                          precioModalidad === "online" ||
-                          precioModalidad === "ambas"
-                        );
-                      });
-                    } else if (modalidadLower === "a_domicilio") {
-                      // Para domicilio: solo incluir precios de domicilio
-                      preciosFiltrados = prices.filter((p: any) => {
-                        const precioModalidad = (p.modalidad || "").toLowerCase().trim();
-                        return (
-                          precioModalidad === "a_domicilio" ||
-                          precioModalidad === "domicilio"
-                        );
-                      });
-                    }
-                    
-                    // Calcular el mínimo de los precios filtrados
-                    if (preciosFiltrados.length > 0) {
-                      const values = preciosFiltrados
-                        .map((p: any) => {
-                          // Extraer precio desde diferentes ubicaciones posibles
-                          // El precio puede estar en p.precio directamente
-                          let precioValor = 0;
-                          
-                          // Intentar desde p.precio primero
-                          if (typeof p.precio === "number") {
-                            precioValor = p.precio;
-                          } else if (p.precio !== undefined && p.precio !== null && p.precio !== "") {
-                            const parsed = Number(p.precio);
-                            if (!isNaN(parsed)) {
-                              precioValor = parsed;
-                            }
-                          }
-                          
-                          // Si no hay precio, intentar desde raw
-                          if (precioValor === 0 && p.raw) {
-                            if (typeof p.raw.precio === "number") {
-                              precioValor = p.raw.precio;
-                            } else if (p.raw.precio !== undefined && p.raw.precio !== null && p.raw.precio !== "") {
-                              const parsed = Number(p.raw.precio);
-                              if (!isNaN(parsed)) {
-                                precioValor = parsed;
-                              }
-                            }
-                          }
-                          
-                          // Debug: loggear si encontramos un precio
-                          if (precioValor > 0) {
-                            console.log(`[CategoryServicePage] Precio encontrado para ${professional.id}:`, {
-                              precioValor,
-                              precioCompleto: p,
-                              modalidad: p.modalidad,
-                            });
-                          } else {
-                            console.warn(`[CategoryServicePage] No se pudo extraer precio de:`, p);
-                          }
-                          
-                          return precioValor;
-                        })
-                        .filter((v) => v > 0);
-                      if (values.length > 0) {
-                        const min = Number(Math.min(...values).toFixed(2));
-                        console.log(`[CategoryServicePage] ✅ Precio mínimo para ${professional.id}:`, {
-                          modalidad: filterModalidad,
-                          preciosTotales: prices.length,
-                          preciosFiltrados: preciosFiltrados.length,
-                          valores: values,
-                          minimo: min,
-                        });
-                        return min;
-                      } else {
-                        console.warn(`[CategoryServicePage] ⚠️ No se encontraron valores de precio válidos para ${professional.id} con modalidad ${filterModalidad}:`, {
-                          preciosFiltrados,
-                          preciosTotales: prices,
-                        });
-                      }
-                    } else {
-                      console.warn(`[CategoryServicePage] ⚠️ No hay precios filtrados para ${professional.id} con modalidad ${filterModalidad}:`, {
-                        preciosTotales: prices,
-                        modalidadFiltro: filterModalidad,
-                      });
-                    }
-                  }
-                  
-                  // Fallback a tarifa por hora si no hay precios
-                  if (professional.tarifaPorHora) {
-                    return Number(
-                      Number(professional.tarifaPorHora).toFixed(2)
-                    );
-                  }
-                  
-                  console.warn(`[CategoryServicePage] No se encontró precio para profesional ${professional.id} con modalidad ${filterModalidad}`, {
-                    precios: professional.precios,
-                    tarifaPorHora: professional.tarifaPorHora,
-                  });
-                  return 0;
-                })();
-
-                const cardImage =
-                  professional.profileImage &&
-                  professional.profileImage.trim().length > 0
-                    ? professional.profileImage
-                    : "/placeholder-professional.jpg";
-
-                const mappedProfessional = {
-                  id: professional.id || "",
-                  name:
-                    professional.fullName || professional.name || "Profesional",
-                  title: professional.specialty || "Especialista",
-                  description: professional.bio || "",
-                  rating: professional.rating || 0,
-                  reviewCount: professional.totalSessions || 0, // Usar totalSessions como reviewCount
-                  price: minPrice,
-                  image: cardImage,
-                  isPopular:
-                    professional.status === "activo" &&
-                    (professional.rating || 0) >= 4.5, // Popular si está activo y tiene buena calificación
-                  specialties: professional.specialty
-                    ? [professional.specialty]
-                    : [],
-                  // Slug basado SOLO en el nombre del profesional (sin ID en la URL)
-                  // Ejemplo: "/psicologia/ansiedad/maria-lopez-perez"
-                  slug: createProfessionalSlug(
-                    professional.fullName || professional.name || "Profesional"
-                  ),
-                };
 
                 return (
                   <ProfessionalCard

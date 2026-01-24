@@ -268,19 +268,13 @@ export default function AdminPagosPage() {
       if (statsResponse.success && statsResponse.data) {
         const stats = statsResponse.data.estadisticas || {};
         
-        // Priorizar balance_stripe (balance de Stripe), luego balance_general, luego balance_total
-        const balanceGeneral = typeof stats.balance_stripe === 'number' && stats.balance_stripe !== null
-          ? stats.balance_stripe
-          : typeof stats.balance_general === 'number' && stats.balance_general !== null
-          ? stats.balance_general
-          : typeof stats.balance_total === 'number' && stats.balance_total !== null
-          ? stats.balance_total
-          : 0;
+        // NUEVO MODELO: La plataforma NO gestiona dinero, no hay balance interno
+        const balanceGeneral = 0;
         
         setEstadisticas({
-          balance_general: balanceGeneral,
+          balance_general: 0, // NUEVO MODELO: No hay balance interno de la plataforma
           total_ventas: typeof stats.total_ventas === 'number' ? stats.total_ventas : (typeof stats.total_ventas === 'string' ? parseFloat(stats.total_ventas) : 0),
-          total_comisiones: typeof stats.total_comisiones === 'number' ? stats.total_comisiones : (typeof stats.total_comisiones === 'string' ? parseFloat(stats.total_comisiones) : 0),
+          total_comisiones: 0, // NUEVO MODELO: La plataforma NO retiene comisión
           total_pagos: typeof stats.total_pagos === 'number' ? stats.total_pagos : pagosData.length,
           total_clientes: 0, // TODO: Obtener de otra API
           total_profesionales: 0, // TODO: Obtener de otra API
@@ -290,6 +284,7 @@ export default function AdminPagosPage() {
         calculateMonthlyData(pagosData, fecha_inicio, fecha_fin);
       } else {
         // Si no hay estadísticas, calcular desde los pagos
+        // NUEVO MODELO: La plataforma NO retiene comisión, solo actúa como pasarela
         const totalVentas = pagosData
           .filter(p => p.estado === 'completado' || p.estado === 'pagado')
           .reduce((sum, p) => {
@@ -297,22 +292,13 @@ export default function AdminPagosPage() {
             return sum + (isNaN(monto) ? 0 : monto);
           }, 0);
         
-        const totalComisiones = pagosData
-          .filter(p => p.estado === 'completado' || p.estado === 'pagado')
-          .reduce((sum, p) => {
-            const monto = typeof p.monto === 'string' ? parseFloat(p.monto) : Number(p.monto);
-            if (isNaN(monto)) return sum;
-            const comision = monto <= 100 ? monto * 0.20 
-              : monto <= 200 ? monto * 0.15 
-              : monto <= 300 ? monto * 0.10 
-              : monto * 0.08;
-            return sum + comision;
-          }, 0);
+        // NUEVO MODELO: La plataforma NO retiene comisión
+        const totalComisiones = 0;
         
         setEstadisticas({
-          balance_general: totalVentas - totalComisiones,
+          balance_general: 0, // NUEVO MODELO: No hay balance interno de la plataforma
           total_ventas: totalVentas,
-          total_comisiones: totalComisiones,
+          total_comisiones: 0, // NUEVO MODELO: La plataforma NO retiene comisión
           total_pagos: pagosData.length,
           total_clientes: new Set(pagosData.map(p => p.id_cliente)).size,
           total_profesionales: new Set(pagosData.map(p => p.id_profesional)).size,
@@ -411,10 +397,11 @@ export default function AdminPagosPage() {
         tension: 0.4,
       },
       {
-        label: "Ingresos Netos",
+        label: "Ingresos Netos (Profesionales)",
         data: chartData.map((ingreso) => {
-          // Calcular ingresos netos (aproximación)
-          return ingreso * 0.85; // 85% después de comisiones aproximadas
+          // NUEVO MODELO: El profesional recibe el 100% del pago (menos comisiones de Stripe que se deducen automáticamente)
+          // Aproximación: ~96.5% después de comisiones de Stripe (~3.5%)
+          return ingreso * 0.965;
         }),
         borderColor: "rgb(249, 115, 22)",
         backgroundColor: "rgba(249, 115, 22, 0.1)",
@@ -610,7 +597,10 @@ export default function AdminPagosPage() {
                     Balance General
                   </p>
                   <p className="text-2xl font-bold text-gray-900">
-                    ${(typeof estadisticas.balance_general === 'number' ? estadisticas.balance_general : parseFloat(String(estadisticas.balance_general || 0))).toFixed(2)}
+                    $0.00
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    La plataforma no gestiona dinero
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">

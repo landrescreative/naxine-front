@@ -239,47 +239,20 @@ export default function PagosPage() {
           setPayments(pagosArray);
 
           // Calcular estadísticas
+          // NUEVO MODELO: La plataforma NO gestiona dinero, no hay balance interno
+          // El dinero va directamente a Stripe Connect del profesional
           const now = new Date();
           const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1);
 
-          // Balance de Naxine: solo pagos completados CON factura fiscal subida
-          // Este es el balance que se muestra al usuario (no el de Stripe Connect)
-          const balanceNaxine = pagosArray
-            .filter((p: any) => {
-              const estado = String(p.estado || "").toLowerCase();
-              const tieneFacturaFiscal =
-                p.url_factura_fiscal &&
-                p.url_factura_fiscal !== null &&
-                p.url_factura_fiscal !== "null" &&
-                p.url_factura_fiscal !== "undefined" &&
-                String(p.url_factura_fiscal).trim() !== "";
-              return (
-                (estado === "completado" ||
-                  estado === "pagado" ||
-                  estado === "paid") &&
-                tieneFacturaFiscal // Solo contar pagos con factura fiscal subida
-              );
-            })
-            .reduce((sum: number, p: any) => {
-              // Usar balance_general si está disponible, sino usar monto - comisión estimada
-              const balance = p.balance_general
-                ? parseFloat(String(p.balance_general))
-                : p.monto
-                ? parseFloat(String(p.monto))
-                : 0;
-              return sum + balance;
-            }, 0);
+          // NUEVO MODELO: No hay balance interno de la plataforma
+          // El balance real está en Stripe Connect del profesional
+          const balanceNaxine = 0;
 
-          // Ingresos del mes (pagos completados este mes CON factura fiscal subida)
+          // Ingresos del mes (pagos completados este mes)
+          // NUEVO MODELO: El profesional recibe el 100% del pago directamente en Stripe Connect
           const ingresosMes = pagosArray
             .filter((p: any) => {
               const estado = String(p.estado || "").toLowerCase();
-              const tieneFacturaFiscal =
-                p.url_factura_fiscal &&
-                p.url_factura_fiscal !== null &&
-                p.url_factura_fiscal !== "null" &&
-                p.url_factura_fiscal !== "undefined" &&
-                String(p.url_factura_fiscal).trim() !== "";
               if (
                 estado !== "completado" &&
                 estado !== "pagado" &&
@@ -287,7 +260,6 @@ export default function PagosPage() {
               )
                 return false;
               if (!p.fecha_pago) return false;
-              if (!tieneFacturaFiscal) return false; // Solo contar pagos con factura fiscal subida
               try {
                 const fechaPago = new Date(p.fecha_pago);
                 return !isNaN(fechaPago.getTime()) && fechaPago >= inicioMes;
@@ -296,12 +268,9 @@ export default function PagosPage() {
               }
             })
             .reduce((sum: number, p: any) => {
-              const balance = p.balance_general
-                ? parseFloat(String(p.balance_general))
-                : p.monto
-                ? parseFloat(String(p.monto))
-                : 0;
-              return sum + balance;
+              // El profesional recibe el 100% del monto (menos comisiones de Stripe que se deducen automáticamente)
+              const monto = p.monto ? parseFloat(String(p.monto)) : 0;
+              return sum + monto;
             }, 0);
 
           // Obtener balance de Naxine desde el backend (más preciso)
@@ -345,10 +314,10 @@ export default function PagosPage() {
           }
 
           setStats({
-            balanceGeneral: balanceNaxineBackend, // Balance de Naxine (no Stripe Connect)
-            ingresosMes,
-            stripeBalance: balanceNaxineBackend, // Mostrar balance de Naxine en lugar de Stripe Connect
-            tieneFacturasPendientes, // Flag para indicar si hay facturas pendientes
+            balanceGeneral: 0, // NUEVO MODELO: No hay balance interno de la plataforma
+            ingresosMes, // Ingresos del mes (100% del pago va a Stripe Connect)
+            stripeBalance: 0, // NUEVO MODELO: El balance está en Stripe Connect del profesional, no en la plataforma
+            tieneFacturasPendientes, // Solo informativo (no bloquea nada)
           });
         } else {
           setError(pagosResponse.error || "Error al cargar los pagos");
@@ -433,7 +402,8 @@ export default function PagosPage() {
           pago.url_factura_fiscal !== undefined
             ? pago.url_factura_fiscal
             : null,
-        // Flag para indicar si necesita subir factura fiscal (para destacar el botón)
+        // Flag para indicar si necesita subir factura fiscal (solo para destacar el botón)
+        // NUEVO MODELO: La factura solo se guarda, no activa nada en el backend
         necesitaFacturaFiscal: !(
           pago.url_factura_fiscal &&
           pago.url_factura_fiscal !== null &&
@@ -486,14 +456,17 @@ export default function PagosPage() {
               <div className="ml-5 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-white truncate">
-                    Balance de Naxine
+                    Balance en Stripe Connect
                   </dt>
                   <dd className="text-lg font-medium text-white">
-                    EUR €{stats.balanceGeneral.toFixed(2)}
+                    Ver en Stripe Dashboard
+                  </dd>
+                  <dd className="text-xs text-white/80 mt-1">
+                    ℹ️ El dinero va directamente a tu cuenta de Stripe Connect
                   </dd>
                   {stats.tieneFacturasPendientes && (
                     <dd className="text-xs text-white/80 mt-1">
-                      ⚠️ Tienes facturas pendientes de subir
+                      ⚠️ Tienes facturas pendientes de subir (solo informativo)
                     </dd>
                   )}
                 </dl>
@@ -541,6 +514,7 @@ export default function PagosPage() {
           <ProfessionalPaymentsTable
             rows={paymentRows}
             onUploadInvoice={async (pagoId: string, file: File) => {
+              // NUEVO MODELO: La factura solo se guarda, no activa balance ni depósitos
               const response = await pagosService.subirFacturaFiscal(
                 pagoId,
                 file
@@ -550,7 +524,7 @@ export default function PagosPage() {
                   response.error || "Error desconocido al subir factura"
                 );
               }
-              // El componente manejará el mensaje de éxito y recarga
+              // El componente manejará el mensaje de éxito y recarga para mostrar la factura guardada
             }}
           />
 

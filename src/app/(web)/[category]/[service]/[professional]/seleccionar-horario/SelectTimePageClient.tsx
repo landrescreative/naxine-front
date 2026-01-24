@@ -4,6 +4,7 @@ import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { ApiProfessional, ProfessionalPrice } from "@/services/types/api";
 import { appointmentsService, citasService } from "@/services";
 import { useAuth } from "@/hooks/useAuth";
+import { createSpainLocalDateUTC, parseMySQLDateAsSpainLocal } from "@/services/utils/api-helpers";
 import Image from "next/image";
 
 interface SelectTimePageClientProps {
@@ -115,6 +116,10 @@ export default function SelectTimePageClient({
   const [loadingAppointments, setLoadingAppointments] = useState(false);
   const [isCreatingAppointment, setIsCreatingAppointment] = useState(false);
   const [direccionDomicilio, setDireccionDomicilio] = useState<string>("");
+  const [codigoPostal, setCodigoPostal] = useState<string>("");
+  const [codigoPostalError, setCodigoPostalError] = useState<string | null>(
+    null
+  );
   const [stripeTaxCode, setStripeTaxCode] = useState<string | null>(null);
 
   // Ref para evitar re-seleccionar el precio múltiples veces
@@ -124,6 +129,18 @@ export default function SelectTimePageClient({
   useEffect(() => {
     hasSelectedPrice.current = false;
   }, [professional?.id, precioId]);
+
+  // Pre-cargar dirección y código postal desde la URL (si vienen del paso anterior)
+  useEffect(() => {
+    const direccionFromUrl = searchParams.get("direccionDomicilio");
+    if (direccionFromUrl) {
+      setDireccionDomicilio(direccionFromUrl);
+    }
+    const cpFromUrl = searchParams.get("codigoPostal");
+    if (cpFromUrl) {
+      setCodigoPostal(cpFromUrl);
+    }
+  }, [searchParams]);
 
   // Cargar el precio seleccionado
   useEffect(() => {
@@ -630,6 +647,54 @@ export default function SelectTimePageClient({
     }
   }, [currentMonth, professional.id]);
 
+  // Validar que el código postal esté en la lista del profesional
+  const validarCodigoPostal = (
+    cp: string
+  ): { valido: boolean; error: string | null } => {
+    if (!codigosPostalesDomicilio || !codigosPostalesDomicilio.trim()) {
+      return { valido: true, error: null }; // Si el profesional no especifica códigos, no validar
+    }
+
+    const codigoPostalIngresado = cp.trim();
+
+    if (!codigoPostalIngresado) {
+      return {
+        valido: false,
+        error: "Por favor, ingresa un código postal.",
+      };
+    }
+
+    // Validar formato (5 dígitos para España)
+    if (!/^\d{5}$/.test(codigoPostalIngresado)) {
+      return {
+        valido: false,
+        error: "El código postal debe tener 5 dígitos.",
+      };
+    }
+
+    // Normalizar códigos postales del profesional (separar por comas/espacios y limpiar)
+    const codigosProfesional = codigosPostalesDomicilio
+      .split(/[,\s]+/)
+      .map((cpItem) => cpItem.trim())
+      .filter((cpItem) => cpItem.length > 0);
+
+    // Verificar si el código postal ingresado está en la lista
+    const codigoEncontrado = codigosProfesional.find(
+      (cpProf) => cpProf === codigoPostalIngresado
+    );
+
+    if (!codigoEncontrado) {
+      return {
+        valido: false,
+        error: `El código postal ${codigoPostalIngresado} no está en las zonas de servicio del profesional. Códigos postales disponibles: ${codigosProfesional.join(
+          ", "
+        )}`,
+      };
+    }
+
+    return { valido: true, error: null };
+  };
+
   // Funciones helper
   const normalizarDia = (dia: string): string => {
     return dia
@@ -655,125 +720,9 @@ export default function SelectTimePageClient({
       .padStart(2, "0")}`;
   };
 
-  const crearFechaEspanaUTC = (
-    year: number,
-    month: number,
-    day: number,
-    hour: number,
-    minute: number
-  ): Date => {
-    // Crear una fecha de referencia en UTC y ver qué hora muestra en España
-    // Luego calcular qué hora UTC necesitamos para que en España sea la hora seleccionada
-    const fechaReferenciaUTC = new Date(Date.UTC(year, month, day, 12, 0, 0)); // Mediodía UTC
-
-    // Obtener la hora en España para esta fecha de referencia
-    const horaReferenciaEspana = fechaReferenciaUTC.toLocaleString("en-US", {
-      timeZone: "Europe/Madrid",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-    const [horaRefEspanaStr] = horaReferenciaEspana.split(":");
-    const horaRefEspana = parseInt(horaRefEspanaStr);
-
-    // Calcular el offset: diferencia entre hora UTC de referencia (12:00) y hora en España
-    // Si España muestra 13:00 cuando UTC es 12:00, offset es +1 hora
-    const offsetHoras = horaRefEspana - 12;
-
-    // Calcular la hora UTC que necesitamos para que en España sea la hora seleccionada
-    // Si seleccionas 9:00 AM España y offset es +1, necesitamos 9 - 1 = 8:00 AM UTC
-    const horaUTC = hour - offsetHoras;
-
-    // Manejar casos donde la hora UTC podría ser negativa o mayor a 23
-    let horaUTCFinal = horaUTC;
-    let diaFinal = day;
-    if (horaUTC < 0) {
-      horaUTCFinal = 24 + horaUTC;
-      diaFinal = day - 1;
-    } else if (horaUTC >= 24) {
-      horaUTCFinal = horaUTC - 24;
-      diaFinal = day + 1;
-    }
-
-    // Crear la fecha UTC final
-    return new Date(Date.UTC(year, month, diaFinal, horaUTCFinal, minute, 0));
-  };
-
-  // Función helper para normalizar fechas a UTC para comparación precisa
-  // IMPORTANTE: Las fechas MySQL DATETIME vienen como hora local de España, no UTC
-  // Necesitamos convertirlas correctamente a UTC
-  const normalizeDateToUTC = (dateInput: string | Date): Date => {
-    if (dateInput instanceof Date) {
-      // Si ya es un Date, crear uno nuevo en UTC para evitar problemas de zona horaria
-      return new Date(
-        Date.UTC(
-          dateInput.getUTCFullYear(),
-          dateInput.getUTCMonth(),
-          dateInput.getUTCDate(),
-          dateInput.getUTCHours(),
-          dateInput.getUTCMinutes(),
-          dateInput.getUTCSeconds()
-        )
-      );
-    }
-
-    const dateStr = String(dateInput).trim();
-
-    // Si ya tiene 'Z' o '+', es ISO con zona horaria, parsear directamente
-    if (dateStr.includes("Z") || dateStr.includes("+")) {
-      return new Date(dateStr);
-    }
-
-    // Si es formato MySQL DATETIME (YYYY-MM-DD HH:MM:SS), interpretarlo como hora local de España
-    // y convertirlo a UTC
-    if (dateStr.includes(" ") && !dateStr.includes("T")) {
-      // Formato: "2026-01-30 14:00:00" -> interpretar como 14:00 España y convertir a UTC
-      const [datePart, timePart] = dateStr.split(" ");
-      const [year, month, day] = datePart.split("-").map(Number);
-      const timeParts = timePart.split(":").map(Number);
-      const [hours, minutes, seconds = 0] = timeParts;
-      
-      // Crear fecha interpretando la hora como hora local de España
-      // Usar el mismo método que crearFechaEspanaUTC pero en reversa
-      const fechaReferenciaUTC = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
-      const horaReferenciaEspana = fechaReferenciaUTC.toLocaleString("en-US", {
-        timeZone: "Europe/Madrid",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      });
-      const [horaRefEspanaStr] = horaReferenciaEspana.split(":");
-      const horaRefEspana = parseInt(horaRefEspanaStr);
-      const offsetHoras = horaRefEspana - 12;
-      
-      // Convertir hora España a UTC
-      const horaUTC = hours - offsetHoras;
-      let horaUTCFinal = horaUTC;
-      let diaFinal = day;
-      if (horaUTC < 0) {
-        horaUTCFinal = 24 + horaUTC;
-        diaFinal = day - 1;
-      } else if (horaUTC >= 24) {
-        horaUTCFinal = horaUTC - 24;
-        diaFinal = day + 1;
-      }
-      
-      return new Date(Date.UTC(year, month - 1, diaFinal, horaUTCFinal, minutes, seconds || 0));
-    }
-
-    // Si tiene 'T' pero no 'Z' ni offset, tratar como UTC (ya viene del frontend en UTC)
-    if (
-      dateStr.includes("T") &&
-      !dateStr.includes("Z") &&
-      !dateStr.includes("+") &&
-      !dateStr.includes("-", 10)
-    ) {
-      return new Date(dateStr + (dateStr.includes(".") ? "Z" : ".000Z"));
-    }
-
-    // Por defecto, intentar parsear como ISO
-    return new Date(dateStr);
-  };
+  // Usar funciones helper centralizadas de api-helpers.ts para consistencia
+  const crearFechaEspanaUTC = createSpainLocalDateUTC;
+  const normalizeDateToUTC = parseMySQLDateAsSpainLocal;
 
   // Generar horarios disponibles basados en los horarios cargados
   const horariosDisponibles = useMemo(() => {
@@ -939,6 +888,10 @@ export default function SelectTimePageClient({
               ? parseInt(selectedPrice.duracion.replace(/\D/g, "")) || 60
               : 60;
 
+            // Intervalo fijo para generar slots (cada 15 minutos)
+            // Esto permite mostrar slots más frecuentes y verificar disponibilidad dinámicamente
+            const slotIntervalMinutes = 15;
+
             for (const horario of rangosDelDia) {
               const desde = timeToMinutes(horario.desde);
               const hasta = timeToMinutes(horario.hasta);
@@ -946,12 +899,13 @@ export default function SelectTimePageClient({
               while (currentTime + duracionMinutos <= hasta) {
                 const hour = Math.floor(currentTime / 60);
                 const minute = currentTime % 60;
-                const slotDateTimeUTC = crearFechaEspanaUTC(
+                const slotDateTimeUTC = createSpainLocalDateUTC(
                   year,
                   month,
                   day,
                   hour,
-                  minute
+                  minute,
+                  0
                 );
                 const slotEndUTC = new Date(
                   slotDateTimeUTC.getTime() + duracionMinutos * 60000
@@ -977,12 +931,23 @@ export default function SelectTimePageClient({
                     );
                   }
                   
-                  // Lógica de solapamiento mejorada
-                  const hasOverlap =
-                    (slotDateTimeUTC >= aptStart && slotDateTimeUTC < aptEnd) ||
-                    (slotEndUTC > aptStart && slotEndUTC <= aptEnd) ||
-                    (slotDateTimeUTC <= aptStart && slotEndUTC >= aptEnd) ||
-                    (slotDateTimeUTC.getTime() === aptEnd.getTime());
+                  // DEBUG: Calcular diferencia de tiempo para debugging
+                  const timeDiffMs = slotDateTimeUTC.getTime() - aptEnd.getTime();
+                  const timeDiffMinutes = Math.round(timeDiffMs / 60000);
+                  
+                  // Lógica de solapamiento mejorada:
+                  // Dos intervalos se solapan si:
+                  // 1. El inicio del slot está dentro del intervalo de la cita (>= inicio y < fin)
+                  // 2. El fin del slot está dentro del intervalo de la cita (>= inicio y <= fin)
+                  // 3. El slot contiene completamente la cita (slot inicio <= cita inicio y slot fin >= cita fin)
+                  // 4. El slot empieza exactamente cuando termina la cita (necesitamos buffer de 15 minutos entre citas)
+                  // 5. El slot termina exactamente cuando empieza la cita (también necesita buffer)
+                  const condition1 = slotDateTimeUTC >= aptStart && slotDateTimeUTC < aptEnd;
+                  const condition2 = slotEndUTC >= aptStart && slotEndUTC <= aptEnd;
+                  const condition3 = slotDateTimeUTC <= aptStart && slotEndUTC >= aptEnd;
+                  const condition4 = slotDateTimeUTC.getTime() === aptEnd.getTime(); // Slot empieza cuando termina la cita (buffer necesario)
+                  const condition5 = slotEndUTC.getTime() === aptStart.getTime(); // Slot termina cuando empieza la cita (buffer necesario)
+                  const hasOverlap = condition1 || condition2 || condition3 || condition4 || condition5;
                   
                   if (hasOverlap) {
                     console.log(
@@ -1017,9 +982,10 @@ export default function SelectTimePageClient({
                         aptDuration: apt.duration || duracionMinutos,
                         aptEstado: apt.estado,
                         aptFuente: apt.fuente,
-                  condition1: slotDateTimeUTC >= aptStart && slotDateTimeUTC < aptEnd,
-                  condition2: slotEndUTC > aptStart && slotEndUTC <= aptEnd,
-                  condition3: slotDateTimeUTC <= aptStart && slotEndUTC >= aptEnd,
+                  condition1,
+                  condition2,
+                  condition3,
+                  condition4: slotDateTimeUTC.getTime() === aptEnd.getTime(),
                   timeDiff: slotDateTimeUTC.getTime() - aptStart.getTime(),
                       }
                     );
@@ -1032,7 +998,8 @@ export default function SelectTimePageClient({
                   hasAvailableSlots = true;
                   break;
                 }
-                currentTime += duracionMinutos;
+                // Incrementar por intervalo fijo (15 minutos) en lugar de por duración completa
+                currentTime += slotIntervalMinutes;
               }
               if (hasAvailableSlots) break;
             }
@@ -1124,6 +1091,10 @@ export default function SelectTimePageClient({
         ? parseInt(selectedPrice.duracion.replace(/\D/g, "")) || 60
         : 60;
 
+      // Intervalo fijo para generar slots (cada 15 minutos)
+      // Esto permite mostrar slots más frecuentes y verificar disponibilidad dinámicamente
+      const slotIntervalMinutes = 15;
+
       if (horariosDelDia.length > 0) {
         // Usar un Map para evitar duplicados basándose en el time del slot
         const slotsMap = new Map<
@@ -1142,6 +1113,8 @@ export default function SelectTimePageClient({
           const hasta = timeToMinutes(horarioDelDia.hora_fin.substring(0, 5));
           let currentTime = desde;
 
+          // Generar slots cada slotIntervalMinutes minutos, verificando si hay tiempo suficiente
+          // para la duración seleccionada desde cada slot
           while (currentTime + duracionMinutos <= hasta) {
             const slotTime = minutesToTime(currentTime);
 
@@ -1153,7 +1126,8 @@ export default function SelectTimePageClient({
                 // Continuar con la lógica para verificar disponibilidad
               } else {
                 // Si el existente ya está disponible, no hacer nada
-                currentTime += duracionMinutos;
+                // Incrementar por intervalo fijo en lugar de por duración completa
+                currentTime += slotIntervalMinutes;
                 continue;
               }
             }
@@ -1161,12 +1135,13 @@ export default function SelectTimePageClient({
             const hour = Math.floor(currentTime / 60);
             const minute = currentTime % 60;
 
-            const slotDateTimeUTC = crearFechaEspanaUTC(
+            const slotDateTimeUTC = createSpainLocalDateUTC(
               date.getFullYear(),
               date.getMonth(),
               date.getDate(),
               hour,
-              minute
+              minute,
+              0
             );
             const slotEndUTC = new Date(
               slotDateTimeUTC.getTime() + duracionMinutos * 60000
@@ -1185,6 +1160,8 @@ export default function SelectTimePageClient({
               }
             }
 
+            // Verificar si hay suficiente tiempo continuo disponible desde este slot
+            // Un slot está ocupado si se solapa con alguna cita existente
             const isOccupied = existingAppointments.some((apt) => {
               // Asegurarse de que aptStart sea un objeto Date válido
               const aptStart =
@@ -1206,21 +1183,17 @@ export default function SelectTimePageClient({
                 );
               }
               
-              // Lógica de solapamiento mejorada:
-              // Dos intervalos se solapan si:
+              // Lógica de solapamiento: dos intervalos se solapan si:
               // 1. El inicio del slot está dentro del intervalo de la cita (>= inicio y < fin)
-              // 2. El fin del slot está dentro del intervalo de la cita (> inicio y <= fin)
+              // 2. El fin del slot está dentro del intervalo de la cita (>= inicio y <= fin)
               // 3. El slot contiene completamente la cita (slot inicio <= cita inicio y slot fin >= cita fin)
-              // 4. El slot empieza exactamente cuando termina la cita (debe bloquearse porque no hay tiempo entre ellos)
-              const hasOverlap =
-                // Slot empieza dentro de la cita
-                (slotDateTimeUTC >= aptStart && slotDateTimeUTC < aptEnd) ||
-                // Slot termina dentro de la cita
-                (slotEndUTC > aptStart && slotEndUTC <= aptEnd) ||
-                // Slot contiene completamente la cita
-                (slotDateTimeUTC <= aptStart && slotEndUTC >= aptEnd) ||
-                // Slot empieza exactamente cuando termina la cita
-                (slotDateTimeUTC.getTime() === aptEnd.getTime());
+              // 4. El slot empieza exactamente cuando termina la cita (necesitamos buffer de 15 minutos entre citas)
+              // NOTA: condition5 se eliminó porque condition2 ya cubre el caso donde el slot termina dentro de la cita
+              const condition1 = slotDateTimeUTC >= aptStart && slotDateTimeUTC < aptEnd;
+              const condition2 = slotEndUTC > aptStart && slotEndUTC <= aptEnd;
+              const condition3 = slotDateTimeUTC <= aptStart && slotEndUTC >= aptEnd;
+              const condition4 = slotDateTimeUTC.getTime() === aptEnd.getTime(); // Slot empieza cuando termina la cita (buffer necesario)
+              const hasOverlap = condition1 || condition2 || condition3 || condition4;
               
               if (hasOverlap) {
                 console.log(
@@ -1256,10 +1229,11 @@ export default function SelectTimePageClient({
                     aptEstado: apt.estado,
                     aptFuente: apt.fuente,
                     aptDateTimeOriginal: apt.dateTime,
-                  condition1: slotDateTimeUTC >= aptStart && slotDateTimeUTC < aptEnd,
-                  condition2: slotEndUTC > aptStart && slotEndUTC <= aptEnd,
-                  condition3: slotDateTimeUTC <= aptStart && slotEndUTC >= aptEnd,
-                  timeDiff: slotDateTimeUTC.getTime() - aptStart.getTime(),
+                    condition1,
+                    condition2,
+                    condition3,
+                    condition4: slotDateTimeUTC.getTime() === aptEnd.getTime(),
+                    slotDuration: duracionMinutos,
                   }
                 );
               }
@@ -1285,7 +1259,9 @@ export default function SelectTimePageClient({
               });
             }
 
-            currentTime += duracionMinutos;
+            // Incrementar por intervalo fijo (15 minutos) en lugar de por duración completa
+            // Esto permite mostrar slots más frecuentes y verificar disponibilidad dinámicamente
+            currentTime += slotIntervalMinutes;
           }
         });
 
@@ -1521,8 +1497,10 @@ export default function SelectTimePageClient({
 
               return {
                 id: uniqueId,
-                dateTime: fechaInicioUTC.toISOString(),
-                dateTimeUTC: fechaInicioUTC,
+                dateTime: fechaInicioUTC.toISOString(), // Guardar en formato ISO UTC
+                dateTimeUTC: fechaInicioUTC, // Guardar objeto Date UTC para comparación rápida
+                dateTimeEnd: fechaFinUTC.toISOString(), // Guardar fecha fin en formato ISO UTC
+                dateTimeEndUTC: fechaFinUTC, // Guardar objeto Date UTC para fecha fin
                 duration,
                 estado: cita.estado || "confirmada",
                 fuente: cita.fuente || "plataforma",
@@ -1558,14 +1536,29 @@ export default function SelectTimePageClient({
       return;
     }
 
-    if (
-      selectedTipoAtencion === "a_domicilio" &&
-      (!direccionDomicilio || direccionDomicilio.trim() === "")
-    ) {
-      alert(
-        "Por favor, proporciona tu dirección para la atención a domicilio."
-      );
-      return;
+    if (selectedTipoAtencion === "a_domicilio") {
+      if (!direccionDomicilio || direccionDomicilio.trim() === "") {
+        alert(
+          "Por favor, proporciona tu dirección completa para la atención a domicilio."
+        );
+        return;
+      }
+
+      if (!codigoPostal || codigoPostal.trim() === "") {
+        alert("Por favor, ingresa el código postal de tu dirección.");
+        return;
+      }
+
+      // Validar código postal
+      const validacion = validarCodigoPostal(codigoPostal);
+      if (!validacion.valido) {
+        alert(
+          validacion.error ||
+            "El código postal ingresado no es válido para este profesional."
+        );
+        setCodigoPostalError(validacion.error);
+        return;
+      }
     }
 
     // SIEMPRE redirigir a la página de confirmación para permitir agregar notas
@@ -1617,9 +1610,12 @@ export default function SelectTimePageClient({
         queryParams.set("tipoAtencion", selectedTipoAtencion);
       }
 
-      // Dirección de domicilio si es necesario
+      // Dirección y código postal solo para atención a domicilio
       if (selectedTipoAtencion === "a_domicilio" && direccionDomicilio) {
         queryParams.set("direccionDomicilio", direccionDomicilio);
+        if (codigoPostal) {
+          queryParams.set("codigoPostal", codigoPostal);
+        }
       }
 
       // Snapshot de impuestos para que la tarjeta sea idéntica
@@ -2017,7 +2013,8 @@ export default function SelectTimePageClient({
                 )}
               </div>
 
-              {/* Campo de dirección para citas a domicilio */}
+
+              {/* Campo de dirección y código postal para citas a domicilio */}
               {selectedTipoAtencion === "a_domicilio" && (
                 <div className="mb-6">
                   {codigosPostalesDomicilio && (
@@ -2067,18 +2064,80 @@ export default function SelectTimePageClient({
                       </div>
                     </div>
                   )}
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Dirección para atención a domicilio{" "}
-                    <span className="text-red-500">*</span>
-                  </label>
-                  <textarea
-                    value={direccionDomicilio}
-                    onChange={(e) => setDireccionDomicilio(e.target.value)}
-                    placeholder="Ingresa tu dirección completa (calle, número, ciudad, código postal)"
-                    rows={2}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    required
-                  />
+
+                  {/* Código Postal */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Código Postal <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={codigoPostal}
+                      onChange={(e) => {
+                        // Solo permitir números y máximo 5 dígitos
+                        const valor = e.target.value.replace(/\D/g, "").slice(0, 5);
+                        setCodigoPostal(valor);
+
+                        // Validar en tiempo real si hay texto
+                        if (valor.trim().length > 0) {
+                          const validacion = validarCodigoPostal(valor);
+                          setCodigoPostalError(validacion.error);
+                        } else {
+                          setCodigoPostalError(null);
+                        }
+                      }}
+                      onBlur={() => {
+                        if (codigoPostal.trim().length > 0) {
+                          const validacion = validarCodigoPostal(codigoPostal);
+                          setCodigoPostalError(validacion.error);
+                        }
+                      }}
+                      placeholder="28001"
+                      maxLength={5}
+                      className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                        codigoPostalError
+                          ? "border-red-500 focus:border-red-500 focus:ring-red-200"
+                          : "border-gray-300 focus:border-primary focus:ring-primary/20"
+                      }`}
+                      required
+                    />
+                    {codigoPostalError ? (
+                      <p className="text-xs text-red-600 mt-1 flex items-start gap-1">
+                        <svg
+                          className="w-4 h-4 mt-0.5 flex-shrink-0"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        <span>{codigoPostalError}</span>
+                      </p>
+                    ) : (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Ingresa el código postal de tu dirección
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Dirección completa */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Dirección para atención a domicilio{" "}
+                      <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      value={direccionDomicilio}
+                      onChange={(e) => setDireccionDomicilio(e.target.value)}
+                      placeholder="Ingresa tu dirección completa (calle, número, ciudad)"
+                      rows={2}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      required
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -2185,10 +2244,28 @@ export default function SelectTimePageClient({
                           </div>
                         )}
                         {selectedTipoAtencion === "en_linea" && (
+                          <>
+                            <div className="flex justify-between items-center mt-1">
+                              <span className="text-sm text-gray-600">Plataforma</span>
+                              <span className="text-sm font-medium text-green-600">
+                                Google Meet
+                              </span>
+                            </div>
+                            {codigoPostal && (
+                              <div className="flex justify-between items-center mt-1">
+                                <span className="text-sm text-gray-600">Código Postal</span>
+                                <span className="text-sm font-medium text-gray-900">
+                                  {codigoPostal}
+                                </span>
+                              </div>
+                            )}
+                          </>
+                        )}
+                        {selectedTipoAtencion === "a_domicilio" && codigoPostal && (
                           <div className="flex justify-between items-center mt-1">
-                            <span className="text-sm text-gray-600">Plataforma</span>
-                            <span className="text-sm font-medium text-green-600">
-                              Google Meet
+                            <span className="text-sm text-gray-600">Código Postal</span>
+                            <span className="text-sm font-medium text-gray-900">
+                              {codigoPostal}
                             </span>
                           </div>
                         )}
@@ -2264,7 +2341,9 @@ export default function SelectTimePageClient({
                   !selectedTimeSlot ||
                   isCreatingAppointment ||
                   (selectedTipoAtencion === "a_domicilio" &&
-                    !direccionDomicilio.trim())
+                    (!direccionDomicilio.trim() ||
+                      !codigoPostal.trim() ||
+                      !!codigoPostalError))
                 }
                 className="w-full bg-[#1a0082] text-white py-3 px-4 rounded-lg font-semibold hover:bg-[#1a0082]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >

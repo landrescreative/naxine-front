@@ -181,6 +181,7 @@ export default function PagoPage() {
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   const [linkVideollamada, setLinkVideollamada] = useState<string>("");
   const [paymentCompleted, setPaymentCompleted] = useState<boolean>(false);
+  const [codigoPostal, setCodigoPostal] = useState<string>("");
 
   useEffect(() => {
     const fetchPaymentInfo = async () => {
@@ -279,6 +280,14 @@ export default function PagoPage() {
     }
   }, [searchParams, params.id, isAuthenticated]);
 
+  // Cargar código postal desde los query params
+  useEffect(() => {
+    const codigoPostalParam = searchParams.get("codigoPostal");
+    if (codigoPostalParam) {
+      setCodigoPostal(codigoPostalParam);
+    }
+  }, [searchParams]);
+
   const handlePaymentSuccess = async () => {
     setPaymentCompleted(true);
     
@@ -334,6 +343,7 @@ export default function PagoPage() {
     const linkVideollamadaParam = linkVideollamada || searchParams.get("linkVideollamada");
     if (linkVideollamadaParam) confirmacionUrl.searchParams.set("linkVideollamada", linkVideollamadaParam);
     if (direccionDomicilio) confirmacionUrl.searchParams.set("direccionDomicilio", direccionDomicilio);
+    if (codigoPostalParam) confirmacionUrl.searchParams.set("codigoPostal", codigoPostalParam);
     confirmacionUrl.searchParams.set("monto", amount.toString());
     confirmacionUrl.searchParams.set("moneda", currency);
 
@@ -479,6 +489,7 @@ export default function PagoPage() {
   const currencyParam = searchParams.get("currency") || currency || "EUR";
   const tipoAtencion = searchParams.get("tipoAtencion") || "presencial";
   const direccionConsultorio = searchParams.get("direccionConsultorio") || "";
+  const codigoPostalParam = searchParams.get("codigoPostal") || "";
 
   // Formatear fecha y hora
   let fechaFormateada = fecha || "";
