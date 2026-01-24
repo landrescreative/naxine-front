@@ -6,6 +6,7 @@ import Image from "next/image";
 import SuccessPopup from "@/components/ui/SuccessPopup";
 import { disponibilidadService, citasService } from "@/services";
 import { useAuth } from "@/hooks/useAuth";
+import { createSpainLocalDateUTC, parseMySQLDateAsSpainLocal } from "@/services/utils/api-helpers";
 
 interface ReschedulePageProps {
   searchParams: Promise<{
@@ -111,66 +112,13 @@ export default function ReschedulePage({ searchParams }: ReschedulePageProps) {
   const minutesToTime = (minutes: number): string => {
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
-    const period = hours >= 12 ? "PM" : "AM";
-    const displayHours = hours > 12 ? hours - 12 : hours === 0 ? 12 : hours;
-    return `${displayHours.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")} ${period}`;
+    // Retornar formato 24 horas para los slots (HH:MM)
+    return `${hours.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}`;
   };
 
-  const crearFechaEspanaUTC = (
-    year: number,
-    month: number,
-    day: number,
-    hour: number,
-    minute: number
-  ): Date => {
-    const fechaReferenciaUTC = new Date(Date.UTC(year, month, day, 12, 0, 0));
-    const horaReferenciaEspana = fechaReferenciaUTC.toLocaleString("en-US", {
-      timeZone: "Europe/Madrid",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-    const [horaRefEspanaStr] = horaReferenciaEspana.split(":");
-    const horaRefEspana = parseInt(horaRefEspanaStr);
-    const offsetHoras = horaRefEspana - 12;
-    const horaUTC = hour - offsetHoras;
-    let horaUTCFinal = horaUTC;
-    let diaFinal = day;
-    if (horaUTC < 0) {
-      horaUTCFinal = 24 + horaUTC;
-      diaFinal = day - 1;
-    } else if (horaUTC >= 24) {
-      horaUTCFinal = horaUTC - 24;
-      diaFinal = day + 1;
-    }
-    return new Date(Date.UTC(year, month, diaFinal, horaUTCFinal, minute, 0));
-  };
-
-  const normalizeDateToUTC = (dateInput: string | Date): Date => {
-    if (dateInput instanceof Date) {
-      return new Date(
-        Date.UTC(
-          dateInput.getUTCFullYear(),
-          dateInput.getUTCMonth(),
-          dateInput.getUTCDate(),
-          dateInput.getUTCHours(),
-          dateInput.getUTCMinutes(),
-          dateInput.getUTCSeconds()
-        )
-      );
-    }
-    const dateStr = String(dateInput);
-    if (dateStr.includes("Z") || dateStr.includes("+") || dateStr.includes("-", 10)) {
-      return new Date(dateStr);
-    }
-    if (dateStr.includes(" ") && !dateStr.includes("T")) {
-      return new Date(dateStr.replace(" ", "T") + "Z");
-    }
-    if (dateStr.includes("T") && !dateStr.includes("Z") && !dateStr.includes("+")) {
-      return new Date(dateStr + "Z");
-    }
-    return new Date(dateStr);
-  };
+  // Usar funciones centralizadas de api-helpers.ts
+  const crearFechaEspanaUTC = createSpainLocalDateUTC;
+  const normalizeDateToUTC = parseMySQLDateAsSpainLocal;
 
   // Cargar información de la cita
   useEffect(() => {
@@ -280,96 +228,279 @@ export default function ReschedulePage({ searchParams }: ReschedulePageProps) {
     loadAppointmentInfo();
   }, [sessionId, isAuthenticated, professionalId, sp.professionalName]);
 
-  // Cargar horarios del profesional
+  // Normalizar tipo de atención
+  const normalizeTipoAtencion = useCallback(
+    (tipo: any): "presencial" | "en_linea" | "a_domicilio" | null => {
+      if (!tipo) return null;
+      const tipoLower = String(tipo).toLowerCase().trim();
+      if (tipoLower === "presencial" || tipoLower === "en_persona") {
+        return "presencial";
+      } else if (
+        tipoLower === "en_linea" ||
+        tipoLower === "en línea" ||
+        tipoLower === "online" ||
+        tipoLower === "virtual"
+      ) {
+        return "en_linea";
+      } else if (
+        tipoLower === "a_domicilio" ||
+        tipoLower === "a domicilio" ||
+        tipoLower === "domicilio"
+      ) {
+        return "a_domicilio";
+      }
+      return null;
+    },
+    []
+  );
+
+  // Cargar horarios del profesional desde endpoint público (igual que SelectTimePageClient)
   useEffect(() => {
     const idProfesional = loadedProfessionalId || professionalId;
-    if (idProfesional && tipoAtencion) {
-      console.log("[ReschedulePage] Cargando horarios para profesional:", idProfesional, "tipo:", tipoAtencion);
-      setLoadingHorarios(true);
-      const fetchHorarios = async () => {
-        try {
-          const response = await disponibilidadService.getDisponibilidadProfesional(
-            idProfesional,
-            tipoAtencion
-          );
-          console.log("[ReschedulePage] Respuesta de horarios:", response);
-          if (response.success && response.data) {
-            // El apiClient devuelve { success: true, data: {...} }
-            // El backend devuelve { success: true, data: { disponibilidad_horarios: [...] } }
-            // Entonces response.data es el objeto completo del backend
-            const backendData = response.data as any;
-            const horarios = backendData.data?.disponibilidad_horarios || backendData.disponibilidad_horarios;
-            
-            if (horarios && Array.isArray(horarios)) {
-              console.log("[ReschedulePage] Horarios cargados:", horarios.length, horarios);
-              setTodosLosHorarios(horarios);
-            } else {
-              console.warn("[ReschedulePage] No se encontraron horarios en la respuesta:", backendData);
-              setTodosLosHorarios([]);
-            }
+    if (!idProfesional || !tipoAtencion) {
+      console.log("[ReschedulePage] No se pueden cargar horarios - ID:", idProfesional, "tipo:", tipoAtencion);
+      setTodosLosHorarios([]);
+      return;
+    }
+
+    console.log("[ReschedulePage] Cargando horarios para profesional:", idProfesional, "tipo:", tipoAtencion);
+    setLoadingHorarios(true);
+    
+    const fetchHorariosDesdeEndpoint = async () => {
+      try {
+        const tipoNormalizado = normalizeTipoAtencion(tipoAtencion);
+        if (!tipoNormalizado) {
+          console.warn("[ReschedulePage] ⚠️ No hay tipo de atención válido, esperando...");
+          setTodosLosHorarios([]);
+          return;
+        }
+
+        const apiBaseUrl =
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+        const url = `${apiBaseUrl}/disponibilidad-horarios/public/profesional/${idProfesional}`;
+        console.log(
+          `[ReschedulePage] Cargando horarios desde endpoint público: ${url} (filtrando por tipo: ${tipoNormalizado})`
+        );
+
+        const response = await fetch(url, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log("[ReschedulePage] Respuesta del endpoint:", data);
+
+          let horarios: any[] = [];
+          if (data.success && data.data?.disponibilidad_horarios) {
+            horarios = data.data.disponibilidad_horarios;
+          } else if (Array.isArray(data.data)) {
+            horarios = data.data;
+          } else if (Array.isArray(data)) {
+            horarios = data;
+          }
+
+          if (horarios.length > 0) {
+            // Normalizar y filtrar horarios por tipo de atención
+            const normalizarYFiltrarHorarios = (horarios: any[]) => {
+              const horariosNormalizados = horarios.map((h: any) => {
+                let tipoNormalizado = h.tipo_atencion || null;
+                
+                if (tipoNormalizado) {
+                  const tipoLower = String(tipoNormalizado).toLowerCase().trim();
+                  
+                  if (tipoLower === "presencial" || tipoLower === "en_linea" || tipoLower === "a_domicilio") {
+                    tipoNormalizado = tipoLower;
+                  } else {
+                    if (tipoLower === "en_persona") {
+                      tipoNormalizado = "presencial";
+                    } else if (
+                      tipoLower === "en línea" ||
+                      tipoLower === "en-linea" ||
+                      tipoLower === "online" ||
+                      tipoLower === "virtual"
+                    ) {
+                      tipoNormalizado = "en_linea";
+                    } else if (
+                      tipoLower === "a-domicilio" ||
+                      tipoLower === "a domicilio" ||
+                      tipoLower === "domicilio"
+                    ) {
+                      tipoNormalizado = "a_domicilio";
+                    }
+                  }
+                }
+
+                return {
+                  dia_semana: h.dia_semana || "",
+                  hora_inicio: h.hora_inicio || "09:00:00",
+                  hora_fin: h.hora_fin || "17:00:00",
+                  tipo_atencion: tipoNormalizado,
+                };
+              });
+
+              // Filtrar por el tipo de atención
+              const horariosFiltrados = horariosNormalizados.filter((h) => {
+                return h.tipo_atencion === tipoNormalizado;
+              });
+
+              return horariosFiltrados.map((h) => ({
+                dia_semana: h.dia_semana,
+                hora_inicio: h.hora_inicio,
+                hora_fin: h.hora_fin,
+                tipo_atencion: h.tipo_atencion,
+              }));
+            };
+
+            const horariosFiltrados = normalizarYFiltrarHorarios(horarios);
+
+            console.log(
+              "[ReschedulePage] Horarios cargados desde endpoint:",
+              horariosFiltrados.length,
+              "de",
+              horarios.length,
+              "total (filtrados por tipo:",
+              tipoNormalizado,
+              ")"
+            );
+            setTodosLosHorarios(horariosFiltrados);
           } else {
-            console.warn("[ReschedulePage] Respuesta no exitosa:", response);
+            console.warn(
+              "[ReschedulePage] No se encontraron horarios en la respuesta"
+            );
             setTodosLosHorarios([]);
           }
-        } catch (error) {
-          console.error("[ReschedulePage] Error al cargar horarios:", error);
-        } finally {
-          setLoadingHorarios(false);
+        } else {
+          console.warn(
+            "[ReschedulePage] Error al cargar horarios:",
+            response.status,
+            response.statusText
+          );
+          setTodosLosHorarios([]);
         }
-      };
-      fetchHorarios();
-    } else {
-      console.log("[ReschedulePage] No se pueden cargar horarios - ID:", idProfesional, "tipo:", tipoAtencion);
-    }
-  }, [loadedProfessionalId, professionalId, tipoAtencion]);
+      } catch (error) {
+        console.error("[ReschedulePage] Error loading schedules:", error);
+        setTodosLosHorarios([]);
+      } finally {
+        setLoadingHorarios(false);
+      }
+    };
 
-  // Cargar citas ocupadas del mes
+    fetchHorariosDesdeEndpoint();
+  }, [loadedProfessionalId, professionalId, tipoAtencion, normalizeTipoAtencion]);
+
+  // Cargar citas ocupadas del mes (igual que SelectTimePageClient)
   useEffect(() => {
     const idProfesional = loadedProfessionalId || professionalId;
     if (idProfesional && currentMonth) {
       setLoadingAppointments(true);
       const fetchOccupiedAppointments = async () => {
         try {
+          // Calcular rango del mes visible
           const year = currentMonth.getFullYear();
           const month = currentMonth.getMonth();
           const inicioMes = new Date(year, month, 1);
           const finMes = new Date(year, month + 1, 0, 23, 59, 59);
 
-          const response = await citasService.getCitasOcupadas(
-            idProfesional,
-            inicioMes.toISOString(),
-            finMes.toISOString()
+          const apiBaseUrl =
+            process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+          const response = await fetch(
+            `${apiBaseUrl}/citas/profesional/${idProfesional}/ocupadas?fecha_inicio=${inicioMes.toISOString()}&fecha_fin=${finMes.toISOString()}`
           );
-
-          let citasData = null;
-          if (response.success && response.data) {
-            const data = response.data as any;
-            if (data.data?.citas && Array.isArray(data.data.citas)) {
-              citasData = data.data.citas;
-            } else if (data.citas && Array.isArray(data.citas)) {
-              citasData = data.citas;
+          
+          if (response.ok) {
+            const data = await response.json();
+            
+            // Manejar estructura anidada: response.data.data.citas o response.data.citas
+            let citasData = null;
+            if (data.success && data.data) {
+              if (
+                data.data.data &&
+                data.data.data.citas &&
+                Array.isArray(data.data.data.citas)
+              ) {
+                citasData = data.data.data.citas;
+              } else if (data.data.citas && Array.isArray(data.data.citas)) {
+                citasData = data.data.citas;
+              } else if (Array.isArray(data.data)) {
+                citasData = data.data;
+              }
             }
-          }
 
-          if (citasData && citasData.length > 0) {
-            const appointments = citasData
-              .filter((cita: any) => String(cita.id_cita) !== String(sessionId)) // Excluir la cita actual
-              .map((cita: any) => {
-                const fechaInicioUTC = normalizeDateToUTC(cita.fecha_inicio);
-                const fechaFinUTC = normalizeDateToUTC(cita.fecha_fin);
-                const duration = Math.round(
-                  (fechaFinUTC.getTime() - fechaInicioUTC.getTime()) / 60000
-                );
-                return {
-                  id: String(cita.id_cita),
-                  dateTime: fechaInicioUTC.toISOString(),
-                  dateTimeUTC: fechaInicioUTC,
-                  duration,
-                  estado: cita.estado,
-                };
-              });
-            setExistingAppointments(appointments);
+            if (citasData && citasData.length > 0) {
+              // Convertir citas ocupadas al formato esperado por el componente
+              // Normalizar fechas a UTC para comparación precisa
+              const appointments = citasData
+                .filter((cita: any) => String(cita.id_cita) !== String(sessionId)) // Excluir la cita actual
+                .map((cita: any) => {
+                  // Los eventos de Google Calendar y Outlook ya vienen en formato ISO UTC desde el backend
+                  // Solo las citas de la plataforma (MySQL DATETIME) necesitan conversión
+                  let fechaInicioUTC: Date;
+                  let fechaFinUTC: Date;
+                  
+                  if (cita.fuente === "google_calendar" || cita.fuente === "outlook_calendar") {
+                    // Eventos externos ya vienen en formato ISO UTC desde el backend
+                    fechaInicioUTC = new Date(cita.fecha_inicio);
+                    fechaFinUTC = new Date(cita.fecha_fin);
+                  } else {
+                    // Citas de la plataforma vienen en formato MySQL DATETIME, necesitan conversión
+                    fechaInicioUTC = normalizeDateToUTC(cita.fecha_inicio);
+                    fechaFinUTC = normalizeDateToUTC(cita.fecha_fin);
+                  }
+                  
+                  const duration = Math.round(
+                    (fechaFinUTC.getTime() - fechaInicioUTC.getTime()) / 60000
+                  );
+
+                  // Generar ID único
+                  let uniqueId = String(
+                    cita.id_cita ||
+                      cita.id_evento_google ||
+                      cita.id_evento_outlook ||
+                      `event_${Date.now()}_${Math.random()}`
+                  );
+
+                  if (
+                    cita.id_cita &&
+                    (cita.id_cita.toString().startsWith("gc_") ||
+                      cita.id_cita.toString().startsWith("oc_"))
+                  ) {
+                    uniqueId = String(cita.id_cita);
+                  }
+
+                  return {
+                    id: uniqueId,
+                    dateTime: fechaInicioUTC.toISOString(), // Guardar en formato ISO UTC
+                    dateTimeUTC: fechaInicioUTC, // Guardar objeto Date UTC para comparación rápida
+                    dateTimeEnd: fechaFinUTC.toISOString(), // Guardar fecha fin en formato ISO UTC
+                    dateTimeEndUTC: fechaFinUTC, // Guardar objeto Date UTC para fecha fin
+                    duration,
+                    estado: cita.estado || "confirmada",
+                    fuente: cita.fuente || "plataforma",
+                    titulo: cita.titulo || null,
+                  };
+                });
+              
+              console.log(
+                `[ReschedulePage] ✅ Citas ocupadas cargadas: ${appointments.length} total`
+              );
+              
+              setExistingAppointments(appointments);
+            } else {
+              console.warn(
+                "[ReschedulePage] No se encontraron citas ocupadas o la estructura de respuesta es incorrecta:",
+                data
+              );
+              setExistingAppointments([]);
+            }
           } else {
+            console.error(
+              "[ReschedulePage] Error al cargar citas ocupadas:",
+              response.status,
+              response.statusText
+            );
             setExistingAppointments([]);
           }
         } catch (error) {
@@ -467,7 +598,7 @@ export default function ReschedulePage({ searchParams }: ReschedulePageProps) {
     return available;
   }, [currentMonth, horariosDisponibles]);
 
-  // Generar slots de tiempo
+  // Generar slots de tiempo (igual que SelectTimePageClient)
   const generateTimeSlots = useCallback(
     (date: Date): Array<{ time: string; displayTime: string; available: boolean }> => {
       if (!date || !tipoAtencion) return [];
@@ -482,115 +613,165 @@ export default function ReschedulePage({ searchParams }: ReschedulePageProps) {
       const dayNames = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
       const diaSemanaNombre = dayNames[dayOfWeek];
       const diaSemanaNormalizado = normalizarDia(diaSemanaNombre);
+      
+      // Los horarios ya están filtrados por tipo de atención desde la carga
       const horariosDelDia = horariosCargados.filter((h) => {
         const diaHorarioNormalizado = normalizarDia(h.dia_semana);
-        return diaHorarioNormalizado === diaSemanaNormalizado && h.tipo_atencion === tipoAtencion;
+        const horarioTipoNormalizado = normalizeTipoAtencion(h.tipo_atencion);
+        const tipoCoincide = horarioTipoNormalizado === tipoAtencion;
+        return diaHorarioNormalizado === diaSemanaNormalizado && tipoCoincide;
       });
 
-      const horario = horariosDisponibles[dayOfWeek];
-      if (!horario && horariosDelDia.length === 0) return [];
+      if (horariosDelDia.length === 0) return [];
 
       const slots: Array<{ time: string; displayTime: string; available: boolean }> = [];
-      const duracionMinutos = 60; // Default duration
+      const duracionMinutos = currentAppointmentData?.duracion 
+        ? parseInt(String(currentAppointmentData.duracion).replace(/\D/g, "")) || 60
+        : 60;
 
-      if (horariosDelDia.length > 0) {
-        horariosDelDia.forEach((horarioDelDia) => {
-          const desde = timeToMinutes(horarioDelDia.hora_inicio.substring(0, 5));
-          const hasta = timeToMinutes(horarioDelDia.hora_fin.substring(0, 5));
-          let currentTime = desde;
+      // Intervalo fijo para generar slots (cada 15 minutos)
+      const slotIntervalMinutes = 15;
 
-          while (currentTime + duracionMinutos <= hasta) {
-            const slotTime = minutesToTime(currentTime);
-            const hour = Math.floor(currentTime / 60);
-            const minute = currentTime % 60;
-            const year = date.getFullYear();
-            const month = date.getMonth();
-            const day = date.getDate();
-            const slotDateTimeUTC = crearFechaEspanaUTC(year, month, day, hour, minute);
-            const slotEndUTC = new Date(slotDateTimeUTC.getTime() + duracionMinutos * 60000);
+      // Usar un Map para evitar duplicados basándose en el time del slot
+      const slotsMap = new Map<
+        string,
+        {
+          time: string;
+          displayTime: string;
+          available: boolean;
+        }
+      >();
 
-            let isPastTime = false;
-            if (isToday) {
-              const now = new Date();
-              const nowInSpain = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Madrid" }));
-              const nowMinutes = nowInSpain.getHours() * 60 + nowInSpain.getMinutes();
-              isPastTime = currentTime < nowMinutes;
-            }
-
-            const isOccupied = existingAppointments.some((apt) => {
-              const aptStart = apt.dateTimeUTC || normalizeDateToUTC(apt.dateTime);
-              const aptEnd = new Date(aptStart.getTime() + (apt.duration || duracionMinutos) * 60000);
-              return (
-                (slotDateTimeUTC >= aptStart && slotDateTimeUTC < aptEnd) ||
-                (slotEndUTC > aptStart && slotEndUTC <= aptEnd) ||
-                (slotDateTimeUTC <= aptStart && slotEndUTC >= aptEnd)
-              );
-            });
-
-            const timeStr = `${Math.floor(currentTime / 60).toString().padStart(2, "0")}:${(currentTime % 60).toString().padStart(2, "0")}`;
-            if (!slots.some((s) => s.time === timeStr) && !isPastTime) {
-              slots.push({
-                time: timeStr,
-                displayTime: slotTime,
-                available: !isOccupied,
-              });
-            }
-            currentTime += duracionMinutos;
-          }
-        });
-      } else if (horario) {
-        const desde = timeToMinutes(horario.desde);
-        const hasta = timeToMinutes(horario.hasta);
+      horariosDelDia.forEach((horarioDelDia) => {
+        const desde = timeToMinutes(horarioDelDia.hora_inicio.substring(0, 5));
+        const hasta = timeToMinutes(horarioDelDia.hora_fin.substring(0, 5));
         let currentTime = desde;
 
+        // Generar slots cada slotIntervalMinutes minutos, verificando si hay tiempo suficiente
         while (currentTime + duracionMinutos <= hasta) {
           const slotTime = minutesToTime(currentTime);
+
+          // Si ya existe este slot, solo actualizar si el nuevo es más disponible
+          if (slotsMap.has(slotTime)) {
+            const existingSlot = slotsMap.get(slotTime)!;
+            if (!existingSlot.available) {
+              // Continuar con la lógica para verificar disponibilidad
+            } else {
+              // Si el existente ya está disponible, no hacer nada
+              currentTime += slotIntervalMinutes;
+              continue;
+            }
+          }
+
           const hour = Math.floor(currentTime / 60);
           const minute = currentTime % 60;
           const year = date.getFullYear();
           const month = date.getMonth();
           const day = date.getDate();
-          const slotDateTimeUTC = crearFechaEspanaUTC(year, month, day, hour, minute);
-          const slotEndUTC = new Date(slotDateTimeUTC.getTime() + duracionMinutos * 60000);
+          
+          const slotDateTimeUTC = createSpainLocalDateUTC(
+            year,
+            month,
+            day,
+            hour,
+            minute,
+            0
+          );
+          const slotEndUTC = new Date(
+            slotDateTimeUTC.getTime() + duracionMinutos * 60000
+          );
 
           let isPastTime = false;
           if (isToday) {
             const now = new Date();
-            const nowInSpain = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Madrid" }));
-            const nowMinutes = nowInSpain.getHours() * 60 + nowInSpain.getMinutes();
-            isPastTime = currentTime < nowMinutes;
+            const nowInSpain = new Date(
+              now.toLocaleString("en-US", { timeZone: "Europe/Madrid" })
+            );
+            const nowMinutes =
+              nowInSpain.getHours() * 60 + nowInSpain.getMinutes();
+            if (currentTime < nowMinutes) {
+              isPastTime = true;
+            }
           }
 
+          // Verificar si hay suficiente tiempo continuo disponible desde este slot
+          // Un slot está ocupado si se solapa con alguna cita existente
           const isOccupied = existingAppointments.some((apt) => {
-            const aptStart = apt.dateTimeUTC || normalizeDateToUTC(apt.dateTime);
-            const aptEnd = new Date(aptStart.getTime() + (apt.duration || duracionMinutos) * 60000);
-            return (
-              (slotDateTimeUTC >= aptStart && slotDateTimeUTC < aptEnd) ||
-              (slotEndUTC > aptStart && slotEndUTC <= aptEnd) ||
-              (slotDateTimeUTC <= aptStart && slotEndUTC >= aptEnd)
-            );
+            // Asegurarse de que aptStart sea un objeto Date válido
+            const aptStart =
+              apt.dateTimeUTC instanceof Date
+                ? apt.dateTimeUTC
+                : normalizeDateToUTC(apt.dateTime || apt.dateTimeUTC);
+            
+            // Si la cita tiene fecha_fin, usarla directamente en lugar de calcular desde duration
+            let aptEnd: Date;
+            if (apt.dateTimeEndUTC instanceof Date) {
+              aptEnd = apt.dateTimeEndUTC;
+            } else if (apt.dateTimeEnd) {
+              aptEnd = normalizeDateToUTC(apt.dateTimeEnd);
+            } else {
+              // Fallback: calcular desde duration
+              aptEnd = new Date(
+                aptStart.getTime() + (apt.duration || duracionMinutos) * 60000
+              );
+            }
+            
+            // Lógica de solapamiento: dos intervalos se solapan si:
+            // 1. El inicio del slot está dentro del intervalo de la cita (>= inicio y < fin)
+            // 2. El fin del slot está dentro del intervalo de la cita (>= inicio y <= fin)
+            // 3. El slot contiene completamente la cita (slot inicio <= cita inicio y slot fin >= cita fin)
+            // 4. El slot empieza exactamente cuando termina la cita (necesitamos buffer de 15 minutos entre citas)
+            const condition1 = slotDateTimeUTC >= aptStart && slotDateTimeUTC < aptEnd;
+            const condition2 = slotEndUTC > aptStart && slotEndUTC <= aptEnd;
+            const condition3 = slotDateTimeUTC <= aptStart && slotEndUTC >= aptEnd;
+            const condition4 = slotDateTimeUTC.getTime() === aptEnd.getTime(); // Slot empieza cuando termina la cita (buffer necesario)
+            const hasOverlap = condition1 || condition2 || condition3 || condition4;
+            
+            return hasOverlap;
           });
 
-          if (!isPastTime) {
-            slots.push({
-              time: `${Math.floor(currentTime / 60).toString().padStart(2, "0")}:${(currentTime % 60).toString().padStart(2, "0")}`,
-              displayTime: slotTime,
-              available: !isOccupied,
+          const available = !isPastTime && !isOccupied;
+
+          const [hours24, minutes24] = slotTime.split(":").map(Number);
+          const period = hours24 >= 12 ? "pm" : "am";
+          const hours12 = hours24 % 12 || 12;
+          const displayTime = `${hours12}:${minutes24
+            .toString()
+            .padStart(2, "0")}${period}`;
+
+          // Solo agregar si no existe o si el existente no está disponible y este sí
+          if (!slotsMap.has(slotTime) || !slotsMap.get(slotTime)!.available) {
+            slotsMap.set(slotTime, {
+              time: slotTime,
+              displayTime,
+              available,
             });
           }
-          currentTime += duracionMinutos;
-        }
-      }
 
-      slots.sort((a, b) => {
+          // Incrementar por intervalo fijo (15 minutos) en lugar de por duración completa
+          currentTime += slotIntervalMinutes;
+        }
+      });
+
+      // Convertir el Map a un array y ordenar por tiempo
+      return Array.from(slotsMap.values()).sort((a, b) => {
         const timeA = timeToMinutes(a.time);
         const timeB = timeToMinutes(b.time);
         return timeA - timeB;
       });
-
-      return slots;
     },
-    [horariosCargados, horariosDisponibles, tipoAtencion, existingAppointments]
+    [
+      horariosCargados,
+      tipoAtencion,
+      existingAppointments,
+      normalizarDia,
+      timeToMinutes,
+      minutesToTime,
+      crearFechaEspanaUTC,
+      normalizeDateToUTC,
+      normalizeTipoAtencion,
+      currentAppointmentData,
+    ]
   );
 
   const timeSlots = useMemo(() => {
@@ -705,7 +886,7 @@ export default function ReschedulePage({ searchParams }: ReschedulePageProps) {
       const day = selectedDate.getDate();
       
       // Crear fecha UTC que representa la hora seleccionada en España
-      const fechaInicioUTC = crearFechaEspanaUTC(year, month, day, hours, minutes);
+      const fechaInicioUTC = createSpainLocalDateUTC(year, month, day, hours, minutes, 0);
       const fechaFinUTC = new Date(fechaInicioUTC.getTime() + duracionMinutos * 60000);
 
       console.log("[ReschedulePage] Reagendando cita:", {

@@ -43,6 +43,50 @@ export default function PagosPage() {
     totalPages: 0,
   });
   const [hasMorePages, setHasMorePages] = useState(false);
+  const [loadingStripeLogin, setLoadingStripeLogin] = useState(false);
+
+  // Función para abrir el dashboard de Stripe
+  const handleOpenStripeDashboard = async () => {
+    if (!professionalId) {
+      setError("No se pudo identificar tu cuenta profesional");
+      return;
+    }
+
+    try {
+      setLoadingStripeLogin(true);
+      setError(null);
+
+      const response = await professionalsService.getStripeLoginLink();
+
+      if (response.success && response.data) {
+        const backendData = response.data as any;
+        const loginUrl =
+          backendData.data?.login_url ||
+          backendData.login_url ||
+          backendData.data?.data?.login_url;
+
+        if (loginUrl) {
+          // Abrir el dashboard de Stripe en una nueva pestaña
+          window.open(loginUrl, "_blank", "noopener,noreferrer");
+        } else {
+          setError("No se pudo obtener el enlace de acceso a Stripe");
+        }
+      } else {
+        setError(
+          response.error ||
+            "Error al obtener el enlace de acceso al dashboard de Stripe"
+        );
+      }
+    } catch (err: any) {
+      console.error("Error al obtener link de Stripe:", err);
+      setError(
+        err.message ||
+          "Error al acceder al dashboard de Stripe. Por favor, intenta de nuevo."
+      );
+    } finally {
+      setLoadingStripeLogin(false);
+    }
+  };
 
   // Cargar id_profesional del usuario autenticado
   useEffect(() => {
@@ -458,14 +502,64 @@ export default function PagosPage() {
                   <dt className="text-sm font-medium text-white truncate">
                     Balance en Stripe Connect
                   </dt>
-                  <dd className="text-lg font-medium text-white">
+                  <dd className="text-lg font-medium text-white mb-2">
                     Ver en Stripe Dashboard
                   </dd>
-                  <dd className="text-xs text-white/80 mt-1">
+                  <dd className="text-xs text-white/80 mt-1 mb-3">
                     ℹ️ El dinero va directamente a tu cuenta de Stripe Connect
                   </dd>
+                  <dd>
+                    <button
+                      onClick={handleOpenStripeDashboard}
+                      disabled={loadingStripeLogin}
+                      className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-primary bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {loadingStripeLogin ? (
+                        <>
+                          <svg
+                            className="animate-spin -ml-1 mr-2 h-3 w-3 text-primary"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
+                          </svg>
+                          Cargando...
+                        </>
+                      ) : (
+                        <>
+                          <svg
+                            className="h-3 w-3 mr-1.5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                            />
+                          </svg>
+                          Abrir Dashboard de Stripe
+                        </>
+                      )}
+                    </button>
+                  </dd>
                   {stats.tieneFacturasPendientes && (
-                    <dd className="text-xs text-white/80 mt-1">
+                    <dd className="text-xs text-white/80 mt-2">
                       ⚠️ Tienes facturas pendientes de subir (solo informativo)
                     </dd>
                   )}

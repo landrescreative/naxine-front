@@ -1036,6 +1036,24 @@ export class ProfessionalsService {
       stripe_account_id: string;
     }>("/profesionales/me/stripe/onboarding", params);
   }
+
+  /**
+   * Crea un link de login para acceder al dashboard de Stripe Connect
+   * Endpoint: POST /api/profesionales/me/stripe/login
+   */
+  async getStripeLoginLink(): Promise<
+    ApiResponse<{
+      login_url: string;
+      profesional_id: number;
+      stripe_account_id: string;
+    }>
+  > {
+    return apiClient.post<{
+      login_url: string;
+      profesional_id: number;
+      stripe_account_id: string;
+    }>("/profesionales/me/stripe/login");
+  }
 }
 
 export const professionalsService = new ProfessionalsService();
