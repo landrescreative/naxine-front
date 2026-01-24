@@ -2209,8 +2209,7 @@ export default function SelectTimePageClient({
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">Precio</span>
                       <span className="text-sm font-medium text-gray-900">
-                        {selectedPrice.precio.toFixed(2)}
-                        {selectedPrice.moneda === "EUR" ? "€" : "$"}
+                        {selectedPrice.precio.toFixed(2)}€
                       </span>
                     </div>
                     {selectedDate && selectedTimeSlot && (
@@ -2279,8 +2278,7 @@ export default function SelectTimePageClient({
                             Subtotal (sin impuestos):
                           </span>
                           <span className="font-medium text-gray-900">
-                            {selectedPrice.moneda === "EUR" ? "€" : "$"}{" "}
-                            {taxInfo.base.toFixed(2)}
+                            {taxInfo.base.toFixed(2)}€
                           </span>
                         </div>
                         {!taxInfo.isExempt && taxInfo.tax > 0 && (
@@ -2289,8 +2287,7 @@ export default function SelectTimePageClient({
                               Impuestos (IVA {taxInfo.taxPercentage}%):
                             </span>
                             <span className="font-medium text-gray-900">
-                              {selectedPrice.moneda === "EUR" ? "€" : "$"}{" "}
-                              {taxInfo.tax.toFixed(2)}
+                              {taxInfo.tax.toFixed(2)}€
                             </span>
                           </div>
                         )}
@@ -2308,8 +2305,7 @@ export default function SelectTimePageClient({
                               Total
                             </span>
                             <span className="text-base font-bold text-gray-900">
-                              {selectedPrice.moneda === "EUR" ? "€" : "$"}{" "}
-                              {taxInfo.total.toFixed(2)}
+                              {taxInfo.total.toFixed(2)}€
                             </span>
                           </div>
                         </div>
@@ -2322,8 +2318,7 @@ export default function SelectTimePageClient({
                             Total
                           </span>
                           <span className="text-base font-bold text-gray-900">
-                            {selectedPrice.moneda === "EUR" ? "€" : "$"}{" "}
-                            {selectedPrice.precio.toFixed(2)}
+                            {selectedPrice.precio.toFixed(2)}€
                           </span>
                         </div>
                       </div>

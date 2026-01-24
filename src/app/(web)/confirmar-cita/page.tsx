@@ -991,8 +991,7 @@ function ConfirmarCitaAuthPageContent() {
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">Precio</span>
                     <span className="text-sm font-medium text-gray-900">
-                      {citaInfo.price.toFixed(2)}
-                      {citaInfo.currency === "EUR" ? "€" : "$"}
+                      {citaInfo.price.toFixed(2)}€
                     </span>
                   </div>
 
@@ -1047,8 +1046,7 @@ function ConfirmarCitaAuthPageContent() {
                           Subtotal (sin impuestos):
                         </span>
                         <span className="font-medium text-gray-900">
-                          {citaInfo.currency === "EUR" ? "€" : "$"}{" "}
-                          {citaInfo.taxInfo.base.toFixed(2)}
+                          {citaInfo.taxInfo.base.toFixed(2)}€
                         </span>
                       </div>
                       {!citaInfo.taxInfo.isExempt &&
@@ -1058,8 +1056,7 @@ function ConfirmarCitaAuthPageContent() {
                               Impuestos (IVA {citaInfo.taxInfo.taxPercentage}%):
                             </span>
                             <span className="font-medium text-gray-900">
-                              {citaInfo.currency === "EUR" ? "€" : "$"}{" "}
-                              {citaInfo.taxInfo.tax.toFixed(2)}
+                              {citaInfo.taxInfo.tax.toFixed(2)}€
                             </span>
                           </div>
                         )}
@@ -1077,8 +1074,7 @@ function ConfirmarCitaAuthPageContent() {
                             Total
                           </span>
                           <span className="text-base font-bold text-gray-900">
-                            {citaInfo.currency === "EUR" ? "€" : "$"}{" "}
-                            {citaInfo.taxInfo.total.toFixed(2)}
+                            {citaInfo.taxInfo.total.toFixed(2)}€
                           </span>
                         </div>
                       </div>
@@ -1092,8 +1088,7 @@ function ConfirmarCitaAuthPageContent() {
                           Total
                         </span>
                         <span className="text-base font-bold text-gray-900">
-                          {citaInfo.currency === "EUR" ? "€" : "$"}{" "}
-                          {citaInfo.price.toFixed(2)}
+                          {citaInfo.price.toFixed(2)}€
                         </span>
                       </div>
                     </div>
