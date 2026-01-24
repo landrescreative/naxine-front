@@ -713,8 +713,7 @@ export default function PagoPage() {
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">Precio</span>
                     <span className="text-sm font-medium text-gray-900">
-                      {price.toFixed(2)}
-                      {currencyParam === "EUR" ? "€" : "$"}
+                      {price.toFixed(2)}€
                     </span>
                   </div>
 
@@ -795,8 +794,7 @@ export default function PagoPage() {
                         Total
                       </span>
                       <span className="text-base font-bold text-gray-900">
-                        {currencyParam === "EUR" ? "€" : "$"}{" "}
-                        {price.toFixed(2)}
+                        {price.toFixed(2)}€
                       </span>
                     </div>
                   </div>

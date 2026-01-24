@@ -559,7 +559,7 @@ export default function ConfirmacionPagoPage() {
               </div>
               <div className="text-right">
                 <p className="text-gray-900">
-                  {citaData?.moneda === "EUR" ? "EUR" : "USD"} {citaData?.monto?.toFixed(2) || "0.00"}
+                  {citaData?.monto?.toFixed(2) || "0.00"}€
                 </p>
               </div>
             </div>
@@ -574,7 +574,7 @@ export default function ConfirmacionPagoPage() {
             <div className="flex justify-between items-center pt-4 border-t border-gray-300">
               <p className="font-bold text-gray-900">Total</p>
               <p className="font-bold text-gray-900">
-                {citaData?.moneda === "EUR" ? "EUR" : "USD"} {citaData?.monto?.toFixed(2) || "0.00"}
+                {citaData?.monto?.toFixed(2) || "0.00"}€
               </p>
             </div>
           </div>
