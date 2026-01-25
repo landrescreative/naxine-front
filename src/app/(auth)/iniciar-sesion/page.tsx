@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -15,7 +15,16 @@ function LoginForm() {
   const [error, setError] = useState("");
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, error: authError, loading } = useAuth();
+  const { login, error: authError, loading, isAuthenticated } = useAuth();
+
+  // Redirigir a la página principal o a la URL de redirección si el usuario ya está autenticado
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      const redirectTo = searchParams.get("redirect") || "/";
+      logger.info("Usuario ya autenticado, redirigiendo", { redirectTo }, "LoginPage");
+      router.push(redirectTo);
+    }
+  }, [loading, isAuthenticated, router, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,11 +53,13 @@ function LoginForm() {
         "needsVerification" in result &&
         result.needsVerification
       ) {
-        // Redirigir a la página de verificación con el email
+        // Redirigir a la página de verificación con el email y el parámetro redirect
         const emailToVerify = result.email || normalizedEmail;
-        router.push(
-          `/verificar-codigo?email=${encodeURIComponent(emailToVerify)}`
-        );
+        const redirectParam = searchParams.get("redirect");
+        const verificationUrl = redirectParam
+          ? `/verificar-codigo?email=${encodeURIComponent(emailToVerify)}&redirect=${encodeURIComponent(redirectParam)}`
+          : `/verificar-codigo?email=${encodeURIComponent(emailToVerify)}`;
+        router.push(verificationUrl);
         return;
       }
 
@@ -103,6 +114,30 @@ function LoginForm() {
   };
 
   const statusMessageId = "login-form-status";
+
+  // Mostrar loading mientras se verifica la autenticación
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Verificando sesión...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Si ya está autenticado, no mostrar el formulario (ya se está redirigiendo)
+  if (isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Redirigiendo...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <main className="min-h-screen flex flex-col lg:flex-row" aria-labelledby="login-title">

@@ -101,35 +101,61 @@ export default function RootLayout({
           strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
-              window.interdeal = {
-                get sitekey() { return "7ef68b1b5855325eb4d9213a374b96ac"; },
-                get domains() {
-                  return {
-                    js: "https://cdn.equalweb.com/",
-                    acc: "https://access.equalweb.com/",
-                  };
-                },
-                Position: "left",
-                Menulang: "ES",
-                draggable: true,
-                btnStyle: {
+              (function() {
+                // Detectar el dominio para usar el script correcto
+                var hostname = window.location.hostname;
+                var isProduction = hostname === "naxine.com";
+                
+                // Configuración para producción (naxine.com)
+                var productionConfig = {
+                  sitekey: "44e76691553a04845a1f74f128a198be",
+                  draggable: false,
+                  vPosition: ["50%", "50%"],
+                  scale: ["0.6", "0.6"],
+                };
+                
+                // Configuración para staging (prueba.naxine.com) y desarrollo
+                var stagingConfig = {
+                  sitekey: "7ef68b1b5855325eb4d9213a374b96ac",
+                  draggable: true,
                   vPosition: ["50%", "80%"],
-                  margin: ["0", "0"],
                   scale: ["0.8", "0.5"],
-                  color: { main: "#0a51f2", second: "#ffffff" },
-                  icon: { outline: false, outlineColor: "#ffffff", type: 1, shape: "circle" },
-                },
-                showTooltip: true,
-              };
-              (function(doc, head, body) {
-                const coreCall = doc.createElement("script");
-                coreCall.src = window.interdeal.domains.js + "core/5.2.0/accessibility.js";
-                coreCall.defer = true;
-                coreCall.integrity = "sha512-fHF4rKIzByr1XeM6stpnVdiHrJUOZsKN2/Pm0jikdTQ9uZddgq15F92kUptMnyYmjIVNKeMIa67HRFnBNTOXsQ==";
-                coreCall.crossOrigin = "anonymous";
-                coreCall.setAttribute("data-cfasync", "true");
-                (body ? body : head).appendChild(coreCall);
-              })(document, document.head, document.body);
+                };
+                
+                // Seleccionar configuración según el dominio
+                var config = isProduction ? productionConfig : stagingConfig;
+                
+                window.interdeal = {
+                  get sitekey() { return config.sitekey; },
+                  get domains() {
+                    return {
+                      js: "https://cdn.equalweb.com/",
+                      acc: "https://access.equalweb.com/",
+                    };
+                  },
+                  Position: "left",
+                  Menulang: "ES",
+                  draggable: config.draggable,
+                  btnStyle: {
+                    vPosition: config.vPosition,
+                    margin: ["0", "0"],
+                    scale: config.scale,
+                    color: { main: "#0a51f2", second: "#ffffff" },
+                    icon: { outline: false, outlineColor: "#ffffff", type: 1, shape: "circle" },
+                  },
+                  showTooltip: true,
+                };
+                
+                (function(doc, head, body) {
+                  var coreCall = doc.createElement("script");
+                  coreCall.src = window.interdeal.domains.js + "core/5.2.0/accessibility.js";
+                  coreCall.defer = true;
+                  coreCall.integrity = "sha512-fHF4rKIzByr1XeM6stpnVdiHrJUOZsKN2/Pm0jikdTQ9uZddgq15F92kUptMnyYmjIVNKeMIa67HRFnBNTOXsQ==";
+                  coreCall.crossOrigin = "anonymous";
+                  coreCall.setAttribute("data-cfasync", "true");
+                  (body ? body : head).appendChild(coreCall);
+                })(document, document.head, document.body);
+              })();
             `,
           }}
         />

@@ -85,7 +85,24 @@ export default function RegisterProfessionalPage() {
         }>;
       }>;
     } | null,
-    precios: {
+    preciosOnline: {
+      primeraSesion: {
+        precio: "",
+        nombre: "",
+        duracion: "",
+      },
+      seguimiento: {
+        precio: "",
+        nombre: "",
+        duracion: "",
+      },
+      pack3: {
+        precio: "",
+        nombre: "Pack 3 sesiones",
+        duracion: "",
+      },
+    },
+    preciosPresencial: {
       primeraSesion: {
         precio: "",
         nombre: "",
@@ -220,18 +237,36 @@ export default function RegisterProfessionalPage() {
     }
   };
 
-  // Función para actualizar precios
-  const updatePrecios = (
-    tipo: keyof typeof formData.precios,
+  // Función para actualizar precios en línea
+  const updatePreciosOnline = (
+    tipo: keyof typeof formData.preciosOnline,
     campo: string,
     value: string
   ) => {
     setFormData((prev) => ({
       ...prev,
-      precios: {
-        ...prev.precios,
+      preciosOnline: {
+        ...prev.preciosOnline,
         [tipo]: {
-          ...prev.precios[tipo],
+          ...prev.preciosOnline[tipo],
+          [campo]: value,
+        },
+      },
+    }));
+  };
+
+  // Función para actualizar precios presencial
+  const updatePreciosPresencial = (
+    tipo: keyof typeof formData.preciosPresencial,
+    campo: string,
+    value: string
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      preciosPresencial: {
+        ...prev.preciosPresencial,
+        [tipo]: {
+          ...prev.preciosPresencial[tipo],
           [campo]: value,
         },
       },
@@ -624,36 +659,76 @@ export default function RegisterProfessionalPage() {
         };
     }
 
-    // 4. Validaciones de precios
+    // 4. Validaciones de precios por modalidad
     const hasPrice = (p: any) => p.precio && p.precio.trim() !== "";
     const isValidPrice = (p: any) =>
       !hasPrice(p) || (p.nombre.trim() !== "" && p.duracion.trim() !== "");
     // Pack3 no requiere duración
     const isValidPack3 = (p: any) => !hasPrice(p) || p.nombre.trim() !== "";
 
-    const precios = formData.precios;
-    const hasAnyPrice =
-      hasPrice(precios.primeraSesion) ||
-      hasPrice(precios.seguimiento) ||
-      hasPrice(precios.pack3);
+    // Validar precios en línea
+    if (formData.modalidades.includes("online")) {
+      const preciosOnline = formData.preciosOnline;
+      const hasAnyPriceOnline =
+        hasPrice(preciosOnline.primeraSesion) ||
+        hasPrice(preciosOnline.seguimiento) ||
+        hasPrice(preciosOnline.pack3);
 
-    if (!hasAnyPrice)
-      return { field: "precios", error: "Debes configurar al menos un precio" };
+      if (!hasAnyPriceOnline)
+        return {
+          field: "preciosOnline",
+          error: "Debes configurar al menos un precio para atención en línea",
+        };
 
-    if (!isValidPrice(precios.primeraSesion))
-      return {
-        field: "preciosPrimeraSesion",
-        error: "Falta nombre o duración en Primera Sesión",
-      };
-    if (!isValidPrice(precios.seguimiento))
-      return {
-        field: "preciosSeguimiento",
-        error: "Falta nombre o duración en Seguimiento",
-      };
-    if (!isValidPack3(precios.pack3))
-      return { field: "preciosPack3", error: "Falta nombre en Pack 3" };
+      if (!isValidPrice(preciosOnline.primeraSesion))
+        return {
+          field: "preciosOnlinePrimeraSesion",
+          error: "Falta nombre o duración en Primera Sesión (En línea)",
+        };
+      if (!isValidPrice(preciosOnline.seguimiento))
+        return {
+          field: "preciosOnlineSeguimiento",
+          error: "Falta nombre o duración en Seguimiento (En línea)",
+        };
+      if (!isValidPack3(preciosOnline.pack3))
+        return {
+          field: "preciosOnlinePack3",
+          error: "Falta nombre en Pack 3 (En línea)",
+        };
+    }
 
-    // 5. Validaciones de precios domicilio
+    // Validar precios presencial
+    if (formData.modalidades.includes("presencial")) {
+      const preciosPresencial = formData.preciosPresencial;
+      const hasAnyPricePresencial =
+        hasPrice(preciosPresencial.primeraSesion) ||
+        hasPrice(preciosPresencial.seguimiento) ||
+        hasPrice(preciosPresencial.pack3);
+
+      if (!hasAnyPricePresencial)
+        return {
+          field: "preciosPresencial",
+          error: "Debes configurar al menos un precio para atención presencial",
+        };
+
+      if (!isValidPrice(preciosPresencial.primeraSesion))
+        return {
+          field: "preciosPresencialPrimeraSesion",
+          error: "Falta nombre o duración en Primera Sesión (Presencial)",
+        };
+      if (!isValidPrice(preciosPresencial.seguimiento))
+        return {
+          field: "preciosPresencialSeguimiento",
+          error: "Falta nombre o duración en Seguimiento (Presencial)",
+        };
+      if (!isValidPack3(preciosPresencial.pack3))
+        return {
+          field: "preciosPresencialPack3",
+          error: "Falta nombre en Pack 3 (Presencial)",
+        };
+    }
+
+    // Validar precios domicilio
     if (formData.modalidades.includes("domicilio")) {
       const preciosDom = formData.preciosDomicilio;
       const hasAnyPriceDom =
@@ -948,52 +1023,108 @@ export default function RegisterProfessionalPage() {
       }
     }
 
-    // Validar que al menos un precio esté configurado
-    const tienePrecios =
-      (formData.precios.primeraSesion.precio &&
-        formData.precios.primeraSesion.precio.trim() !== "") ||
-      (formData.precios.seguimiento.precio &&
-        formData.precios.seguimiento.precio.trim() !== "") ||
-      (formData.precios.pack3.precio &&
-        formData.precios.pack3.precio.trim() !== "");
+    // Validar precios en línea
+    if (formData.modalidades.includes("online")) {
+      const tienePreciosOnline =
+        (formData.preciosOnline.primeraSesion.precio &&
+          formData.preciosOnline.primeraSesion.precio.trim() !== "") ||
+        (formData.preciosOnline.seguimiento.precio &&
+          formData.preciosOnline.seguimiento.precio.trim() !== "") ||
+        (formData.preciosOnline.pack3.precio &&
+          formData.preciosOnline.pack3.precio.trim() !== "");
 
-    if (!tienePrecios) {
-      newErrors.precios =
-        "Debes configurar al menos un precio (Primera Sesión, Seguimiento o Pack x3)";
-    } else {
-      // Validar que los precios configurados tengan nombre y duración
-      if (
-        formData.precios.primeraSesion.precio &&
-        formData.precios.primeraSesion.precio.trim() !== ""
-      ) {
-        if (!formData.precios.primeraSesion.nombre.trim()) {
-          newErrors.preciosPrimeraSesion =
-            "El nombre del paquete de Primera Sesión es requerido";
+      if (!tienePreciosOnline) {
+        newErrors.preciosOnline =
+          "Debes configurar al menos un precio para atención en línea (Primera Sesión, Seguimiento o Pack x3)";
+      } else {
+        // Validar que los precios configurados tengan nombre y duración
+        if (
+          formData.preciosOnline.primeraSesion.precio &&
+          formData.preciosOnline.primeraSesion.precio.trim() !== ""
+        ) {
+          if (!formData.preciosOnline.primeraSesion.nombre.trim()) {
+            newErrors.preciosOnlinePrimeraSesion =
+              "El nombre del paquete de Primera Sesión (en línea) es requerido";
+          }
+          if (!formData.preciosOnline.primeraSesion.duracion.trim()) {
+            newErrors.preciosOnlinePrimeraSesion =
+              "La duración de Primera Sesión (en línea) es requerida";
+          }
         }
-        if (!formData.precios.primeraSesion.duracion.trim()) {
-          newErrors.preciosPrimeraSesion =
-            "La duración de Primera Sesión es requerida";
+        if (
+          formData.preciosOnline.seguimiento.precio &&
+          formData.preciosOnline.seguimiento.precio.trim() !== ""
+        ) {
+          if (!formData.preciosOnline.seguimiento.nombre.trim()) {
+            newErrors.preciosOnlineSeguimiento =
+              "El nombre del paquete de Seguimiento (en línea) es requerido";
+          }
+          if (!formData.preciosOnline.seguimiento.duracion.trim()) {
+            newErrors.preciosOnlineSeguimiento =
+              "La duración de Seguimiento (en línea) es requerida";
+          }
+        }
+        if (
+          formData.preciosOnline.pack3.precio &&
+          formData.preciosOnline.pack3.precio.trim() !== ""
+        ) {
+          if (!formData.preciosOnline.pack3.nombre.trim()) {
+            newErrors.preciosOnlinePack3 =
+              "El nombre del paquete Pack x3 (en línea) es requerido";
+          }
         }
       }
-      if (
-        formData.precios.seguimiento.precio &&
-        formData.precios.seguimiento.precio.trim() !== ""
-      ) {
-        if (!formData.precios.seguimiento.nombre.trim()) {
-          newErrors.preciosSeguimiento =
-            "El nombre del paquete de Seguimiento es requerido";
+    }
+
+    // Validar precios presencial
+    if (formData.modalidades.includes("presencial")) {
+      const tienePreciosPresencial =
+        (formData.preciosPresencial.primeraSesion.precio &&
+          formData.preciosPresencial.primeraSesion.precio.trim() !== "") ||
+        (formData.preciosPresencial.seguimiento.precio &&
+          formData.preciosPresencial.seguimiento.precio.trim() !== "") ||
+        (formData.preciosPresencial.pack3.precio &&
+          formData.preciosPresencial.pack3.precio.trim() !== "");
+
+      if (!tienePreciosPresencial) {
+        newErrors.preciosPresencial =
+          "Debes configurar al menos un precio para atención presencial (Primera Sesión, Seguimiento o Pack x3)";
+      } else {
+        // Validar que los precios configurados tengan nombre y duración
+        if (
+          formData.preciosPresencial.primeraSesion.precio &&
+          formData.preciosPresencial.primeraSesion.precio.trim() !== ""
+        ) {
+          if (!formData.preciosPresencial.primeraSesion.nombre.trim()) {
+            newErrors.preciosPresencialPrimeraSesion =
+              "El nombre del paquete de Primera Sesión (presencial) es requerido";
+          }
+          if (!formData.preciosPresencial.primeraSesion.duracion.trim()) {
+            newErrors.preciosPresencialPrimeraSesion =
+              "La duración de Primera Sesión (presencial) es requerida";
+          }
         }
-        if (!formData.precios.seguimiento.duracion.trim()) {
-          newErrors.preciosSeguimiento =
-            "La duración de Seguimiento es requerida";
+        if (
+          formData.preciosPresencial.seguimiento.precio &&
+          formData.preciosPresencial.seguimiento.precio.trim() !== ""
+        ) {
+          if (!formData.preciosPresencial.seguimiento.nombre.trim()) {
+            newErrors.preciosPresencialSeguimiento =
+              "El nombre del paquete de Seguimiento (presencial) es requerido";
+          }
+          if (!formData.preciosPresencial.seguimiento.duracion.trim()) {
+            newErrors.preciosPresencialSeguimiento =
+              "La duración de Seguimiento (presencial) es requerida";
+          }
         }
-      }
-      if (
-        formData.precios.pack3.precio &&
-        formData.precios.pack3.precio.trim() !== ""
-      ) {
-        if (!formData.precios.pack3.nombre.trim()) {
-          newErrors.preciosPack3 = "El nombre del paquete Pack x3 es requerido";
+        if (
+          formData.preciosPresencial.pack3.precio &&
+          formData.preciosPresencial.pack3.precio.trim() !== ""
+        ) {
+          if (!formData.preciosPresencial.pack3.nombre.trim()) {
+            newErrors.preciosPresencialPack3 =
+              "El nombre del paquete Pack x3 (presencial) es requerido";
+          }
         }
       }
     }
@@ -1178,13 +1309,30 @@ export default function RegisterProfessionalPage() {
         );
       }
 
-      // Agregar precios si están configurados
+      // Agregar precios en línea si están configurados y se selecciona modalidad online
       if (
-        formData.precios.primeraSesion.precio ||
-        formData.precios.seguimiento.precio ||
-        formData.precios.pack3.precio
+        formData.modalidades.includes("online") &&
+        (formData.preciosOnline.primeraSesion.precio ||
+          formData.preciosOnline.seguimiento.precio ||
+          formData.preciosOnline.pack3.precio)
       ) {
-        formDataToSend.append("precios", JSON.stringify(formData.precios));
+        formDataToSend.append(
+          "preciosOnline",
+          JSON.stringify(formData.preciosOnline)
+        );
+      }
+
+      // Agregar precios presencial si están configurados y se selecciona modalidad presencial
+      if (
+        formData.modalidades.includes("presencial") &&
+        (formData.preciosPresencial.primeraSesion.precio ||
+          formData.preciosPresencial.seguimiento.precio ||
+          formData.preciosPresencial.pack3.precio)
+      ) {
+        formDataToSend.append(
+          "preciosPresencial",
+          JSON.stringify(formData.preciosPresencial)
+        );
       }
 
       // Agregar precios de domicilio si están configurados y se selecciona modalidad domicilio
@@ -1223,21 +1371,63 @@ export default function RegisterProfessionalPage() {
         domicilio: !!formData.horariosADomicilio,
       });
       console.log("   - Precios configurados:", {
-        primeraSesion: {
-          precio: formData.precios.primeraSesion.precio,
-          nombre: formData.precios.primeraSesion.nombre,
-          duracion: formData.precios.primeraSesion.duracion,
-        },
-        seguimiento: {
-          precio: formData.precios.seguimiento.precio,
-          nombre: formData.precios.seguimiento.nombre,
-          duracion: formData.precios.seguimiento.duracion,
-        },
-        pack3: {
-          precio: formData.precios.pack3.precio,
-          nombre: formData.precios.pack3.nombre,
-          duracion: formData.precios.pack3.duracion,
-        },
+        online: formData.modalidades.includes("online")
+          ? {
+              primeraSesion: {
+                precio: formData.preciosOnline.primeraSesion.precio,
+                nombre: formData.preciosOnline.primeraSesion.nombre,
+                duracion: formData.preciosOnline.primeraSesion.duracion,
+              },
+              seguimiento: {
+                precio: formData.preciosOnline.seguimiento.precio,
+                nombre: formData.preciosOnline.seguimiento.nombre,
+                duracion: formData.preciosOnline.seguimiento.duracion,
+              },
+              pack3: {
+                precio: formData.preciosOnline.pack3.precio,
+                nombre: formData.preciosOnline.pack3.nombre,
+                duracion: formData.preciosOnline.pack3.duracion,
+              },
+            }
+          : null,
+        presencial: formData.modalidades.includes("presencial")
+          ? {
+              primeraSesion: {
+                precio: formData.preciosPresencial.primeraSesion.precio,
+                nombre: formData.preciosPresencial.primeraSesion.nombre,
+                duracion: formData.preciosPresencial.primeraSesion.duracion,
+              },
+              seguimiento: {
+                precio: formData.preciosPresencial.seguimiento.precio,
+                nombre: formData.preciosPresencial.seguimiento.nombre,
+                duracion: formData.preciosPresencial.seguimiento.duracion,
+              },
+              pack3: {
+                precio: formData.preciosPresencial.pack3.precio,
+                nombre: formData.preciosPresencial.pack3.nombre,
+                duracion: formData.preciosPresencial.pack3.duracion,
+              },
+            }
+          : null,
+        domicilio: formData.modalidades.includes("domicilio")
+          ? {
+              primeraSesion: {
+                precio: formData.preciosDomicilio.primeraSesion.precio,
+                nombre: formData.preciosDomicilio.primeraSesion.nombre,
+                duracion: formData.preciosDomicilio.primeraSesion.duracion,
+              },
+              seguimiento: {
+                precio: formData.preciosDomicilio.seguimiento.precio,
+                nombre: formData.preciosDomicilio.seguimiento.nombre,
+                duracion: formData.preciosDomicilio.seguimiento.duracion,
+              },
+              pack3: {
+                precio: formData.preciosDomicilio.pack3.precio,
+                nombre: formData.preciosDomicilio.pack3.nombre,
+                duracion: formData.preciosDomicilio.pack3.duracion,
+              },
+            }
+          : null,
       });
       console.log("   - Campo tarifas (legacy):", formData.tarifas);
 
@@ -1302,7 +1492,24 @@ export default function RegisterProfessionalPage() {
           horariosEnLinea: null,
           horariosPresencial: null,
           horariosADomicilio: null,
-          precios: {
+          preciosOnline: {
+            primeraSesion: {
+              precio: "",
+              nombre: "",
+              duracion: "",
+            },
+            seguimiento: {
+              precio: "",
+              nombre: "",
+              duracion: "",
+            },
+            pack3: {
+              precio: "",
+              nombre: "Pack 3 sesiones",
+              duracion: "",
+            },
+          },
+          preciosPresencial: {
             primeraSesion: {
               precio: "",
               nombre: "",
@@ -2896,231 +3103,509 @@ export default function RegisterProfessionalPage() {
                 </div>
               )}
 
-              {/* 19. Precios */}
-              <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Precios <span className="text-red-500">*</span>
-                </h3>
-                {errors.precios && (
-                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-sm text-red-600">{errors.precios}</p>
-                  </div>
-                )}
+              {/* 19. Precios para atención en línea */}
+              {formData.modalidades.includes("online") && (
+                <div
+                  id="preciosOnline"
+                  className="rounded-xl border border-gray-200 bg-gray-50 p-6"
+                >
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    Precios para atención en línea{" "}
+                    <span className="text-red-500">*</span>
+                  </h3>
+                  {errors.preciosOnline && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-sm text-red-600">
+                        {errors.preciosOnline}
+                      </p>
+                    </div>
+                  )}
 
-                <div className="space-y-4">
-                  {/* Primera Sesión */}
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">
-                        Precio
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
-                          €
-                        </span>
+                  <div className="space-y-4">
+                    {/* Primera Sesión En Línea */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Precio
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                            €
+                          </span>
+                          <input
+                            type="text"
+                            value={formData.preciosOnline.primeraSesion.precio}
+                            onChange={(e) =>
+                              updatePreciosOnline(
+                                "primeraSesion",
+                                "precio",
+                                e.target.value
+                              )
+                            }
+                            placeholder="Ej: 50"
+                            className="w-full pl-6 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                            disabled={!!successMsg}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Nombre y descripción del paquete
+                        </label>
                         <input
                           type="text"
-                          value={formData.precios.primeraSesion.precio}
+                          value={formData.preciosOnline.primeraSesion.nombre}
                           onChange={(e) =>
-                            updatePrecios(
+                            updatePreciosOnline(
                               "primeraSesion",
-                              "precio",
+                              "nombre",
                               e.target.value
                             )
                           }
-                          placeholder="Ej: 50"
-                          className="w-full pl-6 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                          placeholder="Ej: Primera sesión en línea"
+                          className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
+                            errors.preciosOnlinePrimeraSesion
+                              ? "border-red-300"
+                              : "border-gray-300"
+                          }`}
                           disabled={!!successMsg}
                         />
+                        {errors.preciosOnlinePrimeraSesion && (
+                          <p className="mt-1 text-xs text-red-600">
+                            {errors.preciosOnlinePrimeraSesion}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Duración
+                        </label>
+                        <select
+                          value={formData.preciosOnline.primeraSesion.duracion}
+                          onChange={(e) =>
+                            updatePreciosOnline(
+                              "primeraSesion",
+                              "duracion",
+                              e.target.value
+                            )
+                          }
+                          className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
+                            errors.preciosOnlinePrimeraSesion
+                              ? "border-red-300"
+                              : "border-gray-300"
+                          }`}
+                          disabled={!!successMsg}
+                        >
+                          <option value="">Selecciona duración</option>
+                          {durationOptions.map((opt) => (
+                            <option key={`dur-online-primera-${opt}`} value={opt}>
+                              {opt}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">
-                        Nombre y descripción del paquete
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.precios.primeraSesion.nombre}
-                        onChange={(e) =>
-                          updatePrecios(
-                            "primeraSesion",
-                            "nombre",
-                            e.target.value
-                          )
-                        }
-                        placeholder="Ej: Primera sesión"
-                        className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
-                          errors.preciosPack3
-                            ? "border-red-300"
-                            : "border-gray-300"
-                        }`}
-                        disabled={!!successMsg}
-                      />
-                      {errors.preciosPrimeraSesion && (
-                        <p className="mt-1 text-xs text-red-600">
-                          {errors.preciosPrimeraSesion}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">
-                        Duración
-                      </label>
-                      <select
-                        value={formData.precios.primeraSesion.duracion}
-                        onChange={(e) =>
-                          updatePrecios(
-                            "primeraSesion",
-                            "duracion",
-                            e.target.value
-                          )
-                        }
-                        className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
-                          errors.preciosPrimeraSesion
-                            ? "border-red-300"
-                            : "border-gray-300"
-                        }`}
-                        disabled={!!successMsg}
-                      >
-                        <option value="">Selecciona duración</option>
-                        {durationOptions.map((opt) => (
-                          <option key={`dur-primera-${opt}`} value={opt}>
-                            {opt}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
 
-                  {/* Sesión de Seguimiento */}
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">
-                        Precio
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
-                          €
-                        </span>
+                    {/* Sesión de Seguimiento En Línea */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Precio
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                            €
+                          </span>
+                          <input
+                            type="text"
+                            value={formData.preciosOnline.seguimiento.precio}
+                            onChange={(e) =>
+                              updatePreciosOnline(
+                                "seguimiento",
+                                "precio",
+                                e.target.value
+                              )
+                            }
+                            placeholder="Ej: 40"
+                            className="w-full pl-6 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                            disabled={!!successMsg}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Nombre y descripción del paquete
+                        </label>
                         <input
                           type="text"
-                          value={formData.precios.seguimiento.precio}
+                          value={formData.preciosOnline.seguimiento.nombre}
                           onChange={(e) =>
-                            updatePrecios(
+                            updatePreciosOnline(
                               "seguimiento",
-                              "precio",
+                              "nombre",
                               e.target.value
                             )
                           }
-                          placeholder="Ej: 40"
-                          className="w-full pl-6 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                          placeholder="Ej: Sesión de seguimiento en línea"
+                          className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary ${
+                            errors.preciosOnlineSeguimiento
+                              ? "border-red-300"
+                              : "border-gray-300"
+                          }`}
                           disabled={!!successMsg}
                         />
+                        {errors.preciosOnlineSeguimiento && (
+                          <p className="mt-1 text-xs text-red-600">
+                            {errors.preciosOnlineSeguimiento}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Duración
+                        </label>
+                        <select
+                          value={formData.preciosOnline.seguimiento.duracion}
+                          onChange={(e) =>
+                            updatePreciosOnline(
+                              "seguimiento",
+                              "duracion",
+                              e.target.value
+                            )
+                          }
+                          className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
+                            errors.preciosOnlineSeguimiento
+                              ? "border-red-300"
+                              : "border-gray-300"
+                          }`}
+                          disabled={!!successMsg}
+                        >
+                          <option value="">Selecciona duración</option>
+                          {durationOptions.map((opt) => (
+                            <option key={`dur-online-seg-${opt}`} value={opt}>
+                              {opt}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">
-                        Nombre y descripción del paquete
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.precios.seguimiento.nombre}
-                        onChange={(e) =>
-                          updatePrecios("seguimiento", "nombre", e.target.value)
-                        }
-                        placeholder="Ej: Sesión de seguimiento"
-                        className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary ${
-                          errors.preciosSeguimiento
-                            ? "border-red-300"
-                            : "border-gray-300"
-                        }`}
-                        disabled={!!successMsg}
-                      />
-                      {errors.preciosSeguimiento && (
-                        <p className="mt-1 text-xs text-red-600">
-                          {errors.preciosSeguimiento}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">
-                        Duración
-                      </label>
-                      <select
-                        value={formData.precios.seguimiento.duracion}
-                        onChange={(e) =>
-                          updatePrecios(
-                            "seguimiento",
-                            "duracion",
-                            e.target.value
-                          )
-                        }
-                        className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
-                          errors.preciosSeguimiento
-                            ? "border-red-300"
-                            : "border-gray-300"
-                        }`}
-                        disabled={!!successMsg}
-                      >
-                        <option value="">Selecciona duración</option>
-                        {durationOptions.map((opt) => (
-                          <option key={`dur-seg-${opt}`} value={opt}>
-                            {opt}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
 
-                  {/* Pack x3 */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">
-                        Precio
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
-                          €
-                        </span>
+                    {/* Pack x3 En Línea */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Precio
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                            €
+                          </span>
+                          <input
+                            type="text"
+                            value={formData.preciosOnline.pack3.precio}
+                            onChange={(e) =>
+                              updatePreciosOnline(
+                                "pack3",
+                                "precio",
+                                e.target.value
+                              )
+                            }
+                            placeholder="Ej: 100"
+                            className="w-full pl-6 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                            disabled={!!successMsg}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Nombre y descripción del paquete
+                        </label>
                         <input
                           type="text"
-                          value={formData.precios.pack3.precio}
+                          value={formData.preciosOnline.pack3.nombre}
                           onChange={(e) =>
-                            updatePrecios("pack3", "precio", e.target.value)
+                            updatePreciosOnline(
+                              "pack3",
+                              "nombre",
+                              e.target.value
+                            )
                           }
-                          placeholder="Ej: 100"
-                          className="w-full pl-6 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                          placeholder="Ej: Pack 3 sesiones en línea"
+                          className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
+                            errors.preciosOnlinePack3
+                              ? "border-red-300"
+                              : "border-gray-300"
+                          }`}
                           disabled={!!successMsg}
                         />
+                        {errors.preciosOnlinePack3 && (
+                          <p className="mt-1 text-xs text-red-600">
+                            {errors.preciosOnlinePack3}
+                          </p>
+                        )}
                       </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">
-                        Nombre y descripción del paquete
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.precios.pack3.nombre}
-                        onChange={(e) =>
-                          updatePrecios("pack3", "nombre", e.target.value)
-                        }
-                        placeholder="Ej: Pack 3 sesiones"
-                        className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
-                          errors.preciosPack3
-                            ? "border-red-300"
-                            : "border-gray-300"
-                        }`}
-                        disabled={!!successMsg}
-                      />
-                      {errors.preciosPack3 && (
-                        <p className="mt-1 text-xs text-red-600">
-                          {errors.preciosPack3}
-                        </p>
-                      )}
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
+
+              {/* 19.1. Precios para atención presencial */}
+              {formData.modalidades.includes("presencial") && (
+                <div
+                  id="preciosPresencial"
+                  className="rounded-xl border border-gray-200 bg-gray-50 p-6"
+                >
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    Precios para atención presencial{" "}
+                    <span className="text-red-500">*</span>
+                  </h3>
+                  {errors.preciosPresencial && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-sm text-red-600">
+                        {errors.preciosPresencial}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="space-y-4">
+                    {/* Primera Sesión Presencial */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Precio
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                            €
+                          </span>
+                          <input
+                            type="text"
+                            value={
+                              formData.preciosPresencial.primeraSesion.precio
+                            }
+                            onChange={(e) =>
+                              updatePreciosPresencial(
+                                "primeraSesion",
+                                "precio",
+                                e.target.value
+                              )
+                            }
+                            placeholder="Ej: 60"
+                            className="w-full pl-6 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                            disabled={!!successMsg}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Nombre y descripción del paquete
+                        </label>
+                        <input
+                          type="text"
+                          value={
+                            formData.preciosPresencial.primeraSesion.nombre
+                          }
+                          onChange={(e) =>
+                            updatePreciosPresencial(
+                              "primeraSesion",
+                              "nombre",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Ej: Primera sesión presencial"
+                          className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary ${
+                            errors.preciosPresencialPrimeraSesion
+                              ? "border-red-300"
+                              : "border-gray-300"
+                          }`}
+                          disabled={!!successMsg}
+                        />
+                        {errors.preciosPresencialPrimeraSesion && (
+                          <p className="mt-1 text-xs text-red-600">
+                            {errors.preciosPresencialPrimeraSesion}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Duración
+                        </label>
+                        <select
+                          value={
+                            formData.preciosPresencial.primeraSesion.duracion
+                          }
+                          onChange={(e) =>
+                            updatePreciosPresencial(
+                              "primeraSesion",
+                              "duracion",
+                              e.target.value
+                            )
+                          }
+                          className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
+                            errors.preciosPresencialPrimeraSesion
+                              ? "border-red-300"
+                              : "border-gray-300"
+                          }`}
+                          disabled={!!successMsg}
+                        >
+                          <option value="">Selecciona duración</option>
+                          {durationOptions.map((opt) => (
+                            <option
+                              key={`dur-presencial-primera-${opt}`}
+                              value={opt}
+                            >
+                              {opt}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Seguimiento Presencial */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Precio
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                            €
+                          </span>
+                          <input
+                            type="text"
+                            value={formData.preciosPresencial.seguimiento.precio}
+                            onChange={(e) =>
+                              updatePreciosPresencial(
+                                "seguimiento",
+                                "precio",
+                                e.target.value
+                              )
+                            }
+                            placeholder="Ej: 50"
+                            className="w-full pl-6 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                            disabled={!!successMsg}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Nombre y descripción del paquete
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.preciosPresencial.seguimiento.nombre}
+                          onChange={(e) =>
+                            updatePreciosPresencial(
+                              "seguimiento",
+                              "nombre",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Ej: Sesión de seguimiento presencial"
+                          className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary ${
+                            errors.preciosPresencialSeguimiento
+                              ? "border-red-300"
+                              : "border-gray-300"
+                          }`}
+                          disabled={!!successMsg}
+                        />
+                        {errors.preciosPresencialSeguimiento && (
+                          <p className="mt-1 text-xs text-red-600">
+                            {errors.preciosPresencialSeguimiento}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Duración
+                        </label>
+                        <select
+                          value={formData.preciosPresencial.seguimiento.duracion}
+                          onChange={(e) =>
+                            updatePreciosPresencial(
+                              "seguimiento",
+                              "duracion",
+                              e.target.value
+                            )
+                          }
+                          className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-white ${
+                            errors.preciosPresencialSeguimiento
+                              ? "border-red-300"
+                              : "border-gray-300"
+                          }`}
+                          disabled={!!successMsg}
+                        >
+                          <option value="">Selecciona duración</option>
+                          {durationOptions.map((opt) => (
+                            <option
+                              key={`dur-presencial-seg-${opt}`}
+                              value={opt}
+                            >
+                              {opt}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Pack x3 Presencial */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Precio
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                            €
+                          </span>
+                          <input
+                            type="text"
+                            value={formData.preciosPresencial.pack3.precio}
+                            onChange={(e) =>
+                              updatePreciosPresencial(
+                                "pack3",
+                                "precio",
+                                e.target.value
+                              )
+                            }
+                            placeholder="Ej: 120"
+                            className="w-full pl-6 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                            disabled={!!successMsg}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Nombre y descripción del paquete
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.preciosPresencial.pack3.nombre}
+                          onChange={(e) =>
+                            updatePreciosPresencial(
+                              "pack3",
+                              "nombre",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Ej: Pack 3 sesiones presencial"
+                          className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary ${
+                            errors.preciosPresencialPack3
+                              ? "border-red-300"
+                              : "border-gray-300"
+                          }`}
+                          disabled={!!successMsg}
+                        />
+                        {errors.preciosPresencialPack3 && (
+                          <p className="mt-1 text-xs text-red-600">
+                            {errors.preciosPresencialPack3}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* 19.1. Precios para atención a domicilio */}
               {formData.modalidades.includes("domicilio") && (
