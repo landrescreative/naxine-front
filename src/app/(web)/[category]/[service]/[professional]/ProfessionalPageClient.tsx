@@ -2564,7 +2564,7 @@ export default function ProfessionalPageClient({
                       title={precio.nombre_servicio}
                       subtitle={displaySpecialty}
                       description={precio.descripcion}
-                      duration={duracion || "Consultar"}
+                      duration={duracion}
                       price={formatearPrecio(precio.precio, precio.moneda)}
                       isPopular={esPopular}
                       modalidad={modalidadParaLabel}

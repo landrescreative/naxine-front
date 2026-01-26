@@ -76,9 +76,16 @@ export default function ProfessionalCard({
 
         {/* Price */}
         <div className="pt-2">
-          <span className="text-xl font-bold text-primary">
-            Desde {professional.price}€
-          </span>
+          {professional.price > 0 ? (
+            <span className="text-xl font-bold text-primary">
+              Desde {Number(professional.price).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€
+            </span>
+          ) : (
+            <div className="flex items-center gap-2">
+              <div className="h-7 w-24 bg-gray-200 rounded animate-pulse" />
+              <div className="h-4 w-4 bg-gray-200 rounded animate-pulse" />
+            </div>
+          )}
         </div>
       </div>
     </Link>

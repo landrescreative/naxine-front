@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, Suspense, useEffect } from "react";
+import { useMemo, useState, Suspense, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -35,20 +35,17 @@ function ConfirmarCitaAuthPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
-  const [notas, setNotas] = useState("");
   const [direccionDomicilio, setDireccionDomicilio] = useState("");
   const [codigoPostal, setCodigoPostal] = useState("");
   const [codigoPostalError, setCodigoPostalError] = useState<string | null>(null);
   const [professionalData, setProfessionalData] = useState<ApiProfessional | null>(null);
   const [isCreatingAppointment, setIsCreatingAppointment] = useState(false);
   const [error, setError] = useState("");
+  const [hasClientProfileError, setHasClientProfileError] = useState(false);
+  const hasAttemptedRedirect = useRef(false);
 
-  // Leer notas, dirección y código postal de los searchParams si vienen del redirect
+  // Leer dirección y código postal de los searchParams si vienen del redirect
   useEffect(() => {
-    const notesFromUrl = searchParams.get("notes");
-    if (notesFromUrl) {
-      setNotas(decodeURIComponent(notesFromUrl));
-    }
     const direccionFromUrl = searchParams.get("direccionDomicilio");
     if (direccionFromUrl) {
       setDireccionDomicilio(decodeURIComponent(direccionFromUrl));
@@ -286,28 +283,20 @@ function ConfirmarCitaAuthPageContent() {
   const registroHref = useMemo(() => {
     const base = "/registro";
     const redirectTarget = citaInfo.returnUrl || "/";
-    const separator = redirectTarget.includes("?") ? "&" : "?";
-    const targetWithNotes = notas
-      ? `${redirectTarget}${separator}notes=${encodeURIComponent(notas)}`
-      : redirectTarget;
 
     const params = new URLSearchParams();
-    params.set("redirect", targetWithNotes);
+    params.set("redirect", redirectTarget);
     return `${base}?${params.toString()}`;
-  }, [citaInfo.returnUrl, notas]);
+  }, [citaInfo.returnUrl]);
 
   const loginHref = useMemo(() => {
     const base = "/iniciar-sesion";
     const redirectTarget = citaInfo.returnUrl || "/";
-    const separator = redirectTarget.includes("?") ? "&" : "?";
-    const targetWithNotes = notas
-      ? `${redirectTarget}${separator}notes=${encodeURIComponent(notas)}`
-      : redirectTarget;
 
     const params = new URLSearchParams();
-    params.set("redirect", targetWithNotes);
+    params.set("redirect", redirectTarget);
     return `${base}?${params.toString()}`;
-  }, [citaInfo.returnUrl, notas]);
+  }, [citaInfo.returnUrl]);
 
   // Función para crear la cita y proceder al pago
   const handleConfirmAndPay = async () => {
@@ -403,7 +392,6 @@ function ConfirmarCitaAuthPageContent() {
           citaInfo.tipoAtencion === "a_domicilio"
             ? `${direccionDomicilio.trim()}${codigoPostal.trim() ? `, ${codigoPostal.trim()}` : ""}`
             : undefined,
-        notas: notas.trim() || undefined,
       });
 
       // Log completo de la respuesta RAW antes de procesar
@@ -678,8 +666,19 @@ function ConfirmarCitaAuthPageContent() {
         // Manejar errores específicos
         const errorMessage = response.error || "";
         
-        // Error de Stripe Tax (configuración faltante)
+        // Error de perfil de cliente faltante
         if (
+          errorMessage.includes("perfil de cliente") ||
+          errorMessage.includes("No se encontró un perfil de cliente") ||
+          errorMessage.includes("completa tu perfil de cliente")
+        ) {
+          setHasClientProfileError(true);
+          setError("");
+          // Resetear el intento de redirect para que no se intente de nuevo
+          hasAttemptedRedirect.current = false;
+        }
+        // Error de Stripe Tax (configuración faltante)
+        else if (
           errorMessage.includes("stripe") ||
           errorMessage.includes("tax") ||
           errorMessage.includes("head office address") ||
@@ -695,67 +694,98 @@ function ConfirmarCitaAuthPageContent() {
     } catch (err: any) {
       console.error("Error creating appointment:", err);
       
-      // Enviar error al backend (consola de Node)
-      logToBackend("error", "Error al crear la cita", {
-        error: err?.message,
-        stack: err?.stack,
-        name: err?.name,
-      });
+      const errorMessage = err?.message || "";
       
-      setError(
-        err?.message || "Ocurrió un error al crear la cita. Intenta de nuevo."
-      );
+      // Error de perfil de cliente faltante
+      if (
+        errorMessage.includes("perfil de cliente") ||
+        errorMessage.includes("No se encontró un perfil de cliente") ||
+        errorMessage.includes("completa tu perfil de cliente")
+      ) {
+        setHasClientProfileError(true);
+        setError("");
+        // Resetear el intento de redirect para que no se intente de nuevo
+        hasAttemptedRedirect.current = false;
+      } else {
+        // Enviar error al backend (consola de Node)
+        logToBackend("error", "Error al crear la cita", {
+          error: err?.message,
+          stack: err?.stack,
+          name: err?.name,
+        });
+        
+        setError(
+          err?.message || "Ocurrió un error al crear la cita. Intenta de nuevo."
+        );
+      }
     } finally {
       setIsCreatingAppointment(false);
     }
   };
 
+  // Auto-redirigir a pago si el usuario está autenticado
+  useEffect(() => {
+    // Solo intentar una vez
+    if (hasAttemptedRedirect.current || isCreatingAppointment) {
+      return;
+    }
+
+    // Solo si está autenticado y tiene todos los datos necesarios
+    if (
+      isAuthenticated &&
+      user &&
+      citaInfo.dateISO &&
+      citaInfo.time &&
+      citaInfo.precioId &&
+      professionalData !== undefined // Esperar a que se cargue (puede ser null)
+    ) {
+      // Para atención a domicilio, validar que tenga dirección y código postal
+      if (citaInfo.tipoAtencion === "a_domicilio") {
+        if (!direccionDomicilio.trim() || !codigoPostal.trim()) {
+          // No hacer nada, mostrar error en UI
+          return;
+        }
+        // Validar código postal
+        const validacion = validarCodigoPostal(codigoPostal);
+        if (!validacion.valido) {
+          setCodigoPostalError(validacion.error);
+          return;
+        }
+      }
+
+      // Marcar que ya intentamos redirigir
+      hasAttemptedRedirect.current = true;
+      
+      // Llamar a handleConfirmAndPay automáticamente
+      // Nota: handleConfirmAndPay no está en las dependencias porque usamos hasAttemptedRedirect
+      // para prevenir múltiples llamadas, y la función se recrea en cada render
+      handleConfirmAndPay();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    isAuthenticated,
+    user,
+    citaInfo.dateISO,
+    citaInfo.time,
+    citaInfo.precioId,
+    citaInfo.tipoAtencion,
+    professionalData,
+    direccionDomicilio,
+    codigoPostal,
+    isCreatingAppointment,
+    codigosPostalesDomicilio, // Para validarCodigoPostal
+  ]);
+
   return (
     <div className="min-h-screen bg-white">
       <main className="max-w-6xl mx-auto px-4 py-10 lg:py-16">
-        {/* Enlaces superiores de registro / login */}
-        <div className="mb-6 text-center text-sm text-gray-600">
-          <Link
-            href={registroHref}
-            className="text-purple-700 font-medium hover:underline"
-          >
-            Regístrate
-          </Link>
-          <span className="mx-1">|</span>
-          <Link
-            href={loginHref}
-            className="text-purple-700 font-medium hover:underline"
-          >
-            Inicia Sesión
-          </Link>
-        </div>
-
         <h1 className="text-3xl lg:text-4xl font-bold text-center text-gray-900 mb-12">
           Confirma tu cita
         </h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 items-start">
-          {/* Columna izquierda: notas + acciones de registro/login */}
+          {/* Columna izquierda: acciones de registro/login o procesamiento */}
           <section className="lg:col-span-2">
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-1">
-                Agrega notas para el profesional que te atenderá
-              </h2>
-              <p className="text-sm text-gray-500">
-                Incluye comentarios o solicitudes adicionales para tu
-                profesional.
-              </p>
-            </div>
-
-            <textarea
-              value={notas}
-              onChange={(e) => setNotas(e.target.value)}
-              rows={6}
-              className="w-full border border-gray-300 rounded-xl p-4 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none mb-8"
-              placeholder="Escribe aquí cualquier información que quieras compartir..."
-            />
-
-
             {/* Campo de dirección y código postal para citas a domicilio */}
             {citaInfo.tipoAtencion === "a_domicilio" && (
               <div className="mb-6">
@@ -882,33 +912,41 @@ function ConfirmarCitaAuthPageContent() {
               </div>
             )}
 
-            {isAuthenticated ? (
-              // Si el usuario está autenticado, mostrar botón para crear cita y proceder al pago
+            {isAuthenticated && !hasClientProfileError ? (
+              // Si el usuario está autenticado y tiene perfil de cliente, mostrar estado de procesamiento
               <div className="space-y-4 max-w-md">
-                <button
-                  onClick={handleConfirmAndPay}
-                  disabled={
-                    isCreatingAppointment ||
-                    (citaInfo.tipoAtencion === "a_domicilio" &&
-                      (!direccionDomicilio.trim() || !codigoPostal.trim() || !!codigoPostalError))
-                  }
-                  className="w-full flex items-center justify-center bg-[#4C1DFF] hover:bg-[#3b15cc] text-white font-semibold py-3 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isCreatingAppointment
-                    ? "Procesando..."
-                    : "Confirmar y proceder al pago"}
-                </button>
+                {isCreatingAppointment ? (
+                  <div className="w-full flex flex-col items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
+                    <p className="text-gray-600">Procesando tu cita...</p>
+                    <p className="text-sm text-gray-500 mt-2">Serás redirigido al pago en breve</p>
+                  </div>
+                ) : (
+                  <div className="w-full flex flex-col items-center justify-center py-8">
+                    <p className="text-gray-600">Preparando tu cita...</p>
+                  </div>
+                )}
                 {citaInfo.tipoAtencion === "a_domicilio" &&
-                  (!direccionDomicilio.trim() || !codigoPostal.trim()) && (
-                    <p className="text-sm text-red-600 mt-2">
-                      Por favor, proporciona tu dirección completa y código postal para la atención a
-                      domicilio.
-                    </p>
+                  (!direccionDomicilio.trim() || !codigoPostal.trim() || codigoPostalError) && (
+                    <div className="p-4 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg">
+                      <p className="text-sm font-medium mb-1">Información requerida</p>
+                      <p className="text-sm">
+                        Por favor, proporciona tu dirección completa y código postal para la atención a domicilio.
+                      </p>
+                    </div>
                   )}
               </div>
             ) : (
               // Si el usuario NO está autenticado, mostrar botones de login/registro
               <div className="space-y-4 max-w-md">
+                <div className="mb-6">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-2">
+                    Inicia sesión o regístrate para continuar
+                  </h2>
+                  <p className="text-sm text-gray-500">
+                    Necesitas una cuenta para confirmar tu cita y proceder al pago.
+                  </p>
+                </div>
                 <Link
                   href={registroHref}
                   className="w-full flex items-center justify-center bg-[#4C1DFF] hover:bg-[#3b15cc] text-white font-semibold py-3 rounded-full transition-colors"

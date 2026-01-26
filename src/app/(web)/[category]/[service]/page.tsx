@@ -120,8 +120,54 @@ export default async function ServicePage({ params }: ServicePageProps) {
     );
     console.log(
       "[ServicePage] specialtyResponse.success:",
-      specialtyResponse?.success
+      specialtyResponse?.success,
+      "error:",
+      specialtyResponse?.error
     );
+
+    // Si hay un error de rate limiting, esperar un poco y reintentar
+    if (!specialtyResponse.success && specialtyResponse.error?.includes("Demasiadas solicitudes")) {
+      console.warn("[ServicePage] Rate limit detectado, esperando antes de reintentar...");
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Esperar 2 segundos
+      
+      // Reintentar una vez
+      const retryResponse = await specialtiesService.getSpecialtyBySlugOrId(category);
+      if (!retryResponse.success || !retryResponse.data) {
+        console.warn("[ServicePage] specialty not found after retry for category:", category);
+        notFound();
+      }
+      
+      // Usar la respuesta del reintento
+      const specialty = retryResponse.data!;
+      const specialtyId = String(specialty.id_especialidad || specialty.id || "");
+      
+      // Obtener el servicio específico
+      const serviceResponse = await specialtiesService.getServiceBySlugOrId(
+        specialtyId,
+        serviceSlug
+      );
+      
+      if (!serviceResponse.success || !serviceResponse.data) {
+        console.warn("[ServicePage] service not found for specialty/service:", {
+          specialtyId,
+          serviceSlug,
+        });
+        notFound();
+      }
+      
+      return (
+        <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>}>
+          <CategoryServicePage
+            categorySlug={category}
+            serviceSlug={serviceSlug}
+            specialtyData={specialty}
+            serviceData={serviceResponse.data}
+          />
+        </Suspense>
+      );
+    }
 
     if (!specialtyResponse.success || !specialtyResponse.data) {
       console.warn("[ServicePage] specialty not found for category:", category);
@@ -170,6 +216,30 @@ export default async function ServicePage({ params }: ServicePageProps) {
     );
   } catch (error) {
     console.error("Error loading service page:", error);
+    // Si es un error de red o timeout, intentar mostrar la página con datos mínimos
+    if (error instanceof Error && (
+      error.message.includes("fetch") || 
+      error.message.includes("network") ||
+      error.message.includes("timeout")
+    )) {
+      console.warn("[ServicePage] Error de red detectado, intentando cargar con datos mínimos");
+      // Intentar cargar solo la especialidad sin el servicio específico
+      const specialtyResponse = await specialtiesService.getSpecialtyBySlugOrId(category);
+      if (specialtyResponse.success && specialtyResponse.data) {
+        return (
+          <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>}>
+            <CategoryServicePage
+              categorySlug={category}
+              serviceSlug={serviceSlug}
+              specialtyData={specialtyResponse.data}
+              serviceData={undefined}
+            />
+          </Suspense>
+        );
+      }
+    }
     notFound();
   }
 }

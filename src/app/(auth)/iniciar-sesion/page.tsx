@@ -13,18 +13,22 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login, error: authError, loading, isAuthenticated } = useAuth();
 
   // Redirigir a la página principal o a la URL de redirección si el usuario ya está autenticado
+  // Solo si no estamos en proceso de login (para evitar conflictos)
   useEffect(() => {
-    if (!loading && isAuthenticated) {
+    if (!loading && isAuthenticated && !isRedirecting) {
       const redirectTo = searchParams.get("redirect") || "/";
       logger.info("Usuario ya autenticado, redirigiendo", { redirectTo }, "LoginPage");
-      router.push(redirectTo);
+      setIsRedirecting(true);
+      // Usar replace para evitar agregar entrada al historial y usar window.location para forzar la navegación
+      window.location.href = redirectTo;
     }
-  }, [loading, isAuthenticated, router, searchParams]);
+  }, [loading, isAuthenticated, router, searchParams, isRedirecting]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,10 +99,12 @@ function LoginForm() {
           }
         }
         
-        // Redirigir a la página de destino o a la principal
+        // Marcar que estamos redirigiendo y redirigir a la página de destino o a la principal
+        setIsRedirecting(true);
         const redirectTo = searchParams.get("redirect") || "/";
         logger.info("Login exitoso, redirigiendo", { redirectTo }, "LoginPage");
-        router.push(redirectTo);
+        // Usar window.location para forzar la navegación completa y evitar bucles
+        window.location.href = redirectTo;
       } else {
         // El error ya está manejado por el hook useAuth
         // Priorizar el mensaje del hook que puede contener información específica del backend
@@ -127,8 +133,8 @@ function LoginForm() {
     );
   }
 
-  // Si ya está autenticado, no mostrar el formulario (ya se está redirigiendo)
-  if (isAuthenticated) {
+  // Si ya está autenticado o estamos redirigiendo, mostrar mensaje de redirección
+  if (isAuthenticated || isRedirecting) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

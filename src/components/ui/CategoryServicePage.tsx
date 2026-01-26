@@ -47,6 +47,7 @@ export default function CategoryServicePage({
   const [professionals, setProfessionals] = useState<ApiProfessional[]>([]);
   const [loadingProfessionals, setLoadingProfessionals] = useState(true);
   const [totalProfessionals, setTotalProfessionals] = useState(0);
+  const [enrichingPrices, setEnrichingPrices] = useState(false);
   // Filtros - Leer de la URL o usar valor por defecto
   const [filterModalidad, setFilterModalidad] = useState<string>(() => {
     const modalidadFromUrl = searchParams.get("modalidad");
@@ -138,6 +139,11 @@ export default function CategoryServicePage({
 
   // Cargar profesionales desde el backend si tenemos datos de especialidad
   useEffect(() => {
+    // Limpiar refs cuando cambia la especialidad o la página (navegación)
+    enrichmentAttemptedIdsRef.current?.clear();
+    isEnrichingRef.current = false;
+    // No limpiar lastValidPricesRef aquí, se limpiará solo cuando cambien los profesionales
+    
     const loadProfessionals = async () => {
       if (specialtyData) {
         const specialtyId = String(
@@ -163,11 +169,18 @@ export default function CategoryServicePage({
                 any
               >;
 
-              console.log(
-                `[CategoryServicePage] Profesionales cargados:`,
-                professionalsData.length
-              );
-              console.log(`[CategoryServicePage] Paginación:`, paginationData);
+              // Limpiar el ref de enriquecimiento cuando se cargan nuevos profesionales
+              // Esto asegura que los precios se carguen cuando navegas a una nueva página
+              const newProfessionalsKey = professionalsData.map(p => p.id).sort().join(',');
+              if (newProfessionalsKey !== lastProfessionalsKeyRef.current && newProfessionalsKey) {
+                // Solo limpiar si realmente cambió la lista de profesionales (navegación)
+                if (lastProfessionalsKeyRef.current) {
+                  enrichmentAttemptedIdsRef.current?.clear();
+                  lastValidPricesRef.current.clear(); // Limpiar precios válidos solo cuando cambian los profesionales
+                }
+                isEnrichingRef.current = false;
+                lastProfessionalsKeyRef.current = newProfessionalsKey;
+              }
 
               setProfessionals(professionalsData);
               setTotalProfessionals(
@@ -209,75 +222,188 @@ export default function CategoryServicePage({
   // Enriquecer profesionales con precios mínimos e imagen si faltan (fetch por profesional)
   useEffect(() => {
     const enrichMissingData = async () => {
+      // Evitar múltiples ejecuciones simultáneas
+      if (isEnrichingRef.current) {
+        return;
+      }
+      
       const API_BASE_URL = (
         process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
       ).replace(/\/$/, "");
       // Evitar reintentar enriquecimiento para los mismos IDs
+      // Limpiar el ref cuando cambian los profesionales (navegación a nueva página)
       if (!enrichmentAttemptedIdsRef.current) {
         enrichmentAttemptedIdsRef.current = new Set<string>();
       }
       const attempted = enrichmentAttemptedIdsRef.current;
-      // Seleccionar los que no tienen precios y que no se hayan intentado ya
-      // Si el filtro es "a_domicilio", también intentar cargar precios para profesionales
-      // que podrían tener precios de domicilio pero aún no se han cargado
+      
+      // Crear una clave única basada en los IDs de profesionales actuales
+      // para detectar cuando cambian los profesionales (navegación)
+      const currentProfessionalsKey = professionals.map(p => p.id).sort().join(',');
+      
+      // Si los profesionales cambiaron (navegación), limpiar los refs
+      // Solo limpiar si realmente cambió la lista de profesionales (navegación a nueva página)
+      if (currentProfessionalsKey !== lastProfessionalsKeyRef.current && currentProfessionalsKey) {
+        // Solo limpiar si el último key no está vacío (para evitar limpiar en la primera carga)
+        if (lastProfessionalsKeyRef.current) {
+          attempted.clear();
+          lastValidPricesRef.current.clear(); // Limpiar también los precios válidos anteriores
+        }
+        isEnrichingRef.current = false; // Resetear el flag de enriquecimiento
+        lastProfessionalsKeyRef.current = currentProfessionalsKey;
+      }
+      
+      // Función helper para verificar si hay precios para la modalidad actual
+      // Esta función replica la lógica de calculateMinPrice para verificar si hay precios válidos
+      const hasPricesForModalidad = (p: ApiProfessional, modalidad: string): boolean => {
+        const prices = Array.isArray(p.precios) ? p.precios : [];
+        if (prices.length === 0) return false;
+        
+        const modalidadLower = modalidad.toLowerCase();
+        let preciosFiltrados = prices;
+        
+        if (modalidadLower === "presencial" || modalidadLower === "en_linea") {
+          preciosFiltrados = prices.filter((pr: any) => {
+            const precioModalidad = (pr.modalidad || "").toLowerCase().trim();
+            return (
+              !precioModalidad ||
+              precioModalidad === "presencial" ||
+              precioModalidad === "virtual" ||
+              precioModalidad === "en_linea" ||
+              precioModalidad === "online" ||
+              precioModalidad === "ambas"
+            );
+          });
+        } else if (modalidadLower === "a_domicilio") {
+          preciosFiltrados = prices.filter((pr: any) => {
+            const precioModalidad = (pr.modalidad || "").toLowerCase().trim();
+            return (
+              precioModalidad === "a_domicilio" ||
+              precioModalidad === "domicilio"
+            );
+          });
+        }
+        
+        // Verificar que haya precios filtrados con valores válidos (> 0)
+        if (preciosFiltrados.length === 0) return false;
+        
+        const hasValidPrices = preciosFiltrados.some((pr: any) => {
+          const precioValor = typeof pr.precio === "number" 
+            ? pr.precio 
+            : Number(pr.precio) || 0;
+          return precioValor > 0;
+        });
+        
+        return hasValidPrices;
+      };
+      
+      // Seleccionar profesionales que necesitan enriquecimiento:
+      // 1. No tienen precios en absoluto (siempre cargar si no se ha intentado)
+      // 2. Tienen precios pero no para la modalidad actual
+      // 3. No se han intentado cargar aún para esta modalidad específica
       const targets = professionals.filter((p) => {
-        const noPrices = !Array.isArray(p.precios) || p.precios.length === 0;
         const id = String(p.id || "");
-        // Si el filtro es a_domicilio y el profesional tiene codigosPostalesDomicilio,
-        // intentar cargar precios aunque ya se haya intentado antes (para recargar)
-        const shouldRetry = 
-          filterModalidad === "a_domicilio" && 
-          (p as any).codigosPostalesDomicilio && 
-          noPrices;
-        return id && (noPrices && !attempted.has(id) || shouldRetry);
+        if (!id) return false;
+        
+        const noPrices = !Array.isArray(p.precios) || p.precios.length === 0;
+        
+        // Crear una clave única por modalidad para permitir recargar cuando cambia la modalidad
+        // Para profesionales sin precios, usar una clave genérica sin modalidad
+        const modalidadKey = noPrices ? `${id}-all` : `${id}-${filterModalidad}`;
+        
+        // Si ya se intentó cargar para esta combinación, no intentar de nuevo
+        if (attempted.has(modalidadKey)) {
+          return false;
+        }
+        
+        // Si no tiene precios en absoluto, siempre intentar cargar (primera vez)
+        if (noPrices) {
+          return true;
+        }
+        
+        // Si tiene precios, verificar si tiene precios para la modalidad actual
+        const noPricesForModalidad = !hasPricesForModalidad(p, filterModalidad);
+        
+        // Cargar si no tiene precios para la modalidad actual
+        return noPricesForModalidad;
       });
-      if (targets.length === 0) return;
+      
+      if (targets.length === 0) {
+        setEnrichingPrices(false);
+        return;
+      }
+      
+      // Marcar que estamos enriqueciendo para evitar ejecuciones simultáneas
+      isEnrichingRef.current = true;
+      setEnrichingPrices(true);
+      
       try {
         // Marcar como intentados inmediatamente para evitar bucles incluso si la respuesta no trae precios
+        // Usar clave por modalidad para permitir recargar cuando cambia la modalidad
         targets.forEach((p) => {
           const id = String(p.id || "");
-          if (id) attempted.add(id);
+          if (id) {
+            const noPrices = !Array.isArray(p.precios) || p.precios.length === 0;
+            // Para profesionales sin precios, usar clave genérica; para otros, usar clave por modalidad
+            const modalidadKey = noPrices ? `${id}-all` : `${id}-${filterModalidad}`;
+            attempted.add(modalidadKey);
+          }
         });
-        const results = await Promise.allSettled(
-          targets.map(async (p) => {
-            const id = p.id;
-            const res = await fetch(`${API_BASE_URL}/profesionales/${id}`);
-            if (!res.ok) return null;
-            const data = await res.json().catch(() => ({}));
-            const profData =
-              data?.data?.profesional || data?.profesional || data || null;
-            if (!profData) return null;
-            const preciosRaw = Array.isArray(profData.precios)
-              ? profData.precios
-              : [];
-            const mappedPrices = preciosRaw.map((precio: any) => ({
-              id_precio: precio.id_precio ?? precio.id ?? 0,
-              nombre_servicio:
-                precio.nombre_servicio ||
-                precio.nombre_paquete ||
-                precio.nombre ||
-                "Servicio",
-              descripcion: precio.descripcion ?? "",
-              precio:
-                typeof precio.precio === "number"
-                  ? precio.precio
-                  : Number(precio.precio) || 0,
-              moneda: precio.moneda || "EUR",
-              duracion:
-                precio.duracion ||
-                (precio.duracion_minutos
-                  ? `${precio.duracion_minutos} min`
-                  : undefined),
-              modalidad: precio.modalidad || undefined,
-            }));
-            const foto =
-              profData.foto_perfil ||
-              profData.imagen_perfil ||
-              p.profileImage ||
-              null;
-            return { id, precios: mappedPrices, profileImage: foto };
-          })
-        );
+        // Procesar en lotes para evitar demasiadas peticiones simultáneas
+        const batchSize = 5; // Máximo 5 peticiones simultáneas
+        const allResults: PromiseSettledResult<any>[] = [];
+        
+        for (let i = 0; i < targets.length; i += batchSize) {
+          const batch = targets.slice(i, i + batchSize);
+          const batchResults = await Promise.allSettled(
+            batch.map(async (p) => {
+              const id = p.id;
+              const res = await fetch(`${API_BASE_URL}/profesionales/${id}`);
+              if (!res.ok) return null;
+              const data = await res.json().catch(() => ({}));
+              const profData =
+                data?.data?.profesional || data?.profesional || data || null;
+              if (!profData) return null;
+              const preciosRaw = Array.isArray(profData.precios)
+                ? profData.precios
+                : [];
+              const mappedPrices = preciosRaw.map((precio: any) => ({
+                id_precio: precio.id_precio ?? precio.id ?? 0,
+                nombre_servicio:
+                  precio.nombre_servicio ||
+                  precio.nombre_paquete ||
+                  precio.nombre ||
+                  "Servicio",
+                descripcion: precio.descripcion ?? "",
+                precio:
+                  typeof precio.precio === "number"
+                    ? precio.precio
+                    : Number(precio.precio) || 0,
+                moneda: precio.moneda || "EUR",
+                duracion:
+                  precio.duracion ||
+                  (precio.duracion_minutos
+                    ? `${precio.duracion_minutos} min`
+                    : undefined),
+                modalidad: precio.modalidad || undefined,
+              }));
+              const foto =
+                profData.foto_perfil ||
+                profData.imagen_perfil ||
+                p.profileImage ||
+                null;
+              return { id, precios: mappedPrices, profileImage: foto };
+            })
+          );
+          allResults.push(...batchResults);
+          
+          // Pequeño delay entre lotes para evitar sobrecargar el servidor
+          if (i + batchSize < targets.length) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+          }
+        }
+        
+        const results = allResults;
         const enriched = results
           .filter(
             (r): r is PromiseFulfilledResult<any> => r.status === "fulfilled"
@@ -285,44 +411,113 @@ export default function CategoryServicePage({
           .map((r) => r.value)
           .filter(Boolean);
         if (enriched.length) {
-          setProfessionals((prev) =>
-            prev.map((p) => {
+          // Guardar precios válidos en el ref antes de actualizar el estado
+          enriched.forEach((e) => {
+            if (Array.isArray(e.precios) && e.precios.length > 0) {
+              // Calcular el precio mínimo para la modalidad actual y guardarlo
+              const prices = e.precios;
+              const modalidadLower = filterModalidad.toLowerCase();
+              let preciosFiltrados = prices;
+              
+              if (modalidadLower === "presencial" || modalidadLower === "en_linea") {
+                preciosFiltrados = prices.filter((pr: any) => {
+                  const precioModalidad = (pr.modalidad || "").toLowerCase().trim();
+                  return (
+                    !precioModalidad ||
+                    precioModalidad === "presencial" ||
+                    precioModalidad === "virtual" ||
+                    precioModalidad === "en_linea" ||
+                    precioModalidad === "online" ||
+                    precioModalidad === "ambas"
+                  );
+                });
+              } else if (modalidadLower === "a_domicilio") {
+                preciosFiltrados = prices.filter((pr: any) => {
+                  const precioModalidad = (pr.modalidad || "").toLowerCase().trim();
+                  return (
+                    precioModalidad === "a_domicilio" ||
+                    precioModalidad === "domicilio"
+                  );
+                });
+              }
+              
+              if (preciosFiltrados.length > 0) {
+                const values = preciosFiltrados
+                  .map((pr: any) => {
+                    const precioValor = typeof pr.precio === "number" 
+                      ? pr.precio 
+                      : Number(pr.precio) || 0;
+                    return precioValor;
+                  })
+                  .filter((v) => v > 0);
+                
+                if (values.length > 0) {
+                  const minPrice = Number(Math.min(...values).toFixed(2));
+                  const priceKey = `${e.id}-${filterModalidad}`;
+                  lastValidPricesRef.current.set(priceKey, minPrice);
+                }
+              }
+            }
+          });
+          
+          setProfessionals((prev) => {
+            // Crear un nuevo array para asegurar que React detecte el cambio
+            const updated = prev.map((p) => {
               const found = enriched.find((e) => e.id === p.id);
               if (!found) return p;
-              return {
+              const updatedProf = {
                 ...p,
-                precios: Array.isArray(found.precios)
-                  ? found.precios
-                  : p.precios,
+                // Asegurar que precios sea un nuevo array para que React detecte el cambio
+                precios: Array.isArray(found.precios) && found.precios.length > 0
+                  ? [...found.precios] // Crear copia del array
+                  : (Array.isArray(p.precios) ? [...p.precios] : []),
                 profileImage: found.profileImage || p.profileImage,
               };
-            })
-          );
+              return updatedProf;
+            });
+            // Forzar una nueva referencia del array
+            return [...updated];
+          });
         }
       } catch (e) {
         console.warn(
           "[CategoryServicePage] No se pudo enriquecer precios/imagen:",
           e
         );
+      } finally {
+        isEnrichingRef.current = false;
+        setEnrichingPrices(false);
       }
     };
-    if (!loadingProfessionals && professionals.length > 0) {
+    // Ejecutar enriquecimiento cuando:
+    // 1. No se están cargando profesionales
+    // 2. Hay profesionales
+    // 3. No se está ejecutando ya un enriquecimiento
+    if (!loadingProfessionals && professionals.length > 0 && !isEnrichingRef.current) {
+      // Ejecutar inmediatamente cuando se cargan nuevos profesionales
       enrichMissingData();
     }
-  }, [professionals, loadingProfessionals, filterModalidad]); // Agregar filterModalidad para recargar cuando cambia el filtro
+  }, [professionals, loadingProfessionals, filterModalidad]); // filterModalidad fuerza recarga cuando cambia
 
-  // Limpiar el ref de enriquecimiento cuando cambia el filtro para permitir recargar precios
-  // Esto es especialmente importante para "a_domicilio" donde los precios pueden no estar cargados inicialmente
+  // Limpiar las entradas del ref relacionadas con la modalidad anterior cuando cambia el filtro
+  // Esto permite recargar precios cuando cambia la modalidad
   useEffect(() => {
-    if (enrichmentAttemptedIdsRef.current && filterModalidad === "a_domicilio") {
-      console.log(`[CategoryServicePage] Limpiando ref de enriquecimiento al cambiar filtro a: ${filterModalidad}`);
-      // Limpiar el ref para permitir recargar precios cuando cambia a a_domicilio
-      enrichmentAttemptedIdsRef.current.clear();
+    if (enrichmentAttemptedIdsRef.current) {
+      // Limpiar solo las entradas de la modalidad anterior, no todas
+      // Como ahora usamos claves por modalidad, esto se maneja automáticamente
+      // Pero podemos limpiar entradas antiguas si queremos optimizar memoria
+      // Por ahora, dejamos que se acumulen ya que usamos claves únicas por modalidad
     }
   }, [filterModalidad]);
 
   // Guardar IDs de profesionales ya intentados para enriquecimiento (evita spam de peticiones)
   const enrichmentAttemptedIdsRef = useRef<Set<string>>(new Set());
+  // Ref para rastrear los profesionales anteriores y detectar navegación
+  const lastProfessionalsKeyRef = useRef<string>('');
+  // Ref para almacenar los últimos precios válidos calculados (evita parpadeos)
+  const lastValidPricesRef = useRef<Map<string, number>>(new Map());
+  // Ref para evitar múltiples ejecuciones simultáneas del enriquecimiento
+  const isEnrichingRef = useRef<boolean>(false);
 
   // Función helper para calcular el precio mínimo de un profesional según la modalidad
   const calculateMinPrice = (
@@ -430,17 +625,6 @@ export default function CategoryServicePage({
 
     let matchesModalidad = false;
 
-    // Debug: Log para entender qué está pasando con el filtro
-    if (modalidad === "a_domicilio") {
-      console.log(`[CategoryServicePage] Filtrando profesional ${prof.id} para a_domicilio:`, {
-        modalidadesSesiones: prof.modalidadesSesiones,
-        modoAtencion: prof.modoAtencion,
-        tienePreciosCargados,
-        precios: prof.precios,
-        preciosCount: prof.precios?.length || 0,
-      });
-    }
-
     if (modalidad === "presencial" || modalidad === "en_linea") {
       // Presencial y en_linea muestran los mismos profesionales
       // Verificar modalidades de sesión
@@ -484,9 +668,6 @@ export default function CategoryServicePage({
       // PRIORIDAD 1: Si tiene precios cargados, verificar primero los precios
       // Esto es más confiable que depender de modalidadesSesiones o modoAtencion
       if (tienePreciosCargados) {
-        console.log(`[CategoryServicePage] Verificando precios para profesional ${prof.id}:`, {
-          precios: prof.precios,
-        });
         matchesModalidad = prof.precios.some((p: any) => {
           // Extraer modalidad desde diferentes ubicaciones posibles
           const precioModalidad = (
@@ -500,18 +681,10 @@ export default function CategoryServicePage({
 
           // "ambas" NO aplica para domicilio, solo para presencial/virtual
           // Solo buscar "domicilio" o "a_domicilio"
-          const matches =
+          return (
             precioModalidad === "a_domicilio" ||
-            precioModalidad === "domicilio";
-
-          // Debug: loggear todos los precios para ver qué modalidades tienen
-          console.log(`[CategoryServicePage] Precio del profesional ${prof.id}:`, {
-            precioModalidad,
-            precioCompleto: p,
-            matches,
-          });
-
-          return matches;
+            precioModalidad === "domicilio"
+          );
         });
       }
 
@@ -520,7 +693,6 @@ export default function CategoryServicePage({
       if (!matchesModalidad && (prof as any).codigosPostalesDomicilio) {
         const codigosPostales = String((prof as any).codigosPostalesDomicilio || "").trim();
         if (codigosPostales.length > 0) {
-          console.log(`[CategoryServicePage] Profesional ${prof.id} tiene códigos postales de domicilio:`, codigosPostales);
           matchesModalidad = true;
         }
       }
@@ -545,13 +717,6 @@ export default function CategoryServicePage({
       }
     }
 
-    // Debug final
-    if (modalidad === "a_domicilio" && !matchesModalidad) {
-      console.log(`[CategoryServicePage] Profesional ${prof.id} NO coincide con a_domicilio después de todas las verificaciones`);
-    } else if (modalidad === "a_domicilio" && matchesModalidad) {
-      console.log(`[CategoryServicePage] ✅ Profesional ${prof.id} SÍ coincide con a_domicilio`);
-    }
-
     if (!matchesModalidad) return false;
 
     return true;
@@ -569,10 +734,45 @@ export default function CategoryServicePage({
     totalProfessionalsFiltrados / professionalsPerPage
   );
 
+  // Crear una dependencia que detecte cambios en los precios para forzar la recalculación
+  // Incluir filterModalidad para que se recalcule cuando cambia la modalidad
+  const pricesKey = useMemo(() => {
+    return `${filterModalidad}|${professionals
+      .map((p) => {
+        const precios = Array.isArray(p.precios) ? p.precios : [];
+        const preciosStr = precios
+          .map((pr: any) => `${pr.id_precio || ''}-${pr.precio || 0}-${pr.modalidad || ''}`)
+          .join(',');
+        return `${p.id}:${precios.length}:${preciosStr}`;
+      })
+      .join('|')}`;
+  }, [professionals, filterModalidad]);
+
   // Calcular profesionales mapeados con precios mínimos de forma reactiva
   const mappedProfessionals = useMemo(() => {
     return currentProfessionalsPaginated.map((professional) => {
       const minPrice = calculateMinPrice(professional, filterModalidad);
+      
+      // Usar el último precio válido conocido si el precio actual es 0
+      // Esto evita el parpadeo mientras se cargan los precios o cuando se recalcula el useMemo
+      const priceKey = `${professional.id}-${filterModalidad}`;
+      let finalPrice = minPrice;
+      
+      if (minPrice > 0) {
+        // Si el precio es válido, guardarlo en el ref para uso futuro
+        lastValidPricesRef.current.set(priceKey, minPrice);
+        finalPrice = minPrice;
+      } else {
+        // Si el precio es 0, intentar usar el último precio válido conocido
+        // Esto evita el parpadeo cuando el useMemo se recalcula antes de que los precios se actualicen
+        // O cuando los precios se están cargando
+        const lastValidPrice = lastValidPricesRef.current.get(priceKey);
+        if (lastValidPrice && lastValidPrice > 0) {
+          // Usar el precio del ref solo si no estamos en la primera carga (para evitar mostrar precios de otros profesionales)
+          // Verificar que el profesional actual tenga el mismo ID que el precio guardado
+          finalPrice = lastValidPrice;
+        }
+      }
 
       const cardImage =
         professional.profileImage &&
@@ -588,7 +788,7 @@ export default function CategoryServicePage({
         description: professional.bio || "",
         rating: professional.rating || 0,
         reviewCount: professional.totalSessions || 0,
-        price: minPrice,
+        price: finalPrice,
         image: cardImage,
         isPopular:
           professional.status === "activo" &&
@@ -601,18 +801,8 @@ export default function CategoryServicePage({
         ),
       };
     });
-  }, [currentProfessionalsPaginated, filterModalidad]);
+  }, [currentProfessionalsPaginated, filterModalidad, pricesKey]);
 
-  // Debug: Log para verificar el filtrado
-  useEffect(() => {
-    console.log(`[CategoryServicePage] Filtro de modalidad: "${filterModalidad}"`, {
-      totalProfesionales: professionals.length,
-      profesionalesFiltrados: totalProfessionalsFiltrados,
-      profesionalesPagina: currentProfessionalsPaginated.length,
-      paginaActual: currentPage,
-      totalPaginas: totalPages,
-    });
-  }, [filterModalidad, totalProfessionalsFiltrados, currentProfessionalsPaginated.length, currentPage, totalPages, professionals.length]);
 
   // Funciones de paginación
   const goToPage = (page: number) => {

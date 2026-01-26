@@ -1300,14 +1300,13 @@ export default function AdminProfessionalEditPage() {
 
       // Normalizar modalidad para el backend
       // El ENUM de la BD acepta: 'presencial', 'virtual', 'ambas', 'domicilio'
-      // Si es "presencial_virtual", guardar como "presencial" (los precios son compartidos)
+      // Ahora se guardan por separado: virtual, presencial y domicilio
       let modalidadBackend = "presencial";
       if (newPriceModalidad === "domicilio") {
         modalidadBackend = "domicilio"; // El ENUM acepta 'domicilio', no 'a_domicilio'
       } else if (newPriceModalidad === "virtual") {
         modalidadBackend = "virtual";
-      } else if (newPriceModalidad === "presencial_virtual") {
-        // Si tiene ambas modalidades, guardar como "presencial" ya que los precios son compartidos
+      } else if (newPriceModalidad === "presencial") {
         modalidadBackend = "presencial";
       }
       
@@ -3887,20 +3886,19 @@ export default function AdminProfessionalEditPage() {
                     case "domicilio":
                     case "a_domicilio":
                       return "A Domicilio";
-                    case "presencial_virtual":
-                      return "Presencial/Virtual";
                     case "virtual":
                     case "en_linea":
                     case "online":
-                      return "Virtual";
+                      return "En Línea";
                     case "presencial":
+                      return "Presencial";
                     default:
                       return "Presencial";
                   }
                 };
 
                 // Determinar modalidades disponibles del profesional
-                // Los precios de presencial y virtual SIEMPRE son los mismos, solo se separan los de domicilio
+                // Ahora se separan en 3 categorías: virtual (en línea), presencial y domicilio
                 const availableModalities = new Set<string>();
                 
                 // Verificar modalidades desde el array de modalidades
@@ -3912,11 +3910,11 @@ export default function AdminProfessionalEditPage() {
                     } else if (
                       modLower.includes("virtual") || 
                       modLower.includes("en_linea") || 
-                      modLower.includes("online") ||
-                      modLower.includes("presencial")
+                      modLower.includes("online")
                     ) {
-                      // Presencial y virtual se tratan como la misma categoría
-                      availableModalities.add("presencial_virtual");
+                      availableModalities.add("virtual");
+                    } else if (modLower.includes("presencial")) {
+                      availableModalities.add("presencial");
                     }
                   });
                 }
@@ -3945,24 +3943,29 @@ export default function AdminProfessionalEditPage() {
                 
                 if (modalidadCita) {
                   const modalidadLower = String(modalidadCita).toLowerCase().trim();
-                  if (
-                    modalidadLower === "ambas" ||
-                    modalidadLower.includes("presencial") ||
+                  if (modalidadLower === "ambas") {
+                    // Si es "ambas", agregar tanto virtual como presencial
+                    availableModalities.add("virtual");
+                    availableModalities.add("presencial");
+                  } else if (
                     modalidadLower.includes("virtual") ||
                     modalidadLower.includes("en_linea") ||
                     modalidadLower.includes("online")
                   ) {
-                    availableModalities.add("presencial_virtual");
+                    availableModalities.add("virtual");
+                  } else if (modalidadLower.includes("presencial")) {
+                    availableModalities.add("presencial");
                   }
                 }
                 
-                // IMPORTANTE: Siempre mostrar ambas categorías para permitir agregar precios
+                // IMPORTANTE: Siempre mostrar las tres categorías para permitir agregar precios
                 // Incluso si no están configuradas, el admin debe poder agregar precios
-                availableModalities.add("presencial_virtual"); // Siempre mostrar presencial/virtual
-                availableModalities.add("domicilio"); // Siempre mostrar domicilio para poder agregar precios
+                availableModalities.add("virtual"); // Siempre mostrar en línea
+                availableModalities.add("presencial"); // Siempre mostrar presencial
+                availableModalities.add("domicilio"); // Siempre mostrar domicilio
 
                 // Agrupar precios por modalidad
-                // IMPORTANTE: Presencial y Virtual siempre se agrupan juntos, solo Domicilio es separado
+                // Ahora se separan en 3 categorías: virtual (en línea), presencial y domicilio
                 const pricesByModality: Record<
                   string,
                   { prices: any[]; originalIndices: number[] }
@@ -3974,9 +3977,10 @@ export default function AdminProfessionalEditPage() {
                     value.modalidad || value.modalidad_atencion || "";
                   const normalizedModality = modalidad.toLowerCase().trim();
 
-                  // Normalizar modalidad:
-                  // - 'domicilio' o 'a_domicilio' -> 'domicilio' (sección separada)
-                  // - Todo lo demás (presencial, virtual, en_linea, online, ambas) -> 'presencial_virtual'
+                  // Normalizar modalidad en 3 categorías separadas:
+                  // - 'domicilio' o 'a_domicilio' -> 'domicilio'
+                  // - 'virtual', 'en_linea', 'online' -> 'virtual'
+                  // - 'presencial' o cualquier otra cosa -> 'presencial'
                   let modalityKey: string;
                   if (
                     normalizedModality === "domicilio" ||
@@ -3984,10 +3988,15 @@ export default function AdminProfessionalEditPage() {
                     normalizedModality.includes("domicilio")
                   ) {
                     modalityKey = "domicilio";
+                  } else if (
+                    normalizedModality === "virtual" ||
+                    normalizedModality === "en_linea" ||
+                    normalizedModality === "online"
+                  ) {
+                    modalityKey = "virtual";
                   } else {
-                    // Presencial, virtual, en_linea, online, ambas, o cualquier otra cosa
-                    // Todos se agrupan en "presencial_virtual" porque los precios son los mismos
-                    modalityKey = "presencial_virtual";
+                    // Presencial o cualquier otra cosa (incluyendo "ambas" que ya no se usa)
+                    modalityKey = "presencial";
                   }
 
                   if (!pricesByModality[modalityKey]) {
@@ -4000,8 +4009,8 @@ export default function AdminProfessionalEditPage() {
                   pricesByModality[modalityKey].originalIndices.push(idx);
                 });
 
-                // Orden de visualización: presencial_virtual primero, luego domicilio
-                const modalityOrder = ["presencial_virtual", "domicilio"];
+                // Orden de visualización: virtual (en línea), presencial, luego domicilio
+                const modalityOrder = ["virtual", "presencial", "domicilio"];
                 
                 // Crear un conjunto de todas las modalidades que deben mostrarse
                 // IMPORTANTE: Usar availableModalities como base, ya que contiene las modalidades
